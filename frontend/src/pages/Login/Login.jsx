@@ -81,12 +81,33 @@ function Login() {
               type="submit"
               style={loading ? { ...styles.button, ...styles.buttonLoading } : styles.button}
               disabled={loading}
-            >
+            >        
               <LogIn size={18} style={{ marginRight: '8px' }} />
               {loading ? 'Ingresando...' : 'Ingresar al Sistema'}
             </button>
+             <button
+                type="button"
+                onClick={() => navigate('/register')}
+                style={{
+                  background: 'transparent',
+                  border: '1.5px solid #e5e7eb',
+                  borderRadius: '12px',
+                  padding: '12px',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  color: '#6b7280',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '100%',
+                  fontFamily: "'Poppins', sans-serif",
+                  marginTop: '4px',
+                }}
+              >
+                ¿No tienes cuenta? Regístrate
+              </button>
           </form>
-
           <p style={styles.footer}>UAGRM · Sistema Avícola 2026</p>
         </div>
       </div>
