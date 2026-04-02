@@ -1,16 +1,9 @@
-import { useNavigate } from 'react-router-dom'
-import {
-  LayoutDashboard, Bird, Skull, Thermometer,
-  Package, LogOut, User
-} from 'lucide-react'
-import './Dashboard.css'
-
-const navItems = [
-  { icon: <LayoutDashboard size={20} />, label: 'Dashboard', active: true },
-  { icon: <Bird size={20} />, label: 'Galpones' },
-  { icon: <Package size={20} />, label: 'Inventario' },
-  { icon: <Thermometer size={20} />, label: 'Clima' },
-]
+import { useState } from 'react'
+import { Bird, Skull, Package, Thermometer } from 'lucide-react'
+import Sidebar from '../../components/Sidebar'
+import Topbar from '../../components/Topbar'
+import StatCard from '../../components/StatCard'
+import AlertItem from '../../components/AlertItem'
 
 const cards = [
   {
@@ -54,83 +47,32 @@ const alerts = [
 ]
 
 function Dashboard() {
-  const navigate = useNavigate()
-
-  const handleLogout = () => {
-    navigate('/')
-  }
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   return (
-    <div className="dashboard-page">
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#f9fafb', fontFamily: "'Poppins', sans-serif" }}>
+      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
 
-      {/* Sidebar */}
-      <aside className="sidebar">
-        <div className="sidebar-logo">
-          <img src="/logo.png" alt="logo" />
-          <span>AviGranja</span>
-        </div>
-
-        <nav className="sidebar-nav">
-          {navItems.map((item, i) => (
-            <button key={i} className={`nav-item ${item.active ? 'active' : ''}`}>
-              {item.icon}
-              <span>{item.label}</span>
-            </button>
-          ))}
-        </nav>
-
-        <div className="sidebar-footer">
-          <button className="logout-btn" onClick={handleLogout}>
-            <LogOut size={20} />
-            <span>Cerrar Sesión</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Contenido principal */}
-      <main className="main-content">
-        <div className="topbar">
-          <div>
-            <h1>Dashboard</h1>
-            <p>Resumen general de la granja</p>
-          </div>
-          <div className="user-badge">
-            <User size={18} color="#78350f" />
-            <span>Administrador</span>
-          </div>
-        </div>
-
-        {/* Tarjetas */}
-        <div className="cards-grid">
+      <main style={{ marginLeft: sidebarOpen ? '240px' : '70px', flex: 1, padding: '32px', transition: 'margin-left 0.3s ease' }}>
+        <Topbar
+          titulo="Dashboard"
+          subtitulo="Resumen general de la granja"
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+        />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '32px' }}>
           {cards.map((card, i) => (
-            <div key={i} className="stat-card">
-              <div className="stat-card-header">
-                <div className="stat-card-icon" style={{ background: card.iconBg }}>
-                  {card.icon}
-                </div>
-                <span className={`stat-card-trend ${card.trendType}`}>{card.trend}</span>
-              </div>
-              <div className="stat-card-value">{card.value}</div>
-              <div className="stat-card-label">{card.label}</div>
-            </div>
+            <StatCard key={i} {...card} />
           ))}
         </div>
 
-        {/* Alertas */}
-        <div className="alerts-section">
-          <h2>Alertas Recientes</h2>
+        <div style={{ background: 'white', borderRadius: '20px', padding: '24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: '700', color: '#1c1c1c', marginBottom: '16px' }}>Alertas Recientes</h2>
           {alerts.map((alert, i) => (
-            <div key={i} className={`alert-item ${alert.type}`}>
-              {alert.icon}
-              <div className="alert-text">
-                <strong>{alert.title}</strong>
-                <span>{alert.desc}</span>
-              </div>
-            </div>
+            <AlertItem key={i} {...alert} />
           ))}
         </div>
       </main>
-
     </div>
   )
 }
