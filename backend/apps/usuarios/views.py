@@ -3,6 +3,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from apps.usuarios.models import Usuario
 from apps.usuarios.serializers import LoginSerializer
+from apps.usuarios.serializers import RegistroUsuarioSerializer
+
 
 class LoginView(APIView):
     def post(self, request):
@@ -19,3 +21,13 @@ class LoginView(APIView):
             except Usuario.DoesNotExist:
                 return Response({'error': 'Usuario no encontrado'}, status=status.HTTP_404_NOT_FOUND)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class RegistroUsuarioView(APIView):
+    def post(self, request):
+        serializer = RegistroUsuarioSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'mensaje': 'Usuario creado correctamente'}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        
