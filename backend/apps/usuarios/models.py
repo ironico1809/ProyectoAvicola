@@ -22,3 +22,37 @@ class Usuario(models.Model):
 
     def __str__(self):
         return self.nom_usuario
+
+    @property
+    def is_authenticated(self):
+        """
+        Compatibilidad con Django REST Framework:
+        Permite que DRF reconozca instancias de Usuario como autenticadas.
+        """
+        return True
+
+
+class Rol(models.Model):
+    """Rol del sistema.
+
+    Basado en tu definición SQL:
+      CREATE TABLE rol (
+          id_rol SERIAL PRIMARY KEY,
+          nombre VARCHAR(50) NOT NULL UNIQUE,
+          descripcion TEXT
+      );
+
+    Importante:
+      - Usamos `id_rol` como PK (nombre de columna como en tu SQL).
+      - Más adelante puedes relacionar roles con usuarios y permisos.
+    """
+
+    id_rol = models.AutoField(primary_key=True)
+    nombre = models.CharField(max_length=50, unique=True)
+    descripcion = models.TextField(blank=True, null=True)
+
+    class Meta:
+        db_table = 'rol'
+
+    def __str__(self):
+        return self.nombre

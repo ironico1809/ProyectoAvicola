@@ -1,7 +1,7 @@
 from django.contrib.auth.hashers import make_password
 from rest_framework import serializers
 
-from apps.usuarios.models import Usuario
+from apps.usuarios.models import Rol, Usuario
 
 
 class LoginSerializer(serializers.Serializer):
@@ -46,3 +46,29 @@ class UsuarioUpdateSerializer(serializers.ModelSerializer):
             instance.password = make_password(raw_password)
         instance.save()
         return instance
+
+
+class RolSerializer(serializers.ModelSerializer):
+    """Serializer para listar/crear/editar roles."""
+
+    class Meta:
+        model = Rol
+        fields = ['id_rol', 'nombre', 'descripcion']
+
+
+class UsuarioRolesSerializer(serializers.Serializer):
+    """Entrada para agregar/quitar roles a un usuario por id_rol."""
+
+    add = serializers.ListField(child=serializers.IntegerField(), required=False, allow_empty=True)
+    remove = serializers.ListField(child=serializers.IntegerField(), required=False, allow_empty=True)
+
+    def validate(self, attrs):
+        if 'add' not in attrs and 'remove' not in attrs:
+            raise serializers.ValidationError('Debes enviar "add" y/o "remove".')
+        return attrs
+
+
+class UsuarioRolesReplaceSerializer(serializers.Serializer):
+    """Entrada para reemplazar TODOS los roles de un usuario (lista completa de id_rol)."""
+
+    roles = serializers.ListField(child=serializers.IntegerField(), required=True, allow_empty=True)
