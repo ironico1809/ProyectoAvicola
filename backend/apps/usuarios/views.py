@@ -19,10 +19,23 @@ from apps.usuarios.serializers import (
 )
 
 
+# --- Funciones de autenticación y gestión de usuarios/roles ---
+
+# Genera los tokens JWT para un usuario dado
+
+def get_tokens_for_user(usuario):
+    refresh = RefreshToken.for_user(usuario)
+    return {
+        'refresh': str(refresh),
+        'access': str(refresh.access_token),
+    }
+
+# Vista para login de usuario. Valida credenciales, retorna tokens y datos del usuario.
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        # Valida datos de login
         serializer = LoginSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -30,6 +43,7 @@ class LoginView(APIView):
         username = serializer.validated_data['nom_usuario']
         password = serializer.validated_data['password']
 
+        # Busca usuario y verifica contraseña
         try:
             usuario = Usuario.objects.get(nom_usuario=username)
         except Usuario.DoesNotExist:
@@ -40,6 +54,7 @@ class LoginView(APIView):
 
         refresh = RefreshToken.for_user(usuario)
 
+        # Registra evento de login en la bitácora
         registrar_evento(
             request,
             accion='login',
@@ -48,6 +63,7 @@ class LoginView(APIView):
             entidad_id=usuario.id,
             usuario=usuario,
         )
+        # Retorna tokens y datos serializados del usuario
         return Response(
             {
                 'refresh': str(refresh),
@@ -58,7 +74,7 @@ class LoginView(APIView):
             status=status.HTTP_200_OK,
         )
 
-
+# Vista para registrar un nuevo usuario
 class RegistroUsuarioView(APIView):
     permission_classes = [AllowAny]
 
@@ -67,6 +83,7 @@ class RegistroUsuarioView(APIView):
         if serializer.is_valid():
             usuario = serializer.save()
 
+            # Registra evento de creación de usuario
             registrar_evento(
                 request,
                 accion='crear',
@@ -85,14 +102,16 @@ class RegistroUsuarioView(APIView):
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
+# Vista para obtener y actualizar los datos del usuario autenticado
 class UsuarioMeView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        # Retorna los datos del usuario autenticado
         return Response(UsuarioSerializer(request.user).data, status=status.HTTP_200_OK)
 
     def patch(self, request):
+        # Permite actualizar parcialmente los datos del usuario autenticado
         serializer = UsuarioUpdateSerializer(request.user, data=request.data, partial=True)
         if serializer.is_valid():
             usuario = serializer.save()
@@ -108,10 +127,9 @@ class UsuarioMeView(APIView):
             return Response(UsuarioSerializer(usuario).data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
+# Vista para logout (invalida el refresh token y registra evento)
 class LogoutView(APIView):
     """Con JWT, el logout real se hace borrando el token en el cliente."""
-
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -134,7 +152,7 @@ class LogoutView(APIView):
 
         return Response({'mensaje': 'Logout correcto'}, status=status.HTTP_200_OK)
 
-
+# Vista para listar todos los usuarios
 class UsuarioListView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -142,7 +160,7 @@ class UsuarioListView(APIView):
         usuarios = Usuario.objects.all().order_by('id')
         return Response(UsuarioSerializer(usuarios, many=True).data, status=status.HTTP_200_OK)
 
-
+# Vista para obtener, actualizar o eliminar un usuario específico
 class UsuarioDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -195,7 +213,7 @@ class UsuarioDetailView(APIView):
         usuario.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-
+# Vista para listar y crear roles
 class RolListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -220,7 +238,7 @@ class RolListCreateView(APIView):
             return Response(RolSerializer(rol).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
+# Vista para obtener, actualizar o eliminar un rol específico
 class RolDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -273,7 +291,7 @@ class RolDetailView(APIView):
         rol.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-
+# Vista para obtener y modificar los roles de un usuario
 class UsuarioRolesView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -288,6 +306,7 @@ class UsuarioRolesView(APIView):
         if not usuario:
             return Response({'detail': 'Usuario no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
+        # Consulta SQL directa para obtener roles del usuario
         with connection.cursor() as cursor:
             cursor.execute(
                 """
@@ -323,6 +342,7 @@ class UsuarioRolesView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # Reemplaza todos los roles del usuario
         with connection.cursor() as cursor:
             cursor.execute('DELETE FROM usuario_roles WHERE usuario_id = %s', [usuario.id])
             for rol in roles:
@@ -371,6 +391,7 @@ class UsuarioRolesView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # Agrega y elimina roles del usuario según corresponda
         with connection.cursor() as cursor:
             for rol in add_roles:
                 cursor.execute(
@@ -399,3 +420,5 @@ class UsuarioRolesView(APIView):
 
         roles_actuales = Rol.objects.filter(id_rol__in=ids_actuales).order_by('id_rol')
         return Response(RolSerializer(roles_actuales, many=True).data, status=status.HTTP_200_OK)
+
+# --- Fin de vistas de usuarios y roles ---
