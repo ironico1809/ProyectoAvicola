@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.usuarios.models import Rol, Usuario
-from bitacora.utils import registrar_evento
+from apps.bitacora.utils import registrar_evento
 from apps.usuarios.serializers import (
     LoginSerializer,
     RegistroUsuarioSerializer,

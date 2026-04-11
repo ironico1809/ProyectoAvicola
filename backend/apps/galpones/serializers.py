@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from galpones.models import Galpon
+from apps.galpones.models import Galpon
 
 
 class GalponSerializer(serializers.ModelSerializer):

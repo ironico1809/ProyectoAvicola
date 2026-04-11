@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from bitacora.models import BitacoraEvento
+from apps.bitacora.models import BitacoraEvento
 
 
 class BitacoraEventoSerializer(serializers.ModelSerializer):

@@ -1,6 +1,6 @@
 import json
 
-from bitacora.models import BitacoraEvento
+from apps.bitacora.models import BitacoraEvento
 
 
 def _get_client_ip(request):

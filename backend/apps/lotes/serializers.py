@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
-from galpones.models import Galpon
-from lotes.models import Lote
+from apps.galpones.models import Galpon
+from apps.lotes.models import Lote
 
 
 class LoteSerializer(serializers.ModelSerializer):

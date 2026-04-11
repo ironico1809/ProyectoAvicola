@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from bitacora.models import BitacoraEvento
+from apps.bitacora.models import BitacoraEvento
 
 
 @admin.register(BitacoraEvento)

@@ -1,6 +1,6 @@
 from django.urls import path
 
-from galpones.views import GalponDetailView, GalponEstadoListView, GalponListCreateView
+from apps.galpones.views import GalponDetailView, GalponEstadoListView, GalponListCreateView
 
 urlpatterns = [
     path('', GalponListCreateView.as_view(), name='galpones_list_create'),

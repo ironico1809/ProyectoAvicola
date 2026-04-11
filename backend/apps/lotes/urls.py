@@ -1,6 +1,6 @@
 from django.urls import path
 
-from lotes.views import LoteDetailView, LoteListCreateView, LotesResumenEstadoView
+from apps.lotes.views import LoteDetailView, LoteListCreateView, LotesResumenEstadoView
 
 urlpatterns = [
     path('', LoteListCreateView.as_view(), name='lotes_list_create'),

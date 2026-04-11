@@ -5,9 +5,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from bitacora.models import BitacoraEvento
-from bitacora.serializers import BitacoraEventoSerializer
-
+from apps.bitacora.models import BitacoraEvento
+from apps.bitacora.serializers import BitacoraEventoSerializer
 
 class BitacoraListView(APIView):
     """Lista eventos de bitácora.

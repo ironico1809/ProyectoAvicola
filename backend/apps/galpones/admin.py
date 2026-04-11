@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from galpones.models import Galpon
+from apps.galpones.models import Galpon
 
 
 @admin.register(Galpon)

@@ -6,9 +6,9 @@ from rest_framework.views import APIView
 from django.db.models import Count, Sum
 from django.db.models.functions import Coalesce
 
-from lotes.models import Lote
-from lotes.serializers import LoteSerializer
-from bitacora.utils import registrar_evento
+from apps.lotes.models import Lote
+from apps.lotes.serializers import LoteSerializer
+from apps.bitacora.utils import registrar_evento
 
 
 class LoteListCreateView(APIView):

@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from apps.permisos.models import Permiso
 from apps.permisos.serializers import PermisoSerializer, RolPermisosReplaceSerializer, RolPermisosSerializer
 from apps.usuarios.models import Rol
-from bitacora.utils import registrar_evento
+from apps.bitacora.utils import registrar_evento
 
 
 class PermisoListCreateView(APIView):

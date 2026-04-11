@@ -6,9 +6,9 @@ from rest_framework.views import APIView
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import Coalesce
 
-from galpones.models import Galpon
-from galpones.serializers import GalponSerializer
-from bitacora.utils import registrar_evento
+from apps.galpones.models import Galpon
+from apps.galpones.serializers import GalponSerializer
+from apps.bitacora.utils import registrar_evento
 
 
 class GalponListCreateView(APIView):

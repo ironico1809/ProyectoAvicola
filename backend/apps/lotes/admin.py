@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from lotes.models import Lote
+from apps.lotes.models import Lote
 
 
 @admin.register(Lote)
