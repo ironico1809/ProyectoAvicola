@@ -1,3 +1,10 @@
+"""Vistas (endpoints) de la app `bitacora`.
+
+Expone endpoints de consulta para auditoría.
+
+Nota: se protege con autenticación (ver `permission_classes`).
+"""
+
 from django.utils.dateparse import parse_datetime
 
 from rest_framework import status
@@ -26,6 +33,11 @@ class BitacoraListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        """Retorna una lista de eventos.
+
+        - Entrada: query params (filtros y limit).
+        - Salida: `200 OK` con array JSON de eventos serializados.
+        """
         qs = BitacoraEvento.objects.all()
 
         usuario_id = request.query_params.get('usuario_id')

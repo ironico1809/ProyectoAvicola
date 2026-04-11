@@ -1,3 +1,12 @@
+"""Rutas (URLs) de la app `usuarios`.
+
+Incluye endpoints de:
+- Usuarios: listado/detalle.
+- Roles: listado/detalle.
+- Asignación roles a usuario.
+- Auth JWT: login/registro/me/logout + refresh/verify.
+"""
+
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 from apps.usuarios.views import (

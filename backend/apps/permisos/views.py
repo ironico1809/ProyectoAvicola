@@ -1,3 +1,15 @@
+"""Vistas (endpoints) de la app `permisos`.
+
+Endpoints:
+- `GET/POST /permisos/` -> listar/crear permisos.
+- `GET/PUT/PATCH/DELETE /permisos/<id>/` -> CRUD sobre un permiso.
+- `GET/PUT/PATCH /permisos/roles/<id_rol>/permisos/` -> ver/modificar permisos de un rol.
+
+Notas:
+- Varias operaciones usan SQL directo sobre tablas puente (`rol_permisos`).
+- Todas requieren autenticación (IsAuthenticated).
+"""
+
 from django.db import connection
 
 from rest_framework import status
@@ -22,10 +34,20 @@ class PermisoListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        """Devuelve lista de permisos.
+
+        Salida: `200 OK` con array de permisos serializados.
+        """
         permisos = Permiso.objects.all().order_by('nombre')
         return Response(PermisoSerializer(permisos, many=True).data, status=status.HTTP_200_OK)
 
     def post(self, request):
+        """Crea un permiso.
+
+        Entrada: JSON validado por `PermisoSerializer`.
+        Salida: `201 Created` con permiso serializado, o `400` con errores.
+        Registra evento en bitácora.
+        """
         serializer = PermisoSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -57,18 +79,21 @@ class PermisoDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def _get_permiso_or_404(self, id_permiso):
+        """Helper: retorna el permiso o None si no existe."""
         try:
             return Permiso.objects.get(pk=id_permiso)
         except Permiso.DoesNotExist:
             return None
 
     def get(self, request, id_permiso):
+        """Devuelve `200` con el permiso o `404` si no existe."""
         permiso = self._get_permiso_or_404(id_permiso)
         if not permiso:
             return Response({'detail': 'Permiso no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
         return Response(PermisoSerializer(permiso).data, status=status.HTTP_200_OK)
 
     def put(self, request, id_permiso):
+        """Actualiza completamente un permiso (PUT)."""
         permiso = self._get_permiso_or_404(id_permiso)
         if not permiso:
             return Response({'detail': 'Permiso no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
@@ -90,6 +115,7 @@ class PermisoDetailView(APIView):
         return Response(PermisoSerializer(permiso).data, status=status.HTTP_200_OK)
 
     def patch(self, request, id_permiso):
+        """Actualiza parcialmente un permiso (PATCH)."""
         permiso = self._get_permiso_or_404(id_permiso)
         if not permiso:
             return Response({'detail': 'Permiso no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
@@ -111,6 +137,10 @@ class PermisoDetailView(APIView):
         return Response(PermisoSerializer(permiso).data, status=status.HTTP_200_OK)
 
     def delete(self, request, id_permiso):
+        """Elimina un permiso.
+
+        Salida: `204 No Content` o `404`.
+        """
         permiso = self._get_permiso_or_404(id_permiso)
         if not permiso:
             return Response({'detail': 'Permiso no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
@@ -141,12 +171,17 @@ class RolPermisosView(APIView):
     permission_classes = [IsAuthenticated]
 
     def _get_rol_or_404(self, id_rol):
+        """Helper: retorna el rol o None si no existe."""
         try:
             return Rol.objects.get(pk=id_rol)
         except Rol.DoesNotExist:
             return None
 
     def get(self, request, id_rol):
+        """Lista permisos actuales del rol.
+
+        Salida (`200`): array con `{id_permiso, nombre, descripcion}`.
+        """
         rol = self._get_rol_or_404(id_rol)
         if not rol:
             return Response({'detail': 'Rol no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
@@ -171,6 +206,11 @@ class RolPermisosView(APIView):
         return Response(data, status=status.HTTP_200_OK)
 
     def put(self, request, id_rol):
+        """Reemplaza TODOS los permisos del rol.
+
+        Entrada: `{"permisos": [1,2,3]}`.
+        Salida: `200 OK` con permisos actuales del rol.
+        """
         rol = self._get_rol_or_404(id_rol)
         if not rol:
             return Response({'detail': 'Rol no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
@@ -214,6 +254,11 @@ class RolPermisosView(APIView):
         return Response(PermisoSerializer(permisos_actuales, many=True).data, status=status.HTTP_200_OK)
 
     def patch(self, request, id_rol):
+        """Agrega y/o quita permisos del rol.
+
+        Entrada: `{"add": [...], "remove": [...]}` (al menos uno).
+        Salida: `200 OK` con permisos actuales del rol.
+        """
         rol = self._get_rol_or_404(id_rol)
         if not rol:
             return Response({'detail': 'Rol no encontrado.'}, status=status.HTTP_404_NOT_FOUND)

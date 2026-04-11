@@ -1,10 +1,24 @@
+"""Serializers de la app `permisos`.
+
+Incluye serializers para:
+- CRUD de `Permiso`.
+- Modificación de permisos asociados a un rol (payloads add/remove o replace).
+"""
+
 from rest_framework import serializers
 
 from apps.permisos.models import Permiso
 
 
 class PermisoSerializer(serializers.ModelSerializer):
-    """Serializer para exponer permisos al frontend."""
+    """Serializa un `Permiso`.
+
+    Entrada:
+    - POST/PUT/PATCH: `nombre`, `descripcion`.
+
+    Salida:
+    - JSON con `id_permiso`, `nombre`, `descripcion`.
+    """
 
     class Meta:
         model = Permiso
@@ -13,7 +27,13 @@ class PermisoSerializer(serializers.ModelSerializer):
 
 
 class RolPermisosSerializer(serializers.Serializer):
-    """Entrada para agregar/quitar permisos a un rol por id_permiso."""
+    """Payload para PATCH de permisos de un rol.
+
+    - `add`: lista de ids a agregar.
+    - `remove`: lista de ids a quitar.
+
+    Devuelve: datos validados para la vista.
+    """
 
     add = serializers.ListField(child=serializers.IntegerField(), required=False, allow_empty=True)
     remove = serializers.ListField(child=serializers.IntegerField(), required=False, allow_empty=True)
@@ -25,6 +45,9 @@ class RolPermisosSerializer(serializers.Serializer):
 
 
 class RolPermisosReplaceSerializer(serializers.Serializer):
-    """Entrada para reemplazar TODOS los permisos de un rol."""
+    """Payload para PUT (reemplazo total) de permisos de un rol.
+
+    - `permisos`: lista de ids_permiso final.
+    """
 
     permisos = serializers.ListField(child=serializers.IntegerField(), required=True, allow_empty=True)

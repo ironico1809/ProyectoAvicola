@@ -1,3 +1,8 @@
-from django.test import TestCase
+"""Tests de la app `galpones`.
 
-# Create your tests here.
+Sugerencias de tests futuros:
+- CRUD de galpones (permisos, validación de serializer).
+- Endpoint `GET /galpones/estado/` (agregaciones correctas y porcentajes).
+"""
+
+from django.test import TestCase

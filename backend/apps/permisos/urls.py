@@ -1,3 +1,5 @@
+"""Rutas (URLs) de la app `permisos`."""
+
 from django.urls import path
 
 from apps.permisos.views import PermisoDetailView, PermisoListCreateView, RolPermisosView

@@ -1,9 +1,22 @@
+"""Utilidades de la app `bitacora`.
+
+Este módulo se importa desde otras apps para registrar eventos sin repetir código.
+
+Regla importante: la bitácora nunca debe tumbar un request.
+Por eso se atrapan excepciones internamente.
+"""
+
 import json
 
 from apps.bitacora.models import BitacoraEvento
 
 
 def _get_client_ip(request):
+    """Extrae la IP del cliente desde el request.
+
+    - Entrada: `request` de Django/DRF (o None).
+    - Salida: string con IP o None.
+    """
     if not request:
         return None
 
@@ -26,8 +39,17 @@ def registrar_evento(
 ):
     """Registra un evento de bitácora.
 
-    - No debe romper el flujo si falla el guardado.
-    - `detalle` puede ser dict/list/str; se serializa a JSON si aplica.
+        - Entrada:
+            - `request`: request actual (para method/path/IP/UA) o None.
+            - `accion`/`modulo`: strings obligatorios para clasificar el evento.
+            - `entidad`/`entidad_id`: opcional, para indicar qué objeto se afectó.
+            - `detalle`: dict/list/str opcional (se serializa a JSON si aplica).
+            - `usuario`: actor explícito (si no se pasa, se intenta usar `request.user`).
+
+        - Salida: None (efecto secundario: crea un registro en DB).
+
+        Garantías:
+        - No debe romper el flujo si falla el guardado (cualquier excepción se ignora).
     """
 
     try:

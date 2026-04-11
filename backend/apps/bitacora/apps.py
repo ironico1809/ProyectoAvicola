@@ -1,3 +1,5 @@
+"""Configuración de Django para la app `bitacora`."""
+
 from django.apps import AppConfig
 
 

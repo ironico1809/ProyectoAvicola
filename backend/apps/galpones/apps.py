@@ -1,3 +1,5 @@
+"""Configuración de Django para la app `galpones`."""
+
 from django.apps import AppConfig
 
 

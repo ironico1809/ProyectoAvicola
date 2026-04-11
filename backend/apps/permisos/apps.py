@@ -1,3 +1,5 @@
+"""Configuración de Django para la app `permisos`."""
+
 from django.apps import AppConfig
 
 

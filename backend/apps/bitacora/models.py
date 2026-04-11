@@ -1,7 +1,26 @@
+"""Modelos de la app `bitacora`.
+
+La bitácora sirve como auditoría: guarda quién hizo qué, cuándo y desde dónde.
+Estos registros se consultan luego desde el endpoint de bitácora o desde el admin.
+"""
+
 from django.db import models
 
 
 class BitacoraEvento(models.Model):
+    """Evento de auditoría.
+
+    Campos principales (resumen):
+    - `usuario` / `nom_usuario`: actor que ejecutó la acción (puede ser NULL).
+    - `accion`: verbo (login, logout, crear, editar, eliminar, asignar_roles, etc.).
+    - `modulo`: área del sistema (usuarios, roles, permisos, galpones, lotes, auth, ...).
+    - `entidad` / `entidad_id`: objeto afectado (ej. "Lote" id 12).
+    - `detalle`: información adicional serializada (JSON o string).
+    - `metodo` / `path` / `ip` / `user_agent`: contexto HTTP del request.
+    - `created_at`: fecha/hora de creación del evento.
+
+    Devuelve (cuando se consulta por ORM): instancias de `BitacoraEvento`.
+    """
     id = models.BigAutoField(primary_key=True)
 
     usuario = models.ForeignKey(
