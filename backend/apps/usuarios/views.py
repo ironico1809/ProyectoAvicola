@@ -58,6 +58,7 @@ def get_tokens_for_user(usuario):
 # Vista para login de usuario. Valida credenciales, retorna tokens y datos del usuario.
 class LoginView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
 
     def post(self, request):
         """Login.
@@ -111,6 +112,7 @@ class LoginView(APIView):
 # Vista para registrar un nuevo usuario
 class RegistroUsuarioView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
 
     def post(self, request):
         """Registro de usuario.

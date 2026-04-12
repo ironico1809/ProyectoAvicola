@@ -25,7 +25,14 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("access_token");
-    if (token) {
+    const url = String(config.url || "");
+    const isAuthEndpoint =
+      url.startsWith("/usuarios/login/") ||
+      url.startsWith("/usuarios/registro/") ||
+      url.startsWith("/usuarios/token/");
+
+    if (token && token !== "null" && token !== "undefined" && !isAuthEndpoint) {
+      config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;

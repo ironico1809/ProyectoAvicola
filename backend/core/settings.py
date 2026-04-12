@@ -50,7 +50,10 @@ if not SECRET_KEY:
     else:
         raise ImproperlyConfigured("SECRET_KEY environment variable is required when DEBUG=False")
 
+
 ALLOWED_HOSTS = _env_list("ALLOWED_HOSTS") if not DEBUG else []
+print("DEBUG:", DEBUG)
+print("ALLOWED_HOSTS:", ALLOWED_HOSTS)
 
 
 # Application definition
