@@ -13,20 +13,44 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 
-load_dotenv()
+# Base directory del proyecto (backend/)
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Carga variables desde backend/.env (si existe)
+load_dotenv(BASE_DIR / '.env')
+
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    val = os.getenv(name)
+    if val is None:
+        return default
+    return str(val).strip().lower() in {"1", "true", "t", "yes", "y", "on"}
+
+
+def _env_list(name: str) -> list[str]:
+    val = os.getenv(name, "")
+    items = [s.strip() for s in val.split(",") if s.strip()]
+    return items
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-48-96z%11#=@m%lk51)5#)f#=%zhb7zo$s3&%#4w6_qtamo3tv'
-
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = _env_bool("DEBUG", default=True)
 
-ALLOWED_HOSTS = []
+# SECURITY WARNING: keep the secret key used in production secret!
+_DEFAULT_DEV_SECRET_KEY = "django-insecure-48-96z%11#=@m%lk51)5#)f#=%zhb7zo$s3&%#4w6_qtamo3tv"
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = _DEFAULT_DEV_SECRET_KEY
+    else:
+        raise ImproperlyConfigured("SECRET_KEY environment variable is required when DEBUG=False")
+
+ALLOWED_HOSTS = _env_list("ALLOWED_HOSTS") if not DEBUG else []
 
 
 # Application definition
@@ -60,6 +84,7 @@ REST_FRAMEWORK = {
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -100,6 +125,13 @@ DATABASES = {
         'PASSWORD': os.getenv('DB_PASSWORD'),
         'HOST': os.getenv('DB_HOST'),
         'PORT': os.getenv('DB_PORT'),
+        'OPTIONS': {
+            **(
+                {'sslmode': os.getenv('DB_SSLMODE')}
+                if os.getenv('DB_SSLMODE')
+                else {}
+            )
+        },
     }
 }
 
@@ -139,19 +171,30 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-#configuración de CORS para permitir solicitudes desde el frontend
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS
+if _env_bool("CORS_ALLOW_ALL_ORIGINS", default=DEBUG):
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    CORS_ALLOW_ALL_ORIGINS = False
+    CORS_ALLOWED_ORIGINS = (
+        _env_list("CORS_ALLOWED_ORIGINS")
+        or ["http://localhost:5173", "http://127.0.0.1:5173"]
+    )
 
-# CORS - permite peticiones desde React
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
+# CSRF (útil si usas admin o cookies)
+CSRF_TRUSTED_ORIGINS = _env_list("CSRF_TRUSTED_ORIGINS")
 
 # JWT
 from datetime import timedelta
