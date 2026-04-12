@@ -1,7 +1,18 @@
 import axios from "axios";
 
-const rawBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
-const baseURL = String(rawBaseUrl).replace(/\/+$/, "");
+const rawBaseUrl = import.meta.env.VITE_API_URL;
+const isDev = import.meta.env.DEV;
+
+if (!rawBaseUrl && !isDev) {
+  throw new Error(
+    "Missing VITE_API_URL. Set it in your hosting provider (e.g., Vercel) so the frontend can reach the backend.",
+  );
+}
+
+const baseURL = String(rawBaseUrl || "http://localhost:8000").replace(
+  /\/+$/,
+  "",
+);
 
 const api = axios.create({
   baseURL,
@@ -33,8 +44,8 @@ api.interceptors.response.use(
       localStorage.removeItem("access_token"); // Borra el token culpable
 
       // Opcional: Redirigir al usuario al login automáticamente
-      if (window.location.pathname !== "/login") {
-        window.location.href = "/login";
+      if (window.location.pathname !== "/") {
+        window.location.href = "/";
       }
     }
     return Promise.reject(error);
