@@ -60,6 +60,7 @@ class PermisoListCreateView(APIView):
             modulo='permisos',
             entidad='Permiso',
             entidad_id=permiso.id_permiso,
+            entidad_nombre=permiso.nombre,
             detalle={'nombre': permiso.nombre},
             usuario=request.user,
         )
@@ -110,6 +111,7 @@ class PermisoDetailView(APIView):
             modulo='permisos',
             entidad='Permiso',
             entidad_id=permiso.id_permiso,
+            entidad_nombre=permiso.nombre,
             usuario=request.user,
         )
         return Response(PermisoSerializer(permiso).data, status=status.HTTP_200_OK)
@@ -132,6 +134,7 @@ class PermisoDetailView(APIView):
             modulo='permisos',
             entidad='Permiso',
             entidad_id=permiso.id_permiso,
+            entidad_nombre=permiso.nombre,
             usuario=request.user,
         )
         return Response(PermisoSerializer(permiso).data, status=status.HTTP_200_OK)
@@ -151,6 +154,7 @@ class PermisoDetailView(APIView):
             modulo='permisos',
             entidad='Permiso',
             entidad_id=permiso.id_permiso,
+            entidad_nombre=permiso.nombre,
             detalle={'nombre': permiso.nombre},
             usuario=request.user,
         )
@@ -245,6 +249,7 @@ class RolPermisosView(APIView):
             modulo='roles',
             entidad='Rol',
             entidad_id=rol.id_rol,
+            entidad_nombre=rol.nombre,
             detalle={'modo': 'replace', 'permisos': ids},
             usuario=request.user,
         )
@@ -299,6 +304,7 @@ class RolPermisosView(APIView):
             modulo='roles',
             entidad='Rol',
             entidad_id=rol.id_rol,
+            entidad_nombre=rol.nombre,
             detalle={'modo': 'patch', 'add': add_ids, 'remove': remove_ids},
             usuario=request.user,
         )

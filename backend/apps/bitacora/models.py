@@ -1,26 +1,36 @@
 """Modelos de la app `bitacora`.
 
-La bitácora sirve como auditoría: guarda quién hizo qué, cuándo y desde dónde.
-Estos registros se consultan luego desde el endpoint de bitácora o desde el admin.
+El usuario pidió que la bitácora tenga exactamente este esquema (equivalente SQL):
+
+        CREATE TABLE bitacora (
+                id BIGSERIAL PRIMARY KEY,
+                usuario_id BIGINT REFERENCES usuarios(id),
+                accion VARCHAR(255) NOT NULL,
+                descripcion TEXT,
+                fecha_hora TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+Notas:
+- En Django, `BIGSERIAL` se representa como `BigAutoField`.
+- `DEFAULT CURRENT_TIMESTAMP` se representa con `auto_now_add=True`.
+- En el modelo mantenemos el nombre de clase histórico `BitacoraEvento` para no romper
+    imports internos del proyecto, pero la tabla en DB pasa a ser `bitacora`.
 """
 
 from django.db import models
 
 
 class BitacoraEvento(models.Model):
-    """Evento de auditoría.
+    """Registro de bitácora.
 
-    Campos principales (resumen):
-    - `usuario` / `nom_usuario`: actor que ejecutó la acción (puede ser NULL).
-    - `accion`: verbo (login, logout, crear, editar, eliminar, asignar_roles, etc.).
-    - `modulo`: área del sistema (usuarios, roles, permisos, galpones, lotes, auth, ...).
-    - `entidad` / `entidad_id`: objeto afectado (ej. "Lote" id 12).
-    - `detalle`: información adicional serializada (JSON o string).
-    - `metodo` / `path` / `ip` / `user_agent`: contexto HTTP del request.
-    - `created_at`: fecha/hora de creación del evento.
-
-    Devuelve (cuando se consulta por ORM): instancias de `BitacoraEvento`.
+    Se ajusta para reflejar el esquema solicitado:
+    - `id`: BIGSERIAL PK
+    - `usuario`: FK opcional a `usuarios.Usuario` (columna `usuario_id`)
+    - `accion`: string
+    - `descripcion`: texto opcional
+    - `fecha_hora`: timestamp de creación
     """
+
     id = models.BigAutoField(primary_key=True)
 
     usuario = models.ForeignKey(
@@ -29,29 +39,16 @@ class BitacoraEvento(models.Model):
         null=True,
         blank=True,
         related_name='eventos_bitacora',
-        db_constraint=False,
+        db_column='usuario_id',
     )
-    nom_usuario = models.CharField(max_length=50, blank=True, null=True)
 
-    accion = models.CharField(max_length=50)  # login, logout, crear, editar, eliminar, asignar, quitar, etc.
-    modulo = models.CharField(max_length=50)  # usuarios, roles, permisos, galpones, lotes, auth
-
-    entidad = models.CharField(max_length=50, blank=True, null=True)  # Usuario, Rol, Permiso, Galpon, Lote
-    entidad_id = models.CharField(max_length=64, blank=True, null=True)
-
-    detalle = models.TextField(blank=True, null=True)
-
-    metodo = models.CharField(max_length=10, blank=True, null=True)
-    path = models.TextField(blank=True, null=True)
-
-    ip = models.GenericIPAddressField(blank=True, null=True)
-    user_agent = models.TextField(blank=True, null=True)
-
-    created_at = models.DateTimeField(auto_now_add=True)
+    accion = models.CharField(max_length=255)
+    descripcion = models.TextField(blank=True, null=True)
+    fecha_hora = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'bitacora_eventos'
-        ordering = ['-created_at', '-id']
+        db_table = 'bitacora'
+        ordering = ['-fecha_hora', '-id']
 
     def __str__(self):
-        return f"{self.created_at} {self.modulo}:{self.accion} ({self.nom_usuario})"
+        return f"{self.fecha_hora} {self.accion} (usuario_id={self.usuario_id})"

@@ -94,6 +94,7 @@ class LoginView(APIView):
             modulo='auth',
             entidad='Usuario',
             entidad_id=usuario.id,
+            entidad_nombre=getattr(usuario, 'nom_usuario', None),
             usuario=usuario,
         )
         # Retorna tokens y datos serializados del usuario
@@ -129,6 +130,7 @@ class RegistroUsuarioView(APIView):
                 modulo='usuarios',
                 entidad='Usuario',
                 entidad_id=usuario.id,
+                entidad_nombre=getattr(usuario, 'nom_usuario', None),
                 detalle={'nom_usuario': usuario.nom_usuario},
                 usuario=getattr(request, 'user', None) if getattr(getattr(request, 'user', None), 'is_authenticated', False) else None,
             )
@@ -171,6 +173,7 @@ class UsuarioMeView(APIView):
                 modulo='usuarios',
                 entidad='Usuario',
                 entidad_id=usuario.id,
+                entidad_nombre=getattr(usuario, 'nom_usuario', None),
                 usuario=request.user,
             )
             return Response(UsuarioSerializer(usuario).data, status=status.HTTP_200_OK)
@@ -252,6 +255,7 @@ class UsuarioDetailView(APIView):
                 modulo='usuarios',
                 entidad='Usuario',
                 entidad_id=usuario_actualizado.id,
+                entidad_nombre=getattr(usuario_actualizado, 'nom_usuario', None),
                 usuario=request.user,
             )
             return Response(UsuarioSerializer(usuario_actualizado).data, status=status.HTTP_200_OK)
@@ -272,6 +276,7 @@ class UsuarioDetailView(APIView):
             modulo='usuarios',
             entidad='Usuario',
             entidad_id=usuario.id,
+            entidad_nombre=getattr(usuario, 'nom_usuario', None),
             detalle={'nom_usuario': usuario.nom_usuario},
             usuario=request.user,
         )
@@ -299,6 +304,7 @@ class RolListCreateView(APIView):
                 modulo='roles',
                 entidad='Rol',
                 entidad_id=rol.id_rol,
+                entidad_nombre=getattr(rol, 'nombre', None),
                 detalle={'nombre': rol.nombre},
                 usuario=request.user,
             )
@@ -339,6 +345,7 @@ class RolDetailView(APIView):
                 modulo='roles',
                 entidad='Rol',
                 entidad_id=rol.id_rol,
+                entidad_nombre=getattr(rol, 'nombre', None),
                 usuario=request.user,
             )
             return Response(RolSerializer(rol).data, status=status.HTTP_200_OK)
@@ -356,6 +363,7 @@ class RolDetailView(APIView):
             modulo='roles',
             entidad='Rol',
             entidad_id=rol.id_rol,
+            entidad_nombre=getattr(rol, 'nombre', None),
             detalle={'nombre': rol.nombre},
             usuario=request.user,
         )
@@ -431,6 +439,7 @@ class UsuarioRolesView(APIView):
             modulo='usuarios',
             entidad='Usuario',
             entidad_id=usuario.id,
+            entidad_nombre=getattr(usuario, 'nom_usuario', None),
             detalle={'modo': 'replace', 'roles': ids},
             usuario=request.user,
         )
@@ -489,6 +498,7 @@ class UsuarioRolesView(APIView):
             modulo='usuarios',
             entidad='Usuario',
             entidad_id=usuario.id,
+            entidad_nombre=getattr(usuario, 'nom_usuario', None),
             detalle={'modo': 'patch', 'add': add_ids, 'remove': remove_ids},
             usuario=request.user,
         )

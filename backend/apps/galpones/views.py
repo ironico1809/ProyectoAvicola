@@ -55,6 +55,7 @@ class GalponListCreateView(APIView):
 			modulo='galpones',
 			entidad='Galpon',
 			entidad_id=galpon.id,
+			entidad_nombre=galpon.nombre,
 			detalle={'nombre': galpon.nombre},
 			usuario=request.user,
 		)
@@ -100,6 +101,7 @@ class GalponDetailView(APIView):
 			modulo='galpones',
 			entidad='Galpon',
 			entidad_id=galpon.id,
+			entidad_nombre=galpon.nombre,
 			usuario=request.user,
 		)
 		return Response(GalponSerializer(galpon).data, status=status.HTTP_200_OK)
@@ -121,6 +123,7 @@ class GalponDetailView(APIView):
 			modulo='galpones',
 			entidad='Galpon',
 			entidad_id=galpon.id,
+			entidad_nombre=galpon.nombre,
 			usuario=request.user,
 		)
 		return Response(GalponSerializer(galpon).data, status=status.HTTP_200_OK)
@@ -140,6 +143,7 @@ class GalponDetailView(APIView):
 			modulo='galpones',
 			entidad='Galpon',
 			entidad_id=galpon.id,
+			entidad_nombre=galpon.nombre,
 			detalle={'nombre': galpon.nombre},
 			usuario=request.user,
 		)

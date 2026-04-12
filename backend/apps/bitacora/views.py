@@ -1,8 +1,6 @@
 """Vistas (endpoints) de la app `bitacora`.
 
-Expone endpoints de consulta para auditoría.
-
-Nota: se protege con autenticación (ver `permission_classes`).
+Expone el endpoint de consulta alineado al esquema solicitado.
 """
 
 from django.utils.dateparse import parse_datetime
@@ -21,13 +19,12 @@ class BitacoraListView(APIView):
     Endpoint:
       - GET /bitacora/
 
-    Filtros opcionales:
-      - ?usuario_id=
-      - ?modulo=
-      - ?accion=
-      - ?desde= (ISO datetime)
-      - ?hasta= (ISO datetime)
-      - ?limit= (default 200, max 1000)
+        Filtros opcionales:
+            - ?usuario_id=
+            - ?accion=
+            - ?desde= (ISO datetime, filtra por `fecha_hora`)
+            - ?hasta= (ISO datetime, filtra por `fecha_hora`)
+            - ?limit= (default 200, max 1000)
     """
 
     permission_classes = [IsAuthenticated]
@@ -44,10 +41,6 @@ class BitacoraListView(APIView):
         if usuario_id:
             qs = qs.filter(usuario_id=usuario_id)
 
-        modulo = request.query_params.get('modulo')
-        if modulo:
-            qs = qs.filter(modulo=modulo)
-
         accion = request.query_params.get('accion')
         if accion:
             qs = qs.filter(accion=accion)
@@ -56,13 +49,13 @@ class BitacoraListView(APIView):
         if desde:
             dt = parse_datetime(desde)
             if dt:
-                qs = qs.filter(created_at__gte=dt)
+                qs = qs.filter(fecha_hora__gte=dt)
 
         hasta = request.query_params.get('hasta')
         if hasta:
             dt = parse_datetime(hasta)
             if dt:
-                qs = qs.filter(created_at__lte=dt)
+                qs = qs.filter(fecha_hora__lte=dt)
 
         try:
             limit = int(request.query_params.get('limit', 200))

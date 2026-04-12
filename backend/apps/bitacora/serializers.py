@@ -1,7 +1,11 @@
 """Serializers de la app `bitacora`.
 
-Los serializers convierten instancias del modelo a JSON (respuesta) y validan datos
-de entrada si se agregaran endpoints de escritura.
+La respuesta del endpoint de bitácora se alinea al esquema solicitado:
+- `id`
+- `usuario_id`
+- `accion`
+- `descripcion`
+- `fecha_hora`
 """
 
 from rest_framework import serializers
@@ -10,25 +14,22 @@ from apps.bitacora.models import BitacoraEvento
 
 
 class BitacoraEventoSerializer(serializers.ModelSerializer):
-    """Serializa un `BitacoraEvento`.
+    """Serializa un `BitacoraEvento` con el shape esperado por el frontend."""
 
-    - Entrada: instancia de `BitacoraEvento` (o queryset con `many=True`).
-    - Salida: dict/JSON con campos del evento (id, timestamps, actor, acción, contexto, etc.).
-    """
+    usuario_id = serializers.IntegerField(read_only=True)
+    usuario_nombre = serializers.SerializerMethodField()
+
+    def get_usuario_nombre(self, obj):
+        usuario = getattr(obj, 'usuario', None)
+        return getattr(usuario, 'nom_usuario', None) if usuario else None
+
     class Meta:
         model = BitacoraEvento
         fields = [
             'id',
-            'created_at',
-            'usuario',
-            'nom_usuario',
+            'usuario_id',
+            'usuario_nombre',
             'accion',
-            'modulo',
-            'entidad',
-            'entidad_id',
-            'detalle',
-            'metodo',
-            'path',
-            'ip',
-            'user_agent',
+            'descripcion',
+            'fecha_hora',
         ]

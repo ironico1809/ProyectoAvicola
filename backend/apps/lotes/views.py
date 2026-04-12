@@ -56,12 +56,21 @@ class LoteListCreateView(APIView):
 			return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 		lote = serializer.save()
+		galpon_nombre = None
+		try:
+			galpon_nombre = getattr(getattr(lote, 'galpon', None), 'nombre', None)
+		except Exception:
+			galpon_nombre = None
+		entidad_nombre = (
+			f"Lote {lote.id_lote} - Galpón {galpon_nombre}" if galpon_nombre else f"Lote {lote.id_lote}"
+		)
 		registrar_evento(
 			request,
 			accion='crear',
 			modulo='lotes',
 			entidad='Lote',
 			entidad_id=lote.id_lote,
+			entidad_nombre=entidad_nombre,
 			detalle={'id_galpon': lote.galpon_id, 'cantidad_inicial': lote.cantidad_inicial},
 			usuario=request.user,
 		)
@@ -97,12 +106,21 @@ class LoteDetailView(APIView):
 			return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 		lote = serializer.save()
+		galpon_nombre = None
+		try:
+			galpon_nombre = getattr(getattr(lote, 'galpon', None), 'nombre', None)
+		except Exception:
+			galpon_nombre = None
+		entidad_nombre = (
+			f"Lote {lote.id_lote} - Galpón {galpon_nombre}" if galpon_nombre else f"Lote {lote.id_lote}"
+		)
 		registrar_evento(
 			request,
 			accion='editar',
 			modulo='lotes',
 			entidad='Lote',
 			entidad_id=lote.id_lote,
+			entidad_nombre=entidad_nombre,
 			usuario=request.user,
 		)
 		return Response(LoteSerializer(lote).data, status=status.HTTP_200_OK)
@@ -118,12 +136,21 @@ class LoteDetailView(APIView):
 			return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 		lote = serializer.save()
+		galpon_nombre = None
+		try:
+			galpon_nombre = getattr(getattr(lote, 'galpon', None), 'nombre', None)
+		except Exception:
+			galpon_nombre = None
+		entidad_nombre = (
+			f"Lote {lote.id_lote} - Galpón {galpon_nombre}" if galpon_nombre else f"Lote {lote.id_lote}"
+		)
 		registrar_evento(
 			request,
 			accion='editar',
 			modulo='lotes',
 			entidad='Lote',
 			entidad_id=lote.id_lote,
+			entidad_nombre=entidad_nombre,
 			usuario=request.user,
 		)
 		return Response(LoteSerializer(lote).data, status=status.HTTP_200_OK)
@@ -137,12 +164,21 @@ class LoteDetailView(APIView):
 		if not lote:
 			return Response({'detail': 'Lote no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
+		galpon_nombre = None
+		try:
+			galpon_nombre = getattr(getattr(lote, 'galpon', None), 'nombre', None)
+		except Exception:
+			galpon_nombre = None
+		entidad_nombre = (
+			f"Lote {lote.id_lote} - Galpón {galpon_nombre}" if galpon_nombre else f"Lote {lote.id_lote}"
+		)
 		registrar_evento(
 			request,
 			accion='eliminar',
 			modulo='lotes',
 			entidad='Lote',
 			entidad_id=lote.id_lote,
+			entidad_nombre=entidad_nombre,
 			detalle={'id_galpon': lote.galpon_id},
 			usuario=request.user,
 		)
