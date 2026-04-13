@@ -21,11 +21,26 @@ function toNumber(value) {
 }
 
 function isActivo(estado) {
-  return String(estado || "").toLowerCase() === "activo";
+  return (
+    String(estado || "")
+      .toLowerCase()
+      .trim() === "activo"
+  );
 }
+
+const RAZA_TIPO_PRESETS = [
+  "Broiler",
+  "Cobb 500",
+  "Ross 308",
+  "Hubbard",
+  "Criollo",
+];
 
 function Lotes() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [viewportWidth, setViewportWidth] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth : 1200,
+  );
   const [galpones, setGalpones] = useState([]);
   const [lotes, setLotes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,11 +58,19 @@ function Lotes() {
   const [formError, setFormError] = useState("");
   const [success, setSuccess] = useState("");
 
+  // Selector de galpón escribible (typeahead)
+  const [galponQuery, setGalponQuery] = useState("");
+  const [galponDropdownOpen, setGalponDropdownOpen] = useState(false);
+
   const [form, setForm] = useState({
     id_galpon: "",
+    raza_tipo: "",
+    raza_tipo_custom: "",
     cantidad_inicial: "",
     cantidad_actual: "",
+    peso_inicial: "",
     fecha_ingreso: "",
+    fecha_salida_estimada: "",
     estado: "Crianza",
   });
 
@@ -55,6 +78,14 @@ function Lotes() {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const onResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  const isNarrow = viewportWidth < 900;
 
   const fetchData = async () => {
     setLoading(true);
@@ -141,7 +172,26 @@ function Lotes() {
   }, [selectedGalpon, avesPorGalpon, showEditModal, loteSeleccionado]);
 
   const handleChange = (e) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setForm((prev) => {
+      if (name === "raza_tipo") {
+        return {
+          ...prev,
+          raza_tipo: value,
+          raza_tipo_custom: value === "__otro__" ? prev.raza_tipo_custom : "",
+        };
+      }
+
+      if (name === "raza_tipo_custom") {
+        return {
+          ...prev,
+          raza_tipo: "__otro__",
+          raza_tipo_custom: value,
+        };
+      }
+
+      return { ...prev, [name]: value };
+    });
     setFormError("");
     setSuccess("");
   };
@@ -149,11 +199,17 @@ function Lotes() {
   const resetForm = () => {
     setForm({
       id_galpon: "",
+      raza_tipo: "",
+      raza_tipo_custom: "",
       cantidad_inicial: "",
       cantidad_actual: "",
+      peso_inicial: "",
       fecha_ingreso: "",
+      fecha_salida_estimada: "",
       estado: "Crianza",
     });
+    setGalponQuery("");
+    setGalponDropdownOpen(false);
     setFormError("");
     setSuccess("");
   };
@@ -184,10 +240,20 @@ function Lotes() {
     setSuccess("");
 
     const id_galpon = toNumber(form.id_galpon);
+    const raza_tipo =
+      form.raza_tipo === "__otro__"
+        ? String(form.raza_tipo_custom || "").trim() || null
+        : String(form.raza_tipo || "").trim() || null;
     const cantidad_inicial = toNumber(form.cantidad_inicial);
     const cantidad_actual = cantidad_inicial;
+    const peso_inicial = toNumber(form.peso_inicial);
     const fecha_ingreso = form.fecha_ingreso;
+    const fecha_salida_estimada = form.fecha_salida_estimada || null;
     const estado = form.estado;
+
+    if (peso_inicial !== null && peso_inicial < 0) {
+      return setFormError("El peso inicial no puede ser negativo.");
+    }
 
     const msg = validateCommon({
       id_galpon,
@@ -209,9 +275,12 @@ function Lotes() {
     try {
       await api.post("/lotes/", {
         id_galpon,
+        raza_tipo,
         cantidad_inicial,
         cantidad_actual,
+        peso_inicial,
         fecha_ingreso,
+        fecha_salida_estimada,
         estado,
       });
 
@@ -232,13 +301,30 @@ function Lotes() {
 
   const handleEditarClick = (l) => {
     setLoteSeleccionado(l);
+    const gid = toNumber(l?.id_galpon);
+    const nombre =
+      gid !== null ? galponNombrePorId.get(gid) || `Galpón ${gid}` : "";
     setForm({
       id_galpon: String(l?.id_galpon ?? ""),
+      raza_tipo: (() => {
+        const r = String(l?.raza_tipo ?? "").trim();
+        if (!r) return "";
+        return RAZA_TIPO_PRESETS.includes(r) ? r : "__otro__";
+      })(),
+      raza_tipo_custom: (() => {
+        const r = String(l?.raza_tipo ?? "").trim();
+        if (!r) return "";
+        return RAZA_TIPO_PRESETS.includes(r) ? "" : r;
+      })(),
       cantidad_inicial: String(l?.cantidad_inicial ?? ""),
       cantidad_actual: String(l?.cantidad_actual ?? ""),
+      peso_inicial: String(l?.peso_inicial ?? ""),
       fecha_ingreso: String(l?.fecha_ingreso ?? ""),
+      fecha_salida_estimada: String(l?.fecha_salida_estimada ?? ""),
       estado: String(l?.estado ?? "Crianza"),
     });
+    setGalponQuery(nombre);
+    setGalponDropdownOpen(false);
     setFormError("");
     setSuccess("");
     setShowEditModal(true);
@@ -253,10 +339,20 @@ function Lotes() {
     if (!id_lote) return setFormError("No se encontró el lote a editar.");
 
     const id_galpon = toNumber(form.id_galpon);
+    const raza_tipo =
+      form.raza_tipo === "__otro__"
+        ? String(form.raza_tipo_custom || "").trim() || null
+        : String(form.raza_tipo || "").trim() || null;
     const cantidad_inicial = toNumber(form.cantidad_inicial);
     const cantidad_actual = toNumber(form.cantidad_actual);
+    const peso_inicial = toNumber(form.peso_inicial);
     const fecha_ingreso = form.fecha_ingreso;
+    const fecha_salida_estimada = form.fecha_salida_estimada || null;
     const estado = form.estado;
+
+    if (peso_inicial !== null && peso_inicial < 0) {
+      return setFormError("El peso inicial no puede ser negativo.");
+    }
 
     const msg = validateCommon({
       id_galpon,
@@ -278,9 +374,12 @@ function Lotes() {
     try {
       await api.patch(`/lotes/${id_lote}/`, {
         id_galpon,
+        raza_tipo,
         cantidad_inicial,
         cantidad_actual,
+        peso_inicial,
         fecha_ingreso,
+        fecha_salida_estimada,
         estado,
       });
 
@@ -374,10 +473,16 @@ function Lotes() {
         String(l._galponNombre ?? "")
           .toLowerCase()
           .includes(term) ||
+        String(l.raza_tipo ?? "")
+          .toLowerCase()
+          .includes(term) ||
         String(l.estado ?? "")
           .toLowerCase()
           .includes(term) ||
         String(l.fecha_ingreso ?? "")
+          .toLowerCase()
+          .includes(term) ||
+        String(l.fecha_salida_estimada ?? "")
           .toLowerCase()
           .includes(term);
 
@@ -400,8 +505,14 @@ function Lotes() {
         const disp = Math.max(0, cap - usado);
         return { ...g, _disp: disp, _cap: cap };
       })
-      .filter((g) => (toNumber(g?._disp) ?? 0) > 0);
+      .sort((a, b) =>
+        String(a?.nombre || "").localeCompare(String(b?.nombre || "")),
+      );
   }, [galponesActivos, avesPorGalpon]);
+
+  const hayGalponConCupo = useMemo(() => {
+    return galponesDisponibles.some((g) => (toNumber(g?._disp) ?? 0) > 0);
+  }, [galponesDisponibles]);
 
   const galponesParaEditar = useMemo(() => {
     const loteGalpon = toNumber(loteSeleccionado?.id_galpon);
@@ -420,30 +531,124 @@ function Lotes() {
     });
   }, [galponesActivos, avesPorGalpon, loteSeleccionado]);
 
+  const galponOptions = showEditModal
+    ? galponesParaEditar
+    : galponesDisponibles;
+
+  const galponOptionsFiltrados = useMemo(() => {
+    const q = String(galponQuery || "")
+      .toLowerCase()
+      .trim();
+    if (!q) return galponOptions;
+    return galponOptions.filter((g) => {
+      const id = String(g?.id ?? "").toLowerCase();
+      const nombre = String(g?.nombre ?? "").toLowerCase();
+      return id.includes(q) || nombre.includes(q);
+    });
+  }, [galponOptions, galponQuery]);
+
+  const handleGalponQueryChange = (e) => {
+    const value = e.target.value;
+    setGalponQuery(value);
+    setForm((prev) => ({ ...prev, id_galpon: "" }));
+    setFormError("");
+    setSuccess("");
+    setGalponDropdownOpen(true);
+  };
+
+  const handleSelectGalpon = (g) => {
+    setForm((prev) => ({ ...prev, id_galpon: String(g?.id ?? "") }));
+    setGalponQuery(String(g?.nombre ?? ""));
+    setGalponDropdownOpen(false);
+    setFormError("");
+    setSuccess("");
+  };
+
   const formFields = (
     <form
       onSubmit={showEditModal ? handleEditar : handleCrear}
       style={{ display: "flex", flexDirection: "column", gap: "14px" }}
     >
+      <div style={comboWrapperStyle}>
+        <input
+          type="text"
+          value={galponQuery}
+          placeholder="Selecciona un galpón (escribe para buscar)"
+          onChange={handleGalponQueryChange}
+          onFocus={() => setGalponDropdownOpen(true)}
+          onBlur={() => {
+            window.setTimeout(() => setGalponDropdownOpen(false), 120);
+          }}
+          style={comboInputStyle}
+        />
+        <ChevronDown size={18} color="#9ca3af" />
+
+        {galponDropdownOpen && (
+          <div style={comboDropdownStyle}>
+            {galponOptionsFiltrados.length === 0 ? (
+              <div style={comboEmptyStyle}>No hay galpones que coincidan.</div>
+            ) : (
+              galponOptionsFiltrados.map((g) => {
+                const disabled = (toNumber(g?._disp) ?? 0) <= 0;
+                return (
+                  <button
+                    key={g.id}
+                    type="button"
+                    style={comboOptionStyle(disabled)}
+                    disabled={disabled}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      if (!disabled) handleSelectGalpon(g);
+                    }}
+                    title={
+                      disabled
+                        ? "Sin capacidad disponible"
+                        : "Seleccionar galpón"
+                    }
+                  >
+                    <span style={comboOptionTitleStyle}>
+                      {g.nombre} (#{g.id})
+                    </span>
+                    <span style={comboOptionMetaStyle}>
+                      Disp: {g._disp} / {g._cap}
+                    </span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        )}
+      </div>
+
       <div style={selectGroupStyle}>
         <select
-          name="id_galpon"
+          name="raza_tipo"
           onChange={handleChange}
-          value={form.id_galpon}
+          value={form.raza_tipo}
           style={selectStyle}
-          required
+          required={false}
         >
-          <option value="">Selecciona un galpón</option>
-          {(showEditModal ? galponesParaEditar : galponesDisponibles).map(
-            (g) => (
-              <option key={g.id} value={g.id}>
-                {g.nombre} — Disp: {g._disp} / {g._cap}
-              </option>
-            ),
-          )}
+          <option value="">Raza / tipo (opcional)</option>
+          {RAZA_TIPO_PRESETS.map((r) => (
+            <option key={r} value={r}>
+              {r}
+            </option>
+          ))}
+          <option value="__otro__">Otro (escribir)</option>
         </select>
         <ChevronDown size={18} color="#9ca3af" />
       </div>
+
+      {form.raza_tipo === "__otro__" && (
+        <InputField
+          name="raza_tipo_custom"
+          type="text"
+          placeholder="Escribe la raza/tipo"
+          onChange={handleChange}
+          value={form.raza_tipo_custom}
+          required={false}
+        />
+      )}
 
       <InputField
         name="cantidad_inicial"
@@ -466,11 +671,31 @@ function Lotes() {
       )}
 
       <InputField
+        name="peso_inicial"
+        type="number"
+        placeholder="Peso inicial (opcional)"
+        onChange={handleChange}
+        value={form.peso_inicial}
+        required={false}
+        min={0}
+        step={0.01}
+      />
+
+      <InputField
         name="fecha_ingreso"
         type="date"
         placeholder="Fecha de inicio"
         onChange={handleChange}
         value={form.fecha_ingreso}
+      />
+
+      <InputField
+        name="fecha_salida_estimada"
+        type="date"
+        placeholder="Fecha de salida estimada (opcional)"
+        onChange={handleChange}
+        value={form.fecha_salida_estimada}
+        required={false}
       />
 
       <div style={selectGroupStyle}>
@@ -529,10 +754,16 @@ function Lotes() {
       <main
         style={{
           ...mainContentStyle,
-          marginLeft: sidebarOpen ? "240px" : "70px",
+          marginLeft: isNarrow ? "0px" : sidebarOpen ? "240px" : "70px",
         }}
       >
-        <div style={headerStyle}>
+        <div
+          style={{
+            ...headerStyle,
+            flexDirection: isNarrow ? "column" : "row",
+            alignItems: isNarrow ? "stretch" : "center",
+          }}
+        >
           <div>
             <h1 style={titleStyle}>Lotes</h1>
             <p style={subtitleStyle}>
@@ -546,14 +777,24 @@ function Lotes() {
               setLoteSeleccionado(null);
               setShowModal(true);
             }}
-            style={btnAgregarStyle}
+            style={{
+              ...btnAgregarStyle,
+              width: isNarrow ? "100%" : "auto",
+              justifyContent: "center",
+            }}
           >
             <Plus size={18} style={{ marginRight: "8px" }} /> Registrar Lote
           </button>
         </div>
 
         <div style={containerStyle}>
-          <div style={filtersRowStyle}>
+          <div
+            style={{
+              ...filtersRowStyle,
+              flexDirection: isNarrow ? "column" : "row",
+              alignItems: isNarrow ? "stretch" : "center",
+            }}
+          >
             <div style={searchWrapperStyle}>
               <Search size={18} color="#9ca3af" />
               <input
@@ -605,10 +846,14 @@ function Lotes() {
               <thead>
                 <tr style={theadRowStyle}>
                   <th style={thStyle}>Lote</th>
+                  <th style={thStyle}>ID Galpón</th>
                   <th style={thStyle}>Galpón</th>
+                  <th style={thStyle}>Raza / Tipo</th>
+                  <th style={thStyle}>Ingreso</th>
+                  <th style={thStyle}>Salida Est.</th>
                   <th style={thStyle}>Cant. Inicial</th>
                   <th style={thStyle}>Cant. Actual</th>
-                  <th style={thStyle}>Inicio</th>
+                  <th style={thStyle}>Peso Inicial</th>
                   <th style={thStyle}>Estado</th>
                   <th style={thStyle}>Acciones</th>
                 </tr>
@@ -616,13 +861,13 @@ function Lotes() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={7} style={emptyTdStyle}>
+                    <td colSpan={11} style={emptyTdStyle}>
                       Cargando...
                     </td>
                   </tr>
                 ) : lotesFiltrados.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={emptyTdStyle}>
+                    <td colSpan={11} style={emptyTdStyle}>
                       No hay lotes que coincidan con el filtro.
                     </td>
                   </tr>
@@ -632,14 +877,24 @@ function Lotes() {
                       <td style={tdStyle}>
                         <strong>#{l.id_lote}</strong>
                       </td>
+                      <td style={tdStyle}>{String(l.id_galpon ?? "-")}</td>
                       <td style={tdGrayStyle}>{l._galponNombre}</td>
+                      <td style={tdStyle}>{String(l.raza_tipo || "-")}</td>
+                      <td style={tdStyle}>{String(l.fecha_ingreso || "-")}</td>
+                      <td style={tdStyle}>
+                        {String(l.fecha_salida_estimada || "-")}
+                      </td>
                       <td style={tdStyle}>
                         {toNumber(l.cantidad_inicial) ?? 0}
                       </td>
                       <td style={tdStyle}>
                         {toNumber(l.cantidad_actual) ?? 0}
                       </td>
-                      <td style={tdStyle}>{String(l.fecha_ingreso || "-")}</td>
+                      <td style={tdStyle}>
+                        {l.peso_inicial === null || l.peso_inicial === undefined
+                          ? "-"
+                          : String(l.peso_inicial)}
+                      </td>
                       <td style={tdStyle}>
                         <span style={estadoBadgeStyle(l.estado)}>
                           {String(l.estado || "-")}
@@ -692,7 +947,7 @@ function Lotes() {
 
       {showModal && (
         <Modal titulo="Registrar Lote" onClose={() => setShowModal(false)}>
-          {galponesDisponibles.length === 0 && !loading ? (
+          {!hayGalponConCupo && !loading ? (
             <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>
               No hay galpones activos con capacidad disponible.
             </p>
@@ -769,7 +1024,7 @@ const layoutStyle = {
 
 const mainContentStyle = {
   flex: 1,
-  padding: "32px",
+  padding: "clamp(16px, 3vw, 32px)",
   transition: "margin-left 0.3s",
   width: "100%",
 };
@@ -779,6 +1034,8 @@ const headerStyle = {
   justifyContent: "space-between",
   alignItems: "center",
   marginBottom: "20px",
+  gap: "12px",
+  flexWrap: "wrap",
 };
 
 const titleStyle = {
@@ -828,7 +1085,7 @@ const searchWrapperStyle = {
   background: "#f9fafb",
   padding: "10px 16px",
   borderRadius: "12px",
-  width: "380px",
+  width: "min(380px, 100%)",
   border: "1px solid #f3f4f6",
 };
 
@@ -846,6 +1103,7 @@ const filtersRightStyle = {
   alignItems: "center",
   gap: "12px",
   flexWrap: "wrap",
+  width: "min(520px, 100%)",
 };
 
 const selectGroupStyle = {
@@ -855,12 +1113,22 @@ const selectGroupStyle = {
   background: "#f9fafb",
   border: "1.5px solid #e5e7eb",
   borderRadius: "12px",
-  padding: "0 16px",
-  gap: "10px",
-  minWidth: "240px",
+  padding: "0 12px",
+  gap: "8px",
+  minWidth: "min(180px, 100%)",
+  flex: "0 0 auto",
+  minHeight: "38px",
+  height: "44px",
+  boxSizing: "border-box",
 };
 
-const selectStyle = {
+const comboWrapperStyle = {
+  ...selectGroupStyle,
+  position: "relative",
+  padding: "0 16px",
+};
+
+const comboInputStyle = {
   width: "100%",
   border: "none",
   background: "transparent",
@@ -868,7 +1136,67 @@ const selectStyle = {
   fontSize: "14px",
   color: "#111827",
   outline: "none",
+  minWidth: 0,
+};
+
+const comboDropdownStyle = {
+  position: "absolute",
+  left: 0,
+  right: 0,
+  top: "calc(100% + 6px)",
+  background: "white",
+  border: "1px solid #e5e7eb",
+  borderRadius: "12px",
+  overflow: "hidden",
+  maxHeight: "240px",
+  overflowY: "auto",
+  zIndex: 20,
+  boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
+};
+
+const comboEmptyStyle = {
+  padding: "12px 14px",
+  fontSize: "13px",
+  color: "#6b7280",
+};
+
+const comboOptionStyle = (disabled) => ({
+  width: "100%",
+  textAlign: "left",
+  display: "flex",
+  flexDirection: "column",
+  gap: "2px",
+  padding: "10px 14px",
+  border: "none",
+  background: "white",
+  cursor: disabled ? "not-allowed" : "pointer",
+  opacity: disabled ? 0.55 : 1,
+});
+
+const comboOptionTitleStyle = {
+  fontSize: "13px",
+  fontWeight: "700",
+  color: "#111827",
+};
+
+const comboOptionMetaStyle = {
+  fontSize: "12px",
+  color: "#6b7280",
+  fontWeight: "600",
+};
+
+const selectStyle = {
+  width: "100%",
+  border: "none",
+  background: "transparent",
+  padding: "10px 0",
+  fontSize: "13px",
+  color: "#111827",
+  outline: "none",
   appearance: "none",
+  minHeight: "28px",
+  height: "32px",
+  boxSizing: "border-box",
 };
 
 const infoBoxStyle = {
