@@ -9,6 +9,7 @@ import Permisos from "./pages/Permisos/Permisos";
 import Roles from "./pages/Roles/Roles";
 import Lotes from "./pages/Lotes/Lotes";
 import Estado from "./pages/Estado/Estado";
+import Alimentacion from "./pages/Alimentacion/Alimentacion";
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/galpones" element={<Galpones />} />
         <Route path="/lotes" element={<Lotes />} />
+        <Route path="/alimentacion" element={<Alimentacion />} />
         <Route path="/estado" element={<Estado />} />
         <Route path="/usuarios" element={<Usuarios />} />
         <Route path="/bitacora" element={<Bitacora />} />

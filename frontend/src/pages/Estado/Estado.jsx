@@ -3,6 +3,7 @@ import { Bird, Thermometer } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import StatCard from "../../components/StatCard";
 import api from "../../api/axios";
+import useIsMobile from "../../hooks/useIsMobile";
 
 function toNumber(value) {
   if (value === "" || value === null || value === undefined) return null;
@@ -16,6 +17,7 @@ function isActivo(estado) {
 
 function Estado() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const isMobile = useIsMobile();
   const [galpones, setGalpones] = useState([]);
   const [lotes, setLotes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -133,7 +135,8 @@ function Estado() {
       <main
         style={{
           ...mainContentStyle,
-          marginLeft: sidebarOpen ? "240px" : "70px",
+          marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px",
+          paddingLeft: isMobile && !sidebarOpen ? "64px" : undefined,
         }}
       >
         <div style={headerStyle}>

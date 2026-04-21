@@ -52,8 +52,7 @@ if not SECRET_KEY:
 
 
 ALLOWED_HOSTS = _env_list("ALLOWED_HOSTS") if not DEBUG else []
-print("DEBUG:", DEBUG)
-print("ALLOWED_HOSTS:", ALLOWED_HOSTS)
+
 
 
 # Application definition
@@ -69,6 +68,7 @@ INSTALLED_APPS = [
     'apps.permisos',
     'apps.galpones',
     'apps.lotes',
+    'apps.alimentacion',
     'apps.bitacora',
     'rest_framework',
     'rest_framework_simplejwt',
@@ -120,23 +120,31 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT'),
-        'OPTIONS': {
-            **(
-                {'sslmode': os.getenv('DB_SSLMODE')}
-                if os.getenv('DB_SSLMODE')
-                else {}
-            )
-        },
+if os.getenv('DB_ENGINE') == 'django.db.backends.sqlite3' or not os.getenv('DB_HOST'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.getenv('DB_NAME', BASE_DIR / 'db.sqlite3'),
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME'),
+            'USER': os.getenv('DB_USER'),
+            'PASSWORD': os.getenv('DB_PASSWORD'),
+            'HOST': os.getenv('DB_HOST'),
+            'PORT': os.getenv('DB_PORT'),
+            'OPTIONS': {
+                **(
+                    {'sslmode': os.getenv('DB_SSLMODE')}
+                    if os.getenv('DB_SSLMODE')
+                    else {}
+                )
+            },
+        }
+    }
 
 
 # Password validation

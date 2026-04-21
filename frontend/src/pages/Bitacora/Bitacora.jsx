@@ -3,6 +3,9 @@ import { Calendar, User, Activity, Search } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import Topbar from "../../components/Topbar";
 import api from "../../api/axios";
+import useIsMobile from "../../hooks/useIsMobile";
+
+import "./Bitacora.css";
 
 function safeParseJson(text) {
   if (typeof text !== "string") return null;
@@ -258,6 +261,7 @@ function formatFecha(fechaIso) {
 
 function Bitacora() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const isMobile = useIsMobile();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState("");
@@ -349,23 +353,16 @@ function Bitacora() {
   });
 
   return (
-    <div
-      style={{
-        display: "flex",
-        minHeight: "100vh",
-        background: "#f9fafb",
-        fontFamily: "'Poppins', sans-serif",
-      }}
-    >
-      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
+    <div className="bita-layout">
+      <Sidebar
+        open={sidebarOpen}
+        setOpen={setSidebarOpen}
+        showMobileTrigger={false}
+      />
 
       <main
-        style={{
-          marginLeft: sidebarOpen ? "240px" : "70px",
-          flex: 1,
-          padding: "32px",
-          transition: "margin-left 0.3s ease",
-        }}
+        className="bita-main"
+        style={{ marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px" }}
       >
         <Topbar
           titulo="Bitácora"
@@ -375,108 +372,60 @@ function Bitacora() {
         />
 
         {/* Buscador */}
-        <div style={searchContainerStyle}>
+        <div className="bita-search">
           <Search size={18} color="#9ca3af" />
           <input
             type="text"
             placeholder="Buscar por usuario, acción, detalles, IP..."
-            style={searchInputStyle}
             onChange={(e) => setFiltro(e.target.value)}
           />
         </div>
 
-        <div style={tableCardStyle}>
+        <div className="bita-card">
           {loading ? (
-            <p style={{ color: "#9ca3af", padding: "20px" }}>
-              Cargando historial...
-            </p>
+            <p className="bita-loading">Cargando historial...</p>
           ) : (
-            <table style={tableStyle}>
-              <thead>
-                <tr style={headerRowStyle}>
-                  <th style={thStyle}>ID</th>
-                  <th style={thStyle}>
-                    <User size={14} style={iconMargin} /> Usuario
-                  </th>
-                  <th style={thStyle}>
-                    <Activity size={14} style={iconMargin} /> Acción
-                  </th>
-                  <th style={thStyle}>Detalles</th>
-                  <th style={thStyle}>IP</th>
-                  <th style={thStyle}>
-                    <Calendar size={14} style={iconMargin} /> Fecha y Hora
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {logsFiltrados.map((log, i) => (
-                  <tr key={log.id ?? i} style={rowStyle}>
-                    <td style={tdStyle}>{log.id}</td>
-                    <td style={tdStyle}>
-                      <strong>
-                        {log.usuario_nombre ?? log.usuario_id ?? "-"}
-                      </strong>
-                    </td>
-                    <td style={tdStyle}>{log._accionLegible ?? log.accion}</td>
-                    <td style={tdStyle}>{log._detallesFrase ?? "-"}</td>
-                    <td style={tdStyle}>{log._ip ?? "-"}</td>
-                    <td style={tdStyle}>{formatFecha(log.fecha_hora)}</td>
+            <div className="bita-tableWrap">
+              <table className="bita-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>
+                      <User size={14} className="bita-icon" /> Usuario
+                    </th>
+                    <th>
+                      <Activity size={14} className="bita-icon" /> Acción
+                    </th>
+                    <th>Detalles</th>
+                    <th>IP</th>
+                    <th>
+                      <Calendar size={14} className="bita-icon" /> Fecha y Hora
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {logsFiltrados.map((log, i) => (
+                    <tr key={log.id ?? i}>
+                      <td>{log.id}</td>
+                      <td>
+                        <strong>
+                          {log.usuario_nombre ?? log.usuario_id ?? "-"}
+                        </strong>
+                      </td>
+                      <td>{log._accionLegible ?? log.accion}</td>
+                      <td>{log._detallesFrase ?? "-"}</td>
+                      <td>{log._ip ?? "-"}</td>
+                      <td>{formatFecha(log.fecha_hora)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </main>
     </div>
   );
 }
-
-// ESTILOS (Siguiendo tu línea de diseño)
-const searchContainerStyle = {
-  display: "flex",
-  alignItems: "center",
-  background: "#fff",
-  padding: "10px 16px",
-  borderRadius: "12px",
-  border: "1px solid #e5e7eb",
-  marginBottom: "24px",
-  width: "fit-content",
-  gap: "10px",
-};
-const searchInputStyle = {
-  border: "none",
-  outline: "none",
-  fontSize: "14px",
-  width: "250px",
-};
-const tableCardStyle = {
-  background: "#fff",
-  borderRadius: "16px",
-  boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)",
-  overflow: "hidden",
-};
-const tableStyle = {
-  width: "100%",
-  borderCollapse: "collapse",
-  textAlign: "left",
-};
-const headerRowStyle = {
-  background: "#f8fafc",
-  borderBottom: "2px solid #f1f5f9",
-};
-const thStyle = {
-  padding: "16px",
-  fontSize: "13px",
-  color: "#64748b",
-  fontWeight: "600",
-  textTransform: "uppercase",
-};
-const rowStyle = {
-  borderBottom: "1px solid #f1f5f9",
-  transition: "background 0.2s",
-};
-const tdStyle = { padding: "16px", fontSize: "14px", color: "#334155" };
-const iconMargin = { marginRight: "6px", verticalAlign: "middle" };
 
 export default Bitacora;

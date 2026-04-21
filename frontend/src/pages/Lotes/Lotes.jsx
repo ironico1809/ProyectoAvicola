@@ -755,6 +755,7 @@ function Lotes() {
         style={{
           ...mainContentStyle,
           marginLeft: isNarrow ? "0px" : sidebarOpen ? "240px" : "70px",
+          paddingLeft: isNarrow && !sidebarOpen ? "64px" : undefined,
         }}
       >
         <div

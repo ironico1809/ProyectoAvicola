@@ -3,13 +3,16 @@ import {
   Bird,
   Package,
   Thermometer,
+  Wheat,
   LogOut,
   ChevronLeft,
+  Menu,
   Users,
   ShieldCheck,
   ClipboardList,
   Shield,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const navItems = [
@@ -20,6 +23,7 @@ const navItems = [
   },
   { icon: <Bird size={20} />, label: "Galpones", path: "/galpones" },
   { icon: <Package size={20} />, label: "Lotes", path: "/lotes" },
+  { icon: <Wheat size={20} />, label: "Alimentación", path: "/alimentacion" },
   { icon: <Users size={20} />, label: "Usuarios", path: "/usuarios" }, // NUEVO
   { icon: <ShieldCheck size={20} />, label: "Permisos", path: "/permisos" }, // NUEVO
   { icon: <ShieldCheck size={20} />, label: "Roles", path: "/roles" },
@@ -27,81 +31,150 @@ const navItems = [
   { icon: <Thermometer size={20} />, label: "Estado", path: "/estado" },
 ];
 
-function Sidebar({ open, setOpen }) {
+function Sidebar({ open, setOpen, showMobileTrigger = true }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const mq = window.matchMedia("(max-width: 900px)");
+    const onChange = () => setIsMobile(mq.matches);
+    onChange();
+
+    if (typeof mq.addEventListener === "function") {
+      mq.addEventListener("change", onChange);
+      return () => mq.removeEventListener("change", onChange);
+    }
+
+    mq.addListener(onChange);
+    return () => mq.removeListener(onChange);
+  }, []);
+
+  // Al entrar a móvil, cerramos para no estorbar.
+  useEffect(() => {
+    if (isMobile && open) setOpen(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMobile]);
+
+  const sidebarWidth = isMobile ? "240px" : open ? "240px" : "70px";
+  const sidebarTransform = isMobile
+    ? open
+      ? "translateX(0)"
+      : "translateX(-100%)"
+    : "translateX(0)";
+
+  const handleNavigate = (path) => {
+    navigate(path);
+    if (isMobile) setOpen(false);
+  };
 
   return (
-    <aside style={{ ...sidebarStyle, width: open ? "240px" : "70px" }}>
-      <div style={logoStyle}>
-        {open && <img src="/logo.png" alt="logo" style={imgStyle} />}
-        {open && <span style={logoTextStyle}>AviGranja</span>}
+    <>
+      {isMobile && open && (
+        <div
+          style={backdropStyle}
+          onClick={() => setOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {isMobile && !open && showMobileTrigger && (
         <button
-          onClick={() => setOpen(!open)}
-          style={{ ...toggleStyle, marginLeft: open ? "auto" : "0" }}
+          onClick={() => setOpen(true)}
+          style={mobileOpenBtnStyle}
+          aria-label="Abrir menú"
+          type="button"
         >
-          {open ? (
-            <ChevronLeft size={18} color="#fef3c7" />
-          ) : (
-            <img
-              src="/logo.png"
-              style={{
-                width: "32px",
-                height: "32px",
-                borderRadius: "50%",
-                objectFit: "cover",
-                border: "2px solid #fbbf24",
-              }}
-            />
-          )}
+          <Menu size={20} color="#78350f" />
         </button>
-      </div>
+      )}
 
-      <nav style={navStyle}>
-        {navItems.map((item, i) => {
-          const isActive = location.pathname === item.path;
-          return (
-            <button
-              key={i}
-              title={item.label}
-              onClick={() => navigate(item.path)}
-              style={{
-                ...navItemStyle,
-                justifyContent: open ? "flex-start" : "center",
-                ...(isActive ? activeStyle : {}),
-              }}
-            >
-              <span style={iconStyle}>{item.icon}</span>
-              {open && (
-                <span style={{ fontSize: "14px", whiteSpace: "nowrap" }}>
-                  {item.label}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </nav>
+      <aside
+        style={{
+          ...sidebarStyle,
+          width: sidebarWidth,
+          transform: sidebarTransform,
+          transition: isMobile ? "transform 0.25s ease" : "width 0.3s ease",
+          boxShadow: isMobile && open ? "0 8px 24px rgba(0,0,0,0.18)" : "none",
+        }}
+      >
+        <div style={logoStyle}>
+          {open && <img src="/logo.png" alt="logo" style={imgStyle} />}
+          {open && <span style={logoTextStyle}>AviGranja</span>}
+          <button
+            onClick={() => setOpen(isMobile ? false : !open)}
+            style={{ ...toggleStyle, marginLeft: open ? "auto" : "0" }}
+            type="button"
+            aria-label={open ? "Cerrar menú" : "Abrir menú"}
+          >
+            {open ? (
+              <ChevronLeft size={18} color="#fef3c7" />
+            ) : (
+              <img
+                src="/logo.png"
+                alt=""
+                style={{
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                  border: "2px solid #fbbf24",
+                }}
+              />
+            )}
+          </button>
+        </div>
 
-      <div style={footerStyle}>
-        <button
-          title="Cerrar Sesión"
-          style={{
-            ...logoutStyle,
-            justifyContent: open ? "flex-start" : "center",
-          }}
-          onClick={() => navigate("/")}
-        >
-          <span style={iconStyle}>
-            <LogOut size={20} />
-          </span>
-          {open && (
-            <span style={{ fontSize: "14px", whiteSpace: "nowrap" }}>
-              Cerrar Sesión
+        <nav style={navStyle}>
+          {navItems.map((item, i) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <button
+                key={i}
+                title={item.label}
+                onClick={() => handleNavigate(item.path)}
+                style={{
+                  ...navItemStyle,
+                  justifyContent: open ? "flex-start" : "center",
+                  ...(isActive ? activeStyle : {}),
+                }}
+                type="button"
+              >
+                <span style={iconStyle}>{item.icon}</span>
+                {open && (
+                  <span style={{ fontSize: "14px", whiteSpace: "nowrap" }}>
+                    {item.label}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div style={footerStyle}>
+          <button
+            title="Cerrar Sesión"
+            style={{
+              ...logoutStyle,
+              justifyContent: open ? "flex-start" : "center",
+            }}
+            onClick={() => handleNavigate("/")}
+            type="button"
+          >
+            <span style={iconStyle}>
+              <LogOut size={20} />
             </span>
-          )}
-        </button>
-      </div>
-    </aside>
+            {open && (
+              <span style={{ fontSize: "14px", whiteSpace: "nowrap" }}>
+                Cerrar Sesión
+              </span>
+            )}
+          </button>
+        </div>
+      </aside>
+    </>
   );
 }
 
@@ -116,6 +189,28 @@ const sidebarStyle = {
   zIndex: 100,
   transition: "width 0.3s ease",
   overflow: "hidden",
+};
+
+const backdropStyle = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(0,0,0,0.35)",
+  zIndex: 90,
+};
+
+const mobileOpenBtnStyle = {
+  position: "fixed",
+  top: "14px",
+  left: "14px",
+  zIndex: 110,
+  background: "white",
+  border: "1.5px solid #e5e7eb",
+  borderRadius: "10px",
+  padding: "8px",
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
 };
 const logoStyle = {
   display: "flex",

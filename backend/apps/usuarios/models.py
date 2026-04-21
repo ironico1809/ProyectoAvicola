@@ -42,6 +42,13 @@ Notas:
         self.save()
 
     # Método para verificar la contraseña
+
+
+
+
+
+
+    
     def check_password(self, raw_password):
         """Valida contraseña contra el hash almacenado.
 
