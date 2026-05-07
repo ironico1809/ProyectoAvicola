@@ -203,7 +203,7 @@ function Alimentacion() {
             <div>
               <h2 className="alim-title">Historial de alimentación</h2>
               <p className="alim-subtitle">
-                Filtra por lote y rango de fechas (CU12)
+                Filtra por lote y rango de fechas
               </p>
             </div>
 
