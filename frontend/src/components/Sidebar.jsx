@@ -15,6 +15,7 @@ import {
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
+
 const navItems = [
   {
     icon: <LayoutDashboard size={20} />,
@@ -24,6 +25,7 @@ const navItems = [
   { icon: <Bird size={20} />, label: "Galpones", path: "/galpones" },
   { icon: <Package size={20} />, label: "Lotes", path: "/lotes" },
   { icon: <Wheat size={20} />, label: "Alimentación", path: "/alimentacion" },
+  { icon: <Thermometer size={20} />, label: "Temperatura", path: "/temperatura" },
   { icon: <Users size={20} />, label: "Usuarios", path: "/usuarios" }, // NUEVO
   { icon: <ShieldCheck size={20} />, label: "Permisos", path: "/permisos" }, // NUEVO
   { icon: <ShieldCheck size={20} />, label: "Roles", path: "/roles" },

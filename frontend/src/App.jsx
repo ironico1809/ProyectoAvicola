@@ -10,6 +10,8 @@ import Roles from "./pages/Roles/Roles";
 import Lotes from "./pages/Lotes/Lotes";
 import Estado from "./pages/Estado/Estado";
 import Alimentacion from "./pages/Alimentacion/Alimentacion";
+import Temperatura from "./pages/Temperatura/Temperatura";
+import TemperatureAlert from "./components/TemperatureAlert";
 
 function App() {
   return (
@@ -26,7 +28,9 @@ function App() {
         <Route path="/bitacora" element={<Bitacora />} />
         <Route path="/permisos" element={<Permisos />} />
         <Route path="/roles" element={<Roles />} />
+        <Route path="/temperatura" element={<Temperatura />} />
       </Routes>
+      <TemperatureAlert />
     </BrowserRouter>
   );
 }
