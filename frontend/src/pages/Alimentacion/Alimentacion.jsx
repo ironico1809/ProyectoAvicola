@@ -18,15 +18,6 @@ function toNumber(value) {
   return Number.isFinite(n) ? n : null;
 }
 
-function calculateAge(entryDate) {
-  if (!entryDate) return 0;
-  const start = new Date(entryDate);
-  const today = new Date();
-  const diffTime = today - start;
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  return Math.max(0, diffDays);
-}
-
 function todayISO() {
   try {
     return new Date().toISOString().slice(0, 10);
@@ -87,17 +78,10 @@ function Alimentacion() {
       setRows(Array.isArray(alimentRes.data) ? alimentRes.data : []);
       setInsumos(Array.isArray(insumosRes.data) ? insumosRes.data : []);
 
-      const activos = dataLotes.filter(l => {
-        const st = String(l.estado || "").toLowerCase();
-        return st === "crianza" || st === "crecimiento" || st === "engorde" || st === "activo";
-      });
+      const activos = dataLotes.filter(l => String(l.estado).toLowerCase() === "crianza");
       setBulkRows(activos.map(l => ({
         id_lote: l.id_lote,
         nombre: `Lote ${l.id_lote}`,
-        raza: l.raza_tipo || "S/R",
-        aves: l.cantidad_actual || 0,
-        edad: calculateAge(l.fecha_ingreso),
-        estado: l.estado,
         cantidad_kg: "",
         tipo_alimento: "",
         insumo_id: "",
@@ -136,6 +120,7 @@ function Alimentacion() {
     if (!id_lote) return setFormError("Selecciona un lote.");
     if (!cantidad_kg || cantidad_kg <= 0) return setFormError("Cantidad inválida.");
 
+    // Verificación previa en el frontend
     if (form.insumo_id) {
       const insumo = insumos.find(i => String(i.id_insumo) === String(form.insumo_id));
       if (insumo && cantidad_kg > parseFloat(insumo.stock_actual)) {
@@ -191,6 +176,7 @@ function Alimentacion() {
     }
   };
 
+  // Insumo seleccionado para el preview de stock
   const insumoSeleccionado = useMemo(() => {
     if (!form.insumo_id) return null;
     return insumos.find(i => String(i.id_insumo) === String(form.insumo_id)) || null;
@@ -203,13 +189,7 @@ function Alimentacion() {
   }, [insumoSeleccionado, form.cantidad_kg]);
 
   const lotesOptions = useMemo(() => {
-    return lotes.map(l => {
-      const edad = calculateAge(l.fecha_ingreso);
-      return { 
-        value: String(l.id_lote), 
-        label: `Lote ${l.id_lote} — ${l.raza_tipo || "S/R"} (${edad} días, ${l.cantidad_actual} aves)` 
-      };
-    });
+    return lotes.map(l => ({ value: String(l.id_lote), label: `Lote ${l.id_lote} — ${l.raza || ""}` }));
   }, [lotes]);
 
   const alimentosOptions = useMemo(() => {
@@ -220,14 +200,6 @@ function Alimentacion() {
         label: `${i.nombre} (${i.stock_actual} ${i.unidad_medida} disp.)`,
       }));
   }, [insumos]);
-
-  const tiposAlimentoUnicos = useMemo(() => {
-    const set = new Set();
-    rows.forEach(r => {
-      if (r.tipo_alimento) set.add(r.tipo_alimento.trim());
-    });
-    return Array.from(set).sort();
-  }, [rows]);
 
   return (
     <div className="alim-layout">
@@ -257,85 +229,7 @@ function Alimentacion() {
 
         <div className="alim-card">
           <div className="alim-cardHeader">
-<<<<<<< HEAD
-            <div>
-              <h2 className="alim-title">Historial de alimentación</h2>
-              <p className="alim-subtitle">
-                Filtra por lote y rango de fechas
-              </p>
-            </div>
-
-            <button className="alim-primaryBtn" onClick={handleOpenModal}>
-              <Plus size={18} />
-              Registrar
-            </button>
-          </div>
-
-          {(formError || success) && (
-            <div className="alim-alerts">
-              {formError && (
-                <AlertItem
-                  type="danger"
-                  icon={<Search size={18} />}
-                  title="Atención"
-                  desc={formError}
-                />
-              )}
-              {success && (
-                <AlertItem
-                  type="info"
-                  icon={<Wheat size={18} />}
-                  title="Listo"
-                  desc={success}
-                />
-              )}
-            </div>
-          )}
-
-          <div className="alim-filters">
-            <div className="alim-filter">
-              <label className="alim-label">Lote</label>
-              <div className="alim-selectWrap">
-                <select
-                  className="alim-select"
-                  value={filtroLote}
-                  onChange={(e) => setFiltroLote(e.target.value)}
-                >
-                  <option value="">Todos</option>
-                  {lotesOptions.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="alim-filter">
-              <label className="alim-label">Desde</label>
-              <InputField
-                type="date"
-                name="fecha_inicio"
-                required={false}
-                value={fechaInicio}
-                onChange={(e) => setFechaInicio(e.target.value)}
-              />
-            </div>
-
-            <div className="alim-filter">
-              <label className="alim-label">Hasta</label>
-              <InputField
-                type="date"
-                name="fecha_fin"
-                required={false}
-                value={fechaFin}
-                onChange={(e) => setFechaFin(e.target.value)}
-              />
-            </div>
-
-=======
             <h2 className="alim-title">Historial de Consumo</h2>
->>>>>>> 46e59e1 (Agregando cosas del alimentacion entre otras cosas)
             <div className="alim-actions">
                <button className="alim-secondaryBtn" onClick={() => { setFiltroLote(""); setFiltroInsumo(""); setFechaInicio(""); setFechaFin(""); fetchInitial(); }}>
                 Limpiar
@@ -423,6 +317,7 @@ function Alimentacion() {
                 placeholder="No descontar inventario"
               />
 
+              {/* Preview de stock en tiempo real */}
               {insumoSeleccionado && (
                 <div className={`alim-stock-preview ${stockTras !== null && stockTras < parseFloat(insumoSeleccionado.stock_minimo) ? "alim-stock-preview--warn" : ""}`}>
                   <div className="alim-stock-preview__row">
@@ -452,16 +347,7 @@ function Alimentacion() {
                 <InputField label="Fecha" type="date" value={form.fecha} onChange={e => setForm({...form, fecha: e.target.value})} />
                 <InputField label="Cantidad (kg)" type="number" step="0.01" value={form.cantidad_kg} onChange={e => setForm({...form, cantidad_kg: e.target.value})} placeholder="0.00" />
               </div>
-              
-              <ComboBox
-                label="Tipo / Marca del Alimento"
-                value={form.tipo_alimento}
-                onChange={val => setForm({...form, tipo_alimento: val})}
-                allowCustom={true}
-                options={tiposAlimentoUnicos.map(t => ({ value: t, label: t }))}
-                placeholder="Escribe o selecciona..."
-              />
-
+              <InputField label="Tipo / Marca del Alimento" value={form.tipo_alimento} onChange={e => setForm({...form, tipo_alimento: e.target.value})} placeholder="Ej: Balanceado Iniciador" />
               <textarea
                 className="alim-textarea"
                 placeholder="Observaciones opcionales..."
@@ -483,7 +369,7 @@ function Alimentacion() {
                 <table className="rep-table">
                   <thead>
                     <tr>
-                      <th>Información del Lote</th>
+                      <th>Lote</th>
                       <th>Insumo (Alimento)</th>
                       <th>Kilos (kg)</th>
                       <th>Tipo/Marca</th>
@@ -492,20 +378,7 @@ function Alimentacion() {
                   <tbody>
                     {bulkRows.map((r, idx) => (
                       <tr key={r.id_lote}>
-                        <td>
-                          <div style={{display:'flex', flexDirection:'column', gap:2}}>
-                            <div style={{display:'flex', alignItems:'center', gap:8}}>
-                              <Bird size={14} color="#f59e0b"/> 
-                              <strong>{r.nombre}</strong>
-                              <span style={{fontSize:10, background:'#f1f5f9', padding:'2px 6px', borderRadius:4, fontWeight:600, color:'#64748b'}}>
-                                {r.estado}
-                              </span>
-                            </div>
-                            <div style={{fontSize:11, color:'#94a3b8', marginLeft:22}}>
-                              {r.raza} • {r.aves} aves • <span style={{color:'#0f172a', fontWeight:700}}>{r.edad} días de edad</span>
-                            </div>
-                          </div>
-                        </td>
+                        <td><div style={{display:'flex', alignItems:'center', gap:8}}><Bird size={14}/> <strong>{r.nombre}</strong></div></td>
                         <td>
                           <select className="rep-select" style={{padding:'6px 10px', fontSize:12}} value={r.insumo_id} onChange={e => {
                               const newRows = [...bulkRows];
@@ -513,8 +386,8 @@ function Alimentacion() {
                               setBulkRows(newRows);
                             }}>
                             <option value="">Ninguno</option>
-                            {insumos.filter(i => i.tipo === 'Alimento').map(i => <option key={i.id_insumo} value={i.id_insumo}>{i.nombre} ({i.stock_actual} {i.unit_medida || "kg"})</option>)}
-                          </select>
+                            {insumos.filter(i => i.tipo === 'Alimento').map(i => <option key={i.id_insumo} value={i.id_insumo}>{i.nombre} ({i.stock_actual} {i.unidad_medida})</option>)}
+     </select>
                         </td>
                         <td>
                           <input type="number" className="rep-input" style={{padding:'6px 10px', fontSize:12, width:90}} placeholder="0.00" value={r.cantidad_kg} onChange={e => {
