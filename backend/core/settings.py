@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     'apps.lotes',
     'apps.alimentacion',
     'apps.bitacora',
+    'apps.mortandad',
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',

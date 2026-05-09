@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   ClipboardList,
   Shield,
+  AlertTriangle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -24,6 +25,7 @@ const navItems = [
   { icon: <Bird size={20} />, label: "Galpones", path: "/galpones" },
   { icon: <Package size={20} />, label: "Lotes", path: "/lotes" },
   { icon: <Wheat size={20} />, label: "Alimentación", path: "/alimentacion" },
+  { icon: <AlertTriangle size={20} />, label: "Mortandad", path: "/mortandad" },
   { icon: <Users size={20} />, label: "Usuarios", path: "/usuarios" }, // NUEVO
   { icon: <ShieldCheck size={20} />, label: "Permisos", path: "/permisos" }, // NUEVO
   { icon: <ShieldCheck size={20} />, label: "Roles", path: "/roles" },
