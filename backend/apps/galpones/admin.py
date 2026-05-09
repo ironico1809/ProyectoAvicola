@@ -10,7 +10,6 @@ from apps.galpones.models import Galpon
 
 @admin.register(Galpon)
 class GalponAdmin(admin.ModelAdmin):
-	"""Presentación del modelo `Galpon` en Django Admin."""
-	list_display = ('id', 'nombre', 'capacidad', 'estado')
-	search_fields = ('nombre',)
-
+    """Presentación del modelo `Galpon` en Django Admin."""
+    list_display = ('id', 'nombre', 'capacidad', 'estado')
+    search_fields = ('nombre',)

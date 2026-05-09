@@ -6,10 +6,12 @@ class Command(BaseCommand):
     help = "Crea la tabla 'bitacora' si no existe (sin restaurar datos)."
 
     def handle(self, *args, **options):
-        existing_tables = {name.lower() for name in connection.introspection.table_names()}
+        existing_tables = {name.lower()
+                           for name in connection.introspection.table_names()}
 
         if "bitacora" in existing_tables:
-            self.stdout.write(self.style.SUCCESS("OK: la tabla 'bitacora' ya existe."))
+            self.stdout.write(self.style.SUCCESS(
+                "OK: la tabla 'bitacora' ya existe."))
             return
 
         # Importar aquí para asegurar que el modelo esté cargado.

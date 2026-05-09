@@ -89,10 +89,14 @@ def registrar_evento(
             else None,
         }
 
-        descripcion_txt = json.dumps(descripcion_payload, ensure_ascii=False, default=str)
+        descripcion_txt = json.dumps(
+            descripcion_payload,
+            ensure_ascii=False,
+            default=str)
 
         BitacoraEvento.objects.create(
-            usuario=actor if getattr(actor, 'is_authenticated', False) else None,
+            usuario=actor if getattr(
+                actor, 'is_authenticated', False) else None,
             accion=str(accion),
             descripcion=descripcion_txt,
         )

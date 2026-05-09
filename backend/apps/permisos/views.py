@@ -39,7 +39,8 @@ class PermisoListCreateView(APIView):
         Salida: `200 OK` con array de permisos serializados.
         """
         permisos = Permiso.objects.all().order_by('nombre')
-        return Response(PermisoSerializer(permisos, many=True).data, status=status.HTTP_200_OK)
+        return Response(PermisoSerializer(
+            permisos, many=True).data, status=status.HTTP_200_OK)
 
     def post(self, request):
         """Crea un permiso.
@@ -50,7 +51,8 @@ class PermisoListCreateView(APIView):
         """
         serializer = PermisoSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
 
         permiso = serializer.save()
 
@@ -64,7 +66,8 @@ class PermisoListCreateView(APIView):
             detalle={'nombre': permiso.nombre},
             usuario=request.user,
         )
-        return Response(PermisoSerializer(permiso).data, status=status.HTTP_201_CREATED)
+        return Response(PermisoSerializer(permiso).data,
+                        status=status.HTTP_201_CREATED)
 
 
 class PermisoDetailView(APIView):
@@ -90,18 +93,22 @@ class PermisoDetailView(APIView):
         """Devuelve `200` con el permiso o `404` si no existe."""
         permiso = self._get_permiso_or_404(id_permiso)
         if not permiso:
-            return Response({'detail': 'Permiso no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
-        return Response(PermisoSerializer(permiso).data, status=status.HTTP_200_OK)
+            return Response({'detail': 'Permiso no encontrado.'},
+                            status=status.HTTP_404_NOT_FOUND)
+        return Response(PermisoSerializer(permiso).data,
+                        status=status.HTTP_200_OK)
 
     def put(self, request, id_permiso):
         """Actualiza completamente un permiso (PUT)."""
         permiso = self._get_permiso_or_404(id_permiso)
         if not permiso:
-            return Response({'detail': 'Permiso no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Permiso no encontrado.'},
+                            status=status.HTTP_404_NOT_FOUND)
 
         serializer = PermisoSerializer(permiso, data=request.data)
         if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
 
         permiso = serializer.save()
 
@@ -114,17 +121,21 @@ class PermisoDetailView(APIView):
             entidad_nombre=permiso.nombre,
             usuario=request.user,
         )
-        return Response(PermisoSerializer(permiso).data, status=status.HTTP_200_OK)
+        return Response(PermisoSerializer(permiso).data,
+                        status=status.HTTP_200_OK)
 
     def patch(self, request, id_permiso):
         """Actualiza parcialmente un permiso (PATCH)."""
         permiso = self._get_permiso_or_404(id_permiso)
         if not permiso:
-            return Response({'detail': 'Permiso no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Permiso no encontrado.'},
+                            status=status.HTTP_404_NOT_FOUND)
 
-        serializer = PermisoSerializer(permiso, data=request.data, partial=True)
+        serializer = PermisoSerializer(
+            permiso, data=request.data, partial=True)
         if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
 
         permiso = serializer.save()
 
@@ -137,7 +148,8 @@ class PermisoDetailView(APIView):
             entidad_nombre=permiso.nombre,
             usuario=request.user,
         )
-        return Response(PermisoSerializer(permiso).data, status=status.HTTP_200_OK)
+        return Response(PermisoSerializer(permiso).data,
+                        status=status.HTTP_200_OK)
 
     def delete(self, request, id_permiso):
         """Elimina un permiso.
@@ -146,7 +158,8 @@ class PermisoDetailView(APIView):
         """
         permiso = self._get_permiso_or_404(id_permiso)
         if not permiso:
-            return Response({'detail': 'Permiso no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Permiso no encontrado.'},
+                            status=status.HTTP_404_NOT_FOUND)
 
         registrar_evento(
             request,
@@ -188,7 +201,8 @@ class RolPermisosView(APIView):
         """
         rol = self._get_rol_or_404(id_rol)
         if not rol:
-            return Response({'detail': 'Rol no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Rol no encontrado.'},
+                            status=status.HTTP_404_NOT_FOUND)
 
         with connection.cursor() as cursor:
             cursor.execute(
@@ -217,11 +231,13 @@ class RolPermisosView(APIView):
         """
         rol = self._get_rol_or_404(id_rol)
         if not rol:
-            return Response({'detail': 'Rol no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Rol no encontrado.'},
+                            status=status.HTTP_404_NOT_FOUND)
 
         serializer = RolPermisosReplaceSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
 
         ids = list(dict.fromkeys(serializer.validated_data['permisos']))
         permisos = list(Permiso.objects.filter(id_permiso__in=ids))
@@ -235,7 +251,9 @@ class RolPermisosView(APIView):
             )
 
         with connection.cursor() as cursor:
-            cursor.execute('DELETE FROM rol_permisos WHERE rol_id = %s', [rol.id_rol])
+            cursor.execute(
+                'DELETE FROM rol_permisos WHERE rol_id = %s', [
+                    rol.id_rol])
 
             for permiso in permisos:
                 cursor.execute(
@@ -255,8 +273,10 @@ class RolPermisosView(APIView):
         )
 
         # Devolver lista actual
-        permisos_actuales = Permiso.objects.filter(id_permiso__in=ids).order_by('nombre')
-        return Response(PermisoSerializer(permisos_actuales, many=True).data, status=status.HTTP_200_OK)
+        permisos_actuales = Permiso.objects.filter(
+            id_permiso__in=ids).order_by('nombre')
+        return Response(PermisoSerializer(permisos_actuales,
+                        many=True).data, status=status.HTTP_200_OK)
 
     def patch(self, request, id_rol):
         """Agrega y/o quita permisos del rol.
@@ -266,14 +286,19 @@ class RolPermisosView(APIView):
         """
         rol = self._get_rol_or_404(id_rol)
         if not rol:
-            return Response({'detail': 'Rol no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Rol no encontrado.'},
+                            status=status.HTTP_404_NOT_FOUND)
 
         serializer = RolPermisosSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
 
         add_ids = list(dict.fromkeys(serializer.validated_data.get('add', [])))
-        remove_ids = list(dict.fromkeys(serializer.validated_data.get('remove', [])))
+        remove_ids = list(
+            dict.fromkeys(
+                serializer.validated_data.get(
+                    'remove', [])))
 
         ids_a_validar = list(dict.fromkeys(add_ids + remove_ids))
         permisos = list(Permiso.objects.filter(id_permiso__in=ids_a_validar))
@@ -322,5 +347,7 @@ class RolPermisosView(APIView):
             )
             ids_actuales = [r[0] for r in cursor.fetchall()]
 
-        permisos_actuales = Permiso.objects.filter(id_permiso__in=ids_actuales).order_by('nombre')
-        return Response(PermisoSerializer(permisos_actuales, many=True).data, status=status.HTTP_200_OK)
+        permisos_actuales = Permiso.objects.filter(
+            id_permiso__in=ids_actuales).order_by('nombre')
+        return Response(PermisoSerializer(permisos_actuales,
+                        many=True).data, status=status.HTTP_200_OK)

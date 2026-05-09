@@ -7,4 +7,3 @@ Conceptos:
 - Roles: se encuentran en `apps.usuarios`.
 - La asignación rol-permiso se maneja contra la tabla puente `rol_permisos`.
 """
-

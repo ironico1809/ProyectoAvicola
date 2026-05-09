@@ -32,6 +32,8 @@ class UsuarioJWTAuthentication(JWTAuthentication):
         try:
             usuario = Usuario.objects.get(pk=user_id)
         except Usuario.DoesNotExist as exc:
-            raise AuthenticationFailed('Usuario no encontrado', code='user_not_found') from exc
+            raise AuthenticationFailed(
+                'Usuario no encontrado',
+                code='user_not_found') from exc
 
         return usuario

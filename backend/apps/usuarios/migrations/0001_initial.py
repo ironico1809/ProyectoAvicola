@@ -14,11 +14,13 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Usuario',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.BigAutoField(auto_created=True,
+                 primary_key=True, serialize=False, verbose_name='ID')),
                 ('nom_usuario', models.CharField(max_length=50, unique=True)),
                 ('email', models.EmailField(max_length=255)),
                 ('password', models.CharField(max_length=255)),
-                ('tipo_usuario', models.CharField(blank=True, max_length=50, null=True)),
+                ('tipo_usuario', models.CharField(
+                    blank=True, max_length=50, null=True)),
                 ('estado', models.CharField(blank=True, max_length=20, null=True)),
             ],
         ),

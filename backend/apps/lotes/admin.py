@@ -10,8 +10,13 @@ from apps.lotes.models import Lote
 
 @admin.register(Lote)
 class LoteAdmin(admin.ModelAdmin):
-	"""Presentación del modelo `Lote` en Django Admin."""
-	list_display = ('id_lote', 'galpon', 'cantidad_inicial', 'cantidad_actual', 'estado', 'fecha_ingreso')
-	search_fields = ('id_lote', 'galpon__nombre')
-	list_filter = ('estado', 'fecha_ingreso')
-
+    """Presentación del modelo `Lote` en Django Admin."""
+    list_display = (
+        'id_lote',
+        'galpon',
+        'cantidad_inicial',
+        'cantidad_actual',
+        'estado',
+        'fecha_ingreso')
+    search_fields = ('id_lote', 'galpon__nombre')
+    list_filter = ('estado', 'fecha_ingreso')

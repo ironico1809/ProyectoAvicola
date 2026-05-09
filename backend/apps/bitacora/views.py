@@ -13,6 +13,7 @@ from rest_framework.views import APIView
 from apps.bitacora.models import BitacoraEvento
 from apps.bitacora.serializers import BitacoraEventoSerializer
 
+
 class BitacoraListView(APIView):
     """Lista eventos de bitácora.
 

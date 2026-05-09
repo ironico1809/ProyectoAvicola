@@ -8,6 +8,9 @@ urlpatterns = [
     # CRUD
     path('', LoteListCreateView.as_view(), name='lotes_list_create'),
     # Resumen
-    path('resumen/estados/', LotesResumenEstadoView.as_view(), name='lotes_resumen_estados'),
+    path(
+        'resumen/estados/',
+        LotesResumenEstadoView.as_view(),
+        name='lotes_resumen_estados'),
     path('<int:id_lote>/', LoteDetailView.as_view(), name='lotes_detail'),
 ]

@@ -10,4 +10,3 @@ Notas de diseño:
 - Para que DRF lo trate como usuario autenticado, `Usuario` expone `is_authenticated`.
 - La autenticación se implementa en `apps.usuarios.authentication.UsuarioJWTAuthentication`.
 """
-

@@ -55,7 +55,10 @@ def get_tokens_for_user(usuario):
         'access': str(refresh.access_token),
     }
 
-# Vista para login de usuario. Valida credenciales, retorna tokens y datos del usuario.
+# Vista para login de usuario. Valida credenciales, retorna tokens y datos
+# del usuario.
+
+
 class LoginView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
@@ -72,7 +75,8 @@ class LoginView(APIView):
         # Valida datos de login
         serializer = LoginSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
 
         username = serializer.validated_data['nom_usuario']
         password = serializer.validated_data['password']
@@ -81,10 +85,12 @@ class LoginView(APIView):
         try:
             usuario = Usuario.objects.get(nom_usuario=username)
         except Usuario.DoesNotExist:
-            return Response({'error': 'Usuario no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Usuario no encontrado'},
+                            status=status.HTTP_404_NOT_FOUND)
 
         if not usuario.check_password(password):
-            return Response({'error': 'Contraseña incorrecta'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Contraseña incorrecta'},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         refresh = RefreshToken.for_user(usuario)
 
@@ -110,6 +116,8 @@ class LoginView(APIView):
         )
 
 # Vista para registrar un nuevo usuario
+
+
 class RegistroUsuarioView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
@@ -134,7 +142,16 @@ class RegistroUsuarioView(APIView):
                 entidad_id=usuario.id,
                 entidad_nombre=getattr(usuario, 'nom_usuario', None),
                 detalle={'nom_usuario': usuario.nom_usuario},
-                usuario=getattr(request, 'user', None) if getattr(getattr(request, 'user', None), 'is_authenticated', False) else None,
+                usuario=getattr(
+                    request,
+                    'user',
+                    None) if getattr(
+                    getattr(
+                        request,
+                        'user',
+                        None),
+                    'is_authenticated',
+                    False) else None,
             )
             return Response(
                 {
@@ -146,6 +163,8 @@ class RegistroUsuarioView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # Vista para obtener y actualizar los datos del usuario autenticado
+
+
 class UsuarioMeView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -155,7 +174,8 @@ class UsuarioMeView(APIView):
         Salida (`200`): usuario serializado.
         """
         # Retorna los datos del usuario autenticado
-        return Response(UsuarioSerializer(request.user).data, status=status.HTTP_200_OK)
+        return Response(UsuarioSerializer(request.user).data,
+                        status=status.HTTP_200_OK)
 
     def patch(self, request):
         """Actualiza parcialmente el usuario autenticado.
@@ -165,7 +185,8 @@ class UsuarioMeView(APIView):
         Errores (`400`): validación.
         """
         # Permite actualizar parcialmente los datos del usuario autenticado
-        serializer = UsuarioUpdateSerializer(request.user, data=request.data, partial=True)
+        serializer = UsuarioUpdateSerializer(
+            request.user, data=request.data, partial=True)
         if serializer.is_valid():
             usuario = serializer.save()
 
@@ -178,10 +199,13 @@ class UsuarioMeView(APIView):
                 entidad_nombre=getattr(usuario, 'nom_usuario', None),
                 usuario=request.user,
             )
-            return Response(UsuarioSerializer(usuario).data, status=status.HTTP_200_OK)
+            return Response(UsuarioSerializer(usuario).data,
+                            status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # Vista para logout (invalida el refresh token y registra evento)
+
+
 class LogoutView(APIView):
     """Con JWT, el logout real se hace borrando el token en el cliente."""
     permission_classes = [IsAuthenticated]
@@ -209,9 +233,12 @@ class LogoutView(APIView):
             usuario=request.user,
         )
 
-        return Response({'mensaje': 'Logout correcto'}, status=status.HTTP_200_OK)
+        return Response({'mensaje': 'Logout correcto'},
+                        status=status.HTTP_200_OK)
 
 # Vista para listar todos los usuarios
+
+
 class UsuarioListView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -221,9 +248,12 @@ class UsuarioListView(APIView):
         Salida (`200`): array de usuarios.
         """
         usuarios = Usuario.objects.all().order_by('id')
-        return Response(UsuarioSerializer(usuarios, many=True).data, status=status.HTTP_200_OK)
+        return Response(UsuarioSerializer(
+            usuarios, many=True).data, status=status.HTTP_200_OK)
 
 # Vista para obtener, actualizar o eliminar un usuario específico
+
+
 class UsuarioDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -238,16 +268,20 @@ class UsuarioDetailView(APIView):
         """Devuelve un usuario por id."""
         usuario = self._get_usuario_or_404(usuario_id)
         if not usuario:
-            return Response({'detail': 'Usuario no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
-        return Response(UsuarioSerializer(usuario).data, status=status.HTTP_200_OK)
+            return Response({'detail': 'Usuario no encontrado.'},
+                            status=status.HTTP_404_NOT_FOUND)
+        return Response(UsuarioSerializer(usuario).data,
+                        status=status.HTTP_200_OK)
 
     def patch(self, request, usuario_id):
         """Actualiza parcialmente un usuario."""
         usuario = self._get_usuario_or_404(usuario_id)
         if not usuario:
-            return Response({'detail': 'Usuario no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Usuario no encontrado.'},
+                            status=status.HTTP_404_NOT_FOUND)
 
-        serializer = UsuarioUpdateSerializer(usuario, data=request.data, partial=True)
+        serializer = UsuarioUpdateSerializer(
+            usuario, data=request.data, partial=True)
         if serializer.is_valid():
             usuario_actualizado = serializer.save()
 
@@ -257,10 +291,12 @@ class UsuarioDetailView(APIView):
                 modulo='usuarios',
                 entidad='Usuario',
                 entidad_id=usuario_actualizado.id,
-                entidad_nombre=getattr(usuario_actualizado, 'nom_usuario', None),
+                entidad_nombre=getattr(
+                    usuario_actualizado, 'nom_usuario', None),
                 usuario=request.user,
             )
-            return Response(UsuarioSerializer(usuario_actualizado).data, status=status.HTTP_200_OK)
+            return Response(UsuarioSerializer(
+                usuario_actualizado).data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, usuario_id):
@@ -270,7 +306,8 @@ class UsuarioDetailView(APIView):
         """
         usuario = self._get_usuario_or_404(usuario_id)
         if not usuario:
-            return Response({'detail': 'Usuario no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Usuario no encontrado.'},
+                            status=status.HTTP_404_NOT_FOUND)
 
         registrar_evento(
             request,
@@ -286,13 +323,16 @@ class UsuarioDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 # Vista para listar y crear roles
+
+
 class RolListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         """Lista roles."""
         roles = Rol.objects.all().order_by('id_rol')
-        return Response(RolSerializer(roles, many=True).data, status=status.HTTP_200_OK)
+        return Response(RolSerializer(roles, many=True).data,
+                        status=status.HTTP_200_OK)
 
     def post(self, request):
         """Crea un rol."""
@@ -310,10 +350,13 @@ class RolListCreateView(APIView):
                 detalle={'nombre': rol.nombre},
                 usuario=request.user,
             )
-            return Response(RolSerializer(rol).data, status=status.HTTP_201_CREATED)
+            return Response(RolSerializer(rol).data,
+                            status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # Vista para obtener, actualizar o eliminar un rol específico
+
+
 class RolDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -328,14 +371,16 @@ class RolDetailView(APIView):
         """Devuelve rol por id."""
         rol = self._get_rol_or_404(id_rol)
         if not rol:
-            return Response({'detail': 'Rol no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Rol no encontrado.'},
+                            status=status.HTTP_404_NOT_FOUND)
         return Response(RolSerializer(rol).data, status=status.HTTP_200_OK)
 
     def patch(self, request, id_rol):
         """Actualiza parcialmente un rol."""
         rol = self._get_rol_or_404(id_rol)
         if not rol:
-            return Response({'detail': 'Rol no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Rol no encontrado.'},
+                            status=status.HTTP_404_NOT_FOUND)
 
         serializer = RolSerializer(rol, data=request.data, partial=True)
         if serializer.is_valid():
@@ -357,7 +402,8 @@ class RolDetailView(APIView):
         """Elimina un rol."""
         rol = self._get_rol_or_404(id_rol)
         if not rol:
-            return Response({'detail': 'Rol no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Rol no encontrado.'},
+                            status=status.HTTP_404_NOT_FOUND)
 
         registrar_evento(
             request,
@@ -373,6 +419,8 @@ class RolDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 # Vista para obtener y modificar los roles de un usuario
+
+
 class UsuarioRolesView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -387,7 +435,8 @@ class UsuarioRolesView(APIView):
         """Lista roles asignados al usuario."""
         usuario = self._get_usuario_or_404(usuario_id)
         if not usuario:
-            return Response({'detail': 'Usuario no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Usuario no encontrado.'},
+                            status=status.HTTP_404_NOT_FOUND)
 
         # Consulta SQL directa para obtener roles del usuario
         with connection.cursor() as cursor:
@@ -403,18 +452,21 @@ class UsuarioRolesView(APIView):
             )
             rows = cursor.fetchall()
 
-        data = [{'id_rol': r[0], 'nombre': r[1], 'descripcion': r[2]} for r in rows]
+        data = [{'id_rol': r[0], 'nombre': r[1], 'descripcion': r[2]}
+                for r in rows]
         return Response(data, status=status.HTTP_200_OK)
 
     def put(self, request, usuario_id):
         """Reemplaza TODOS los roles del usuario (lista completa)."""
         usuario = self._get_usuario_or_404(usuario_id)
         if not usuario:
-            return Response({'detail': 'Usuario no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Usuario no encontrado.'},
+                            status=status.HTTP_404_NOT_FOUND)
 
         serializer = UsuarioRolesReplaceSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
 
         ids = list(dict.fromkeys(serializer.validated_data['roles']))
         roles = list(Rol.objects.filter(id_rol__in=ids))
@@ -428,7 +480,9 @@ class UsuarioRolesView(APIView):
 
         # Reemplaza todos los roles del usuario
         with connection.cursor() as cursor:
-            cursor.execute('DELETE FROM usuario_roles WHERE usuario_id = %s', [usuario.id])
+            cursor.execute(
+                'DELETE FROM usuario_roles WHERE usuario_id = %s', [
+                    usuario.id])
             for rol in roles:
                 cursor.execute(
                     'INSERT INTO usuario_roles (usuario_id, rol_id) VALUES (%s, %s)',
@@ -447,20 +501,26 @@ class UsuarioRolesView(APIView):
         )
 
         roles_actuales = Rol.objects.filter(id_rol__in=ids).order_by('id_rol')
-        return Response(RolSerializer(roles_actuales, many=True).data, status=status.HTTP_200_OK)
+        return Response(RolSerializer(
+            roles_actuales, many=True).data, status=status.HTTP_200_OK)
 
     def patch(self, request, usuario_id):
         """Agrega y/o quita roles del usuario."""
         usuario = self._get_usuario_or_404(usuario_id)
         if not usuario:
-            return Response({'detail': 'Usuario no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Usuario no encontrado.'},
+                            status=status.HTTP_404_NOT_FOUND)
 
         serializer = UsuarioRolesSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
 
         add_ids = list(dict.fromkeys(serializer.validated_data.get('add', [])))
-        remove_ids = list(dict.fromkeys(serializer.validated_data.get('remove', [])))
+        remove_ids = list(
+            dict.fromkeys(
+                serializer.validated_data.get(
+                    'remove', [])))
 
         add_roles = list(Rol.objects.filter(id_rol__in=add_ids))
         remove_roles = list(Rol.objects.filter(id_rol__in=remove_ids))
@@ -491,7 +551,9 @@ class UsuarioRolesView(APIView):
                     [usuario.id, remove_ids],
                 )
 
-            cursor.execute('SELECT rol_id FROM usuario_roles WHERE usuario_id = %s', [usuario.id])
+            cursor.execute(
+                'SELECT rol_id FROM usuario_roles WHERE usuario_id = %s', [
+                    usuario.id])
             ids_actuales = [r[0] for r in cursor.fetchall()]
 
         registrar_evento(
@@ -505,7 +567,9 @@ class UsuarioRolesView(APIView):
             usuario=request.user,
         )
 
-        roles_actuales = Rol.objects.filter(id_rol__in=ids_actuales).order_by('id_rol')
-        return Response(RolSerializer(roles_actuales, many=True).data, status=status.HTTP_200_OK)
+        roles_actuales = Rol.objects.filter(
+            id_rol__in=ids_actuales).order_by('id_rol')
+        return Response(RolSerializer(
+            roles_actuales, many=True).data, status=status.HTTP_200_OK)
 
 # --- Fin de vistas de usuarios y roles ---

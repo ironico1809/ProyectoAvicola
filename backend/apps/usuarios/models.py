@@ -12,6 +12,7 @@ Importante:
 from django.db import models
 from django.contrib.auth.hashers import make_password, check_password
 
+
 class Usuario(models.Model):
     """Usuario del sistema.
 
@@ -43,12 +44,6 @@ Notas:
 
     # Método para verificar la contraseña
 
-
-
-
-
-
-    
     def check_password(self, raw_password):
         """Valida contraseña contra el hash almacenado.
 

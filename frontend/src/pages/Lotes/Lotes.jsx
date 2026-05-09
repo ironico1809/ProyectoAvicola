@@ -7,11 +7,13 @@ import {
   Plus,
   Search,
   Trash2,
+  Bird,
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import Modal from "../../components/Modal";
 import InputField from "../../components/InputField";
 import Button from "../../components/Button";
+import ComboBox from "../../components/ComboBox";
 import api from "../../api/axios";
 
 function toNumber(value) {
@@ -58,14 +60,9 @@ function Lotes() {
   const [formError, setFormError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // Selector de galpón escribible (typeahead)
-  const [galponQuery, setGalponQuery] = useState("");
-  const [galponDropdownOpen, setGalponDropdownOpen] = useState(false);
-
   const [form, setForm] = useState({
     id_galpon: "",
     raza_tipo: "",
-    raza_tipo_custom: "",
     cantidad_inicial: "",
     cantidad_actual: "",
     peso_inicial: "",
@@ -173,25 +170,7 @@ function Lotes() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => {
-      if (name === "raza_tipo") {
-        return {
-          ...prev,
-          raza_tipo: value,
-          raza_tipo_custom: value === "__otro__" ? prev.raza_tipo_custom : "",
-        };
-      }
-
-      if (name === "raza_tipo_custom") {
-        return {
-          ...prev,
-          raza_tipo: "__otro__",
-          raza_tipo_custom: value,
-        };
-      }
-
-      return { ...prev, [name]: value };
-    });
+    setForm((prev) => ({ ...prev, [name]: value }));
     setFormError("");
     setSuccess("");
   };
@@ -200,7 +179,6 @@ function Lotes() {
     setForm({
       id_galpon: "",
       raza_tipo: "",
-      raza_tipo_custom: "",
       cantidad_inicial: "",
       cantidad_actual: "",
       peso_inicial: "",
@@ -208,8 +186,6 @@ function Lotes() {
       fecha_salida_estimada: "",
       estado: "Crianza",
     });
-    setGalponQuery("");
-    setGalponDropdownOpen(false);
     setFormError("");
     setSuccess("");
   };
@@ -240,10 +216,7 @@ function Lotes() {
     setSuccess("");
 
     const id_galpon = toNumber(form.id_galpon);
-    const raza_tipo =
-      form.raza_tipo === "__otro__"
-        ? String(form.raza_tipo_custom || "").trim() || null
-        : String(form.raza_tipo || "").trim() || null;
+    const raza_tipo = String(form.raza_tipo || "").trim() || null;
     const cantidad_inicial = toNumber(form.cantidad_inicial);
     const cantidad_actual = cantidad_inicial;
     const peso_inicial = toNumber(form.peso_inicial);
@@ -301,21 +274,9 @@ function Lotes() {
 
   const handleEditarClick = (l) => {
     setLoteSeleccionado(l);
-    const gid = toNumber(l?.id_galpon);
-    const nombre =
-      gid !== null ? galponNombrePorId.get(gid) || `Galpón ${gid}` : "";
     setForm({
       id_galpon: String(l?.id_galpon ?? ""),
-      raza_tipo: (() => {
-        const r = String(l?.raza_tipo ?? "").trim();
-        if (!r) return "";
-        return RAZA_TIPO_PRESETS.includes(r) ? r : "__otro__";
-      })(),
-      raza_tipo_custom: (() => {
-        const r = String(l?.raza_tipo ?? "").trim();
-        if (!r) return "";
-        return RAZA_TIPO_PRESETS.includes(r) ? "" : r;
-      })(),
+      raza_tipo: String(l?.raza_tipo ?? ""),
       cantidad_inicial: String(l?.cantidad_inicial ?? ""),
       cantidad_actual: String(l?.cantidad_actual ?? ""),
       peso_inicial: String(l?.peso_inicial ?? ""),
@@ -323,8 +284,6 @@ function Lotes() {
       fecha_salida_estimada: String(l?.fecha_salida_estimada ?? ""),
       estado: String(l?.estado ?? "Crianza"),
     });
-    setGalponQuery(nombre);
-    setGalponDropdownOpen(false);
     setFormError("");
     setSuccess("");
     setShowEditModal(true);
@@ -339,10 +298,7 @@ function Lotes() {
     if (!id_lote) return setFormError("No se encontró el lote a editar.");
 
     const id_galpon = toNumber(form.id_galpon);
-    const raza_tipo =
-      form.raza_tipo === "__otro__"
-        ? String(form.raza_tipo_custom || "").trim() || null
-        : String(form.raza_tipo || "").trim() || null;
+    const raza_tipo = String(form.raza_tipo || "").trim() || null;
     const cantidad_inicial = toNumber(form.cantidad_inicial);
     const cantidad_actual = toNumber(form.cantidad_actual);
     const peso_inicial = toNumber(form.peso_inicial);
@@ -535,120 +491,32 @@ function Lotes() {
     ? galponesParaEditar
     : galponesDisponibles;
 
-  const galponOptionsFiltrados = useMemo(() => {
-    const q = String(galponQuery || "")
-      .toLowerCase()
-      .trim();
-    if (!q) return galponOptions;
-    return galponOptions.filter((g) => {
-      const id = String(g?.id ?? "").toLowerCase();
-      const nombre = String(g?.nombre ?? "").toLowerCase();
-      return id.includes(q) || nombre.includes(q);
-    });
-  }, [galponOptions, galponQuery]);
-
-  const handleGalponQueryChange = (e) => {
-    const value = e.target.value;
-    setGalponQuery(value);
-    setForm((prev) => ({ ...prev, id_galpon: "" }));
-    setFormError("");
-    setSuccess("");
-    setGalponDropdownOpen(true);
-  };
-
-  const handleSelectGalpon = (g) => {
-    setForm((prev) => ({ ...prev, id_galpon: String(g?.id ?? "") }));
-    setGalponQuery(String(g?.nombre ?? ""));
-    setGalponDropdownOpen(false);
-    setFormError("");
-    setSuccess("");
-  };
-
   const formFields = (
     <form
       onSubmit={showEditModal ? handleEditar : handleCrear}
       style={{ display: "flex", flexDirection: "column", gap: "14px" }}
     >
-      <div style={comboWrapperStyle}>
-        <input
-          type="text"
-          value={galponQuery}
-          placeholder="Selecciona un galpón (escribe para buscar)"
-          onChange={handleGalponQueryChange}
-          onFocus={() => setGalponDropdownOpen(true)}
-          onBlur={() => {
-            window.setTimeout(() => setGalponDropdownOpen(false), 120);
-          }}
-          style={comboInputStyle}
-        />
-        <ChevronDown size={18} color="#9ca3af" />
+      <ComboBox
+        label="Galpón"
+        value={form.id_galpon}
+        onChange={(val) => setForm({ ...form, id_galpon: val })}
+        options={galponOptions.map(g => ({
+          value: String(g.id),
+          label: `${g.nombre} (Disp: ${g._disp}/${g._cap})`
+        }))}
+        placeholder="Buscar galpón..."
+        icon={<Bird size={16} />}
+        required
+      />
 
-        {galponDropdownOpen && (
-          <div style={comboDropdownStyle}>
-            {galponOptionsFiltrados.length === 0 ? (
-              <div style={comboEmptyStyle}>No hay galpones que coincidan.</div>
-            ) : (
-              galponOptionsFiltrados.map((g) => {
-                const disabled = (toNumber(g?._disp) ?? 0) <= 0;
-                return (
-                  <button
-                    key={g.id}
-                    type="button"
-                    style={comboOptionStyle(disabled)}
-                    disabled={disabled}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      if (!disabled) handleSelectGalpon(g);
-                    }}
-                    title={
-                      disabled
-                        ? "Sin capacidad disponible"
-                        : "Seleccionar galpón"
-                    }
-                  >
-                    <span style={comboOptionTitleStyle}>
-                      {g.nombre} (#{g.id})
-                    </span>
-                    <span style={comboOptionMetaStyle}>
-                      Disp: {g._disp} / {g._cap}
-                    </span>
-                  </button>
-                );
-              })
-            )}
-          </div>
-        )}
-      </div>
-
-      <div style={selectGroupStyle}>
-        <select
-          name="raza_tipo"
-          onChange={handleChange}
-          value={form.raza_tipo}
-          style={selectStyle}
-          required={false}
-        >
-          <option value="">Raza / tipo (opcional)</option>
-          {RAZA_TIPO_PRESETS.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-          <option value="__otro__">Otro (escribir)</option>
-        </select>
-        <ChevronDown size={18} color="#9ca3af" />
-      </div>
-
-      {form.raza_tipo === "__otro__" && (
-        <InputField
-          name="raza_tipo_custom"
-          type="text"
-          placeholder="Escribe la raza/tipo"
-          onChange={handleChange}
-          value={form.raza_tipo_custom}
-          required={false}
-        />
-      )}
+      <ComboBox
+        label="Raza / Tipo de Ave (Opcional)"
+        value={form.raza_tipo}
+        onChange={(val) => setForm({ ...form, raza_tipo: val })}
+        options={RAZA_TIPO_PRESETS.map(r => ({ value: r, label: r }))}
+        allowCustom={true}
+        placeholder="Seleccionar o escribir..."
+      />
 
       <InputField
         name="cantidad_inicial"

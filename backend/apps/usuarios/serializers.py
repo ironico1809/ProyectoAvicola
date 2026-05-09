@@ -61,7 +61,10 @@ class UsuarioUpdateSerializer(serializers.ModelSerializer):
     - Permite actualizar datos y opcionalmente `password`.
     - Si `password` se envía, se hashea.
     """
-    password = serializers.CharField(write_only=True, required=False, allow_blank=False)
+    password = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=False)
 
     class Meta:
         model = Usuario
@@ -92,16 +95,26 @@ class RolSerializer(serializers.ModelSerializer):
 class UsuarioRolesSerializer(serializers.Serializer):
     """Entrada para agregar/quitar roles a un usuario por id_rol."""
 
-    add = serializers.ListField(child=serializers.IntegerField(), required=False, allow_empty=True)
-    remove = serializers.ListField(child=serializers.IntegerField(), required=False, allow_empty=True)
+    add = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        allow_empty=True)
+    remove = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        allow_empty=True)
 
     def validate(self, attrs):
         if 'add' not in attrs and 'remove' not in attrs:
-            raise serializers.ValidationError('Debes enviar "add" y/o "remove".')
+            raise serializers.ValidationError(
+                'Debes enviar "add" y/o "remove".')
         return attrs
 
 
 class UsuarioRolesReplaceSerializer(serializers.Serializer):
     """Entrada para reemplazar TODOS los roles de un usuario (lista completa de id_rol)."""
 
-    roles = serializers.ListField(child=serializers.IntegerField(), required=True, allow_empty=True)
+    roles = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=True,
+        allow_empty=True)

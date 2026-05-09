@@ -6,4 +6,3 @@ para validar:
 - Que `registrar_evento()` no reviente ante errores.
 - Que el endpoint `GET /bitacora/` filtre y limite correctamente.
 """
-

@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bird, Thermometer } from "lucide-react";
+import { Warehouse, Thermometer, RefreshCw, Layers, Calendar, AlertCircle, CheckCircle2, Bird } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import StatCard from "../../components/StatCard";
 import api from "../../api/axios";
 import useIsMobile from "../../hooks/useIsMobile";
+import "./Estado.css";
 
 function toNumber(value) {
   if (value === "" || value === null || value === undefined) return null;
@@ -25,7 +26,6 @@ function Estado() {
 
   useEffect(() => {
     let alive = true;
-
     const tick = async () => {
       try {
         const [galRes, lotRes] = await Promise.all([
@@ -42,7 +42,6 @@ function Estado() {
         if (alive) setLoading(false);
       }
     };
-
     tick();
     const id = setInterval(tick, 10000);
     return () => {
@@ -69,32 +68,8 @@ function Estado() {
 
   const totalLotes = lotes.length;
   const totalAves = useMemo(() => {
-    return lotes.reduce(
-      (acc, l) => acc + (toNumber(l?.cantidad_actual) ?? 0),
-      0,
-    );
+    return lotes.reduce((acc, l) => acc + (toNumber(l?.cantidad_actual) ?? 0), 0);
   }, [lotes]);
-
-  const buildBadge = (tipo) => {
-    if (tipo === "riesgo") {
-      return {
-        background: "#fee2e2",
-        color: "#dc2626",
-        padding: "6px 12px",
-        borderRadius: "20px",
-        fontSize: "12px",
-        fontWeight: "700",
-      };
-    }
-    return {
-      background: "#dcfce7",
-      color: "#16a34a",
-      padding: "6px 12px",
-      borderRadius: "20px",
-      fontSize: "12px",
-      fontWeight: "700",
-    };
-  };
 
   const rowsGalpones = useMemo(() => {
     return galponesActivos.map((g) => {
@@ -103,13 +78,7 @@ function Estado() {
       const cap = toNumber(g.capacidad) ?? 0;
       const pct = cap > 0 ? usado / cap : 0;
       const tipo = pct >= 0.9 ? "riesgo" : "normal";
-      return {
-        ...g,
-        _aves: usado,
-        _cap: cap,
-        _pct: pct,
-        _tipo: tipo,
-      };
+      return { ...g, _aves: usado, _cap: cap, _pct: pct, _tipo: tipo };
     });
   }, [galponesActivos, avesPorGalpon]);
 
@@ -129,97 +98,85 @@ function Estado() {
   }, [lotes, galpones]);
 
   return (
-    <div style={layoutStyle}>
+    <div className="est-layout">
       <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
-
-      <main
-        style={{
-          ...mainContentStyle,
-          marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px",
-          paddingLeft: isMobile && !sidebarOpen ? "64px" : undefined,
-        }}
-      >
-        <div style={headerStyle}>
-          <div>
-            <h1 style={titleStyle}>Estado de Galpones y Lotes</h1>
-            <p style={subtitleStyle}>
-              Monitoreo en tiempo real (actualiza automáticamente)
+      <main className="est-main" style={{ marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px" }}>
+        
+        <header className="est-header">
+          <div className="est-title-group">
+            <h1 className="est-title">Estado General</h1>
+            <p className="est-subtitle">
+              <span className="est-live-indicator" />
+              Monitoreo en tiempo real de la granja
             </p>
           </div>
-          <div style={rightHeaderStyle}>
-            <span style={refreshHintStyle}>Actualiza cada 10s</span>
-            <span style={updatedStyle}>
-              {lastUpdated
-                ? `Última actualización: ${lastUpdated.toLocaleTimeString()}`
-                : ""}
+          <div className="est-header-right">
+            <span className="est-refresh-badge">
+              <RefreshCw size={12} /> Sincronizado cada 10s
+            </span>
+            <span className="est-updated-text">
+              {lastUpdated ? `Última actualización: ${lastUpdated.toLocaleTimeString()}` : "Cargando..."}
             </span>
           </div>
-        </div>
+        </header>
 
-        <div style={statsGridStyle}>
+        <section className="est-stats-grid">
           <StatCard
-            label="Galpones activos"
+            label="Galpones Activos"
             value={loading ? "—" : String(galponesActivos.length)}
-            trend={loading ? "Cargando" : "En línea"}
+            trend={loading ? "..." : "En línea"}
             trendType={loading ? "trend-warn" : "trend-up"}
-            icon={<Bird size={22} color="#92400e" />}
+            icon={<Warehouse size={22} color="#92400e" />}
             iconBg="#fef3c7"
           />
           <StatCard
-            label="Lotes"
+            label="Lotes en Crianza"
             value={loading ? "—" : String(totalLotes)}
-            trend={loading ? "Cargando" : "Total"}
+            trend={loading ? "..." : "Activos"}
             trendType={loading ? "trend-warn" : "trend-up"}
-            icon={<Thermometer size={22} color="#92400e" />}
-            iconBg="#fef3c7"
+            icon={<Layers size={22} color="#1e40af" />}
+            iconBg="#dbeafe"
           />
           <StatCard
-            label="Aves actuales"
-            value={loading ? "—" : String(totalAves)}
-            trend={loading ? "Cargando" : "Acumulado"}
+            label="Total de Aves"
+            value={loading ? "—" : totalAves.toLocaleString()}
+            trend={loading ? "..." : "Población"}
             trendType={loading ? "trend-warn" : "trend-up"}
-            icon={<Bird size={22} color="#92400e" />}
-            iconBg="#fef3c7"
+            icon={<Bird size={22} color="#166534" />}
+            iconBg="#dcfce7"
           />
-        </div>
+        </section>
 
-        <div style={gridStyle}>
-          <div style={panelStyle}>
-            <h3 style={panelTitleStyle}>Galpones activos</h3>
-            <div style={tableWrapperStyle}>
-              <table style={tableStyle}>
+        <div className="est-cards-grid">
+          <div className="est-panel">
+            <div className="est-panel-header">
+              <h3 className="est-panel-title"><Warehouse size={20} color="#f59e0b" /> Capacidad de Galpones</h3>
+            </div>
+            <div className="est-table-wrap">
+              <table className="est-table">
                 <thead>
-                  <tr style={theadRowStyle}>
-                    <th style={thStyle}>Galpón</th>
-                    <th style={thStyle}>Capacidad</th>
-                    <th style={thStyle}>Ocupado</th>
-                    <th style={thStyle}>Estado</th>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Capacidad</th>
+                    <th>Ocupado</th>
+                    <th>Estado</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr>
-                      <td colSpan={4} style={emptyTdStyle}>
-                        Cargando...
-                      </td>
-                    </tr>
+                    <tr><td colSpan={4} className="est-empty">Cargando...</td></tr>
                   ) : rowsGalpones.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} style={emptyTdStyle}>
-                        No hay galpones activos.
-                      </td>
-                    </tr>
+                    <tr><td colSpan={4} className="est-empty">No hay datos.</td></tr>
                   ) : (
                     rowsGalpones.map((g) => (
-                      <tr key={g.id} style={trStyle}>
-                        <td style={tdStyle}>
-                          <strong>{g.nombre}</strong>
-                        </td>
-                        <td style={tdStyle}>{g._cap} aves</td>
-                        <td style={tdStyle}>{g._aves} aves</td>
-                        <td style={tdStyle}>
-                          <span style={buildBadge(g._tipo)}>
-                            {g._tipo === "riesgo" ? "Riesgo" : "Normal"}
+                      <tr key={g.id}>
+                        <td><strong>{g.nombre}</strong></td>
+                        <td>{g._cap.toLocaleString()}</td>
+                        <td>{g._aves.toLocaleString()}</td>
+                        <td>
+                          <span className={`est-badge ${g._tipo === "riesgo" ? "est-badge-danger" : "est-badge-success"}`}>
+                            {g._tipo === "riesgo" ? <AlertCircle size={14} /> : <CheckCircle2 size={14} />}
+                            {g._tipo === "riesgo" ? "Límite" : "Óptimo"}
                           </span>
                         </td>
                       </tr>
@@ -230,44 +187,32 @@ function Estado() {
             </div>
           </div>
 
-          <div style={panelStyle}>
-            <h3 style={panelTitleStyle}>Lotes</h3>
-            <div style={tableWrapperStyle}>
-              <table style={tableStyle}>
+          <div className="est-panel">
+            <div className="est-panel-header">
+              <h3 className="est-panel-title"><Thermometer size={20} color="#f59e0b" /> Últimos Lotes</h3>
+            </div>
+            <div className="est-table-wrap">
+              <table className="est-table">
                 <thead>
-                  <tr style={theadRowStyle}>
-                    <th style={thStyle}>Lote</th>
-                    <th style={thStyle}>Galpón</th>
-                    <th style={thStyle}>Aves</th>
-                    <th style={thStyle}>Inicio</th>
+                  <tr>
+                    <th>ID</th>
+                    <th>Galpón</th>
+                    <th>Aves</th>
+                    <th>Ingreso</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr>
-                      <td colSpan={4} style={emptyTdStyle}>
-                        Cargando...
-                      </td>
-                    </tr>
+                    <tr><td colSpan={4} className="est-empty">Cargando...</td></tr>
                   ) : lotesEnriquecidos.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} style={emptyTdStyle}>
-                        No hay lotes registrados.
-                      </td>
-                    </tr>
+                    <tr><td colSpan={4} className="est-empty">No hay lotes.</td></tr>
                   ) : (
                     lotesEnriquecidos.map((l) => (
-                      <tr key={l.id_lote} style={trStyle}>
-                        <td style={tdStyle}>
-                          <strong>#{l.id_lote}</strong>
-                        </td>
-                        <td style={tdStyle}>{l._galponNombre}</td>
-                        <td style={tdStyle}>
-                          {toNumber(l.cantidad_actual) ?? 0}
-                        </td>
-                        <td style={tdStyle}>
-                          {String(l.fecha_ingreso || "-")}
-                        </td>
+                      <tr key={l.id_lote}>
+                        <td><strong>#{l.id_lote}</strong></td>
+                        <td>{l._galponNombre}</td>
+                        <td>{toNumber(l.cantidad_actual)?.toLocaleString() ?? 0}</td>
+                        <td style={{fontSize:12, color:'#94a3b8'}}><Calendar size={12} style={{display:'inline', marginRight:4, verticalAlign:-2}}/> {l.fecha_ingreso}</td>
                       </tr>
                     ))
                   )}
@@ -280,91 +225,5 @@ function Estado() {
     </div>
   );
 }
-
-const layoutStyle = {
-  display: "flex",
-  minHeight: "100vh",
-  background: "#f9fafb",
-  fontFamily: "'Poppins', sans-serif",
-};
-const mainContentStyle = {
-  flex: 1,
-  padding: "40px",
-  transition: "margin-left 0.3s ease",
-};
-const headerStyle = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  marginBottom: "24px",
-};
-const titleStyle = {
-  fontSize: "24px",
-  fontWeight: "700",
-  color: "#1c1c1c",
-  margin: 0,
-};
-const subtitleStyle = {
-  fontSize: "14px",
-  color: "#6b7280",
-  margin: "4px 0 0 0",
-};
-const rightHeaderStyle = {
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "flex-end",
-  gap: "4px",
-};
-const refreshHintStyle = {
-  fontSize: "12px",
-  fontWeight: "700",
-  color: "#92400e",
-  background: "#fef3c7",
-  borderRadius: "999px",
-  padding: "6px 10px",
-};
-const updatedStyle = {
-  fontSize: "12px",
-  color: "#9ca3af",
-};
-const statsGridStyle = {
-  display: "grid",
-  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-  gap: "18px",
-  marginBottom: "24px",
-};
-const gridStyle = {
-  display: "grid",
-  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-  gap: "24px",
-};
-const panelStyle = {
-  background: "white",
-  borderRadius: "20px",
-  padding: "24px",
-  boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
-};
-const panelTitleStyle = {
-  fontSize: "15px",
-  fontWeight: "700",
-  color: "#1c1c1c",
-  margin: "0 0 16px 0",
-};
-const tableWrapperStyle = { overflowX: "auto" };
-const tableStyle = {
-  width: "100%",
-  borderCollapse: "collapse",
-  textAlign: "left",
-};
-const theadRowStyle = { borderBottom: "1px solid #f3f4f6" };
-const thStyle = {
-  padding: "16px",
-  color: "#6b7280",
-  fontSize: "14px",
-  fontWeight: "500",
-};
-const trStyle = { borderBottom: "1px solid #f8fafc" };
-const tdStyle = { padding: "16px", fontSize: "14px", color: "#1c1c1c" };
-const emptyTdStyle = { padding: "24px", color: "#9ca3af" };
 
 export default Estado;

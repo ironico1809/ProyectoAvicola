@@ -19,7 +19,8 @@ def _ensure_bitacora_table_exists(apps, schema_editor):
     """
 
     connection = schema_editor.connection
-    existing_tables = {name.lower() for name in connection.introspection.table_names()}
+    existing_tables = {name.lower()
+                       for name in connection.introspection.table_names()}
 
     if "bitacora" in existing_tables:
         return
@@ -35,5 +36,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(_ensure_bitacora_table_exists, reverse_code=migrations.RunPython.noop),
+        migrations.RunPython(
+            _ensure_bitacora_table_exists,
+            reverse_code=migrations.RunPython.noop),
     ]

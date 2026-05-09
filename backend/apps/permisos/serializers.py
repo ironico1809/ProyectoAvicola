@@ -35,12 +35,19 @@ class RolPermisosSerializer(serializers.Serializer):
     Devuelve: datos validados para la vista.
     """
 
-    add = serializers.ListField(child=serializers.IntegerField(), required=False, allow_empty=True)
-    remove = serializers.ListField(child=serializers.IntegerField(), required=False, allow_empty=True)
+    add = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        allow_empty=True)
+    remove = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        allow_empty=True)
 
     def validate(self, attrs):
         if 'add' not in attrs and 'remove' not in attrs:
-            raise serializers.ValidationError('Debes enviar "add" y/o "remove".')
+            raise serializers.ValidationError(
+                'Debes enviar "add" y/o "remove".')
         return attrs
 
 
@@ -50,4 +57,7 @@ class RolPermisosReplaceSerializer(serializers.Serializer):
     - `permisos`: lista de ids_permiso final.
     """
 
-    permisos = serializers.ListField(child=serializers.IntegerField(), required=True, allow_empty=True)
+    permisos = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=True,
+        allow_empty=True)

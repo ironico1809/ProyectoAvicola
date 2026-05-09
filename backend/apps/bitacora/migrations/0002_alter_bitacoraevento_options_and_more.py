@@ -66,7 +66,13 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='bitacoraevento',
             name='usuario',
-            field=models.ForeignKey(blank=True, db_column='usuario_id', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='eventos_bitacora', to='usuarios.usuario'),
+            field=models.ForeignKey(
+                blank=True,
+                db_column='usuario_id',
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name='eventos_bitacora',
+                to='usuarios.usuario'),
         ),
         migrations.AlterModelTable(
             name='bitacoraevento',

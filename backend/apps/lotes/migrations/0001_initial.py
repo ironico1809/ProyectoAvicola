@@ -26,11 +26,13 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ('raza_tipo', models.CharField(blank=True, max_length=50, null=True)),
-                ('fecha_ingreso', models.DateField(default=django.utils.timezone.localdate)),
+                ('fecha_ingreso', models.DateField(
+                    default=django.utils.timezone.localdate)),
                 ('fecha_salida_estimada', models.DateField(blank=True, null=True)),
                 ('cantidad_inicial', models.IntegerField()),
                 ('cantidad_actual', models.IntegerField()),
-                ('peso_inicial', models.DecimalField(blank=True, decimal_places=2, max_digits=10, null=True)),
+                ('peso_inicial', models.DecimalField(blank=True,
+                 decimal_places=2, max_digits=10, null=True)),
                 ('estado', models.CharField(default='Crianza', max_length=20)),
             ],
             options={

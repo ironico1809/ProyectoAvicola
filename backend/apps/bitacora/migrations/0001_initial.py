@@ -26,11 +26,13 @@ class Migration(migrations.Migration):
                         to='usuarios.usuario',
                     ),
                 ),
-                ('nom_usuario', models.CharField(blank=True, max_length=50, null=True)),
+                ('nom_usuario', models.CharField(
+                    blank=True, max_length=50, null=True)),
                 ('accion', models.CharField(max_length=50)),
                 ('modulo', models.CharField(max_length=50)),
                 ('entidad', models.CharField(blank=True, max_length=50, null=True)),
-                ('entidad_id', models.CharField(blank=True, max_length=64, null=True)),
+                ('entidad_id', models.CharField(
+                    blank=True, max_length=64, null=True)),
                 ('detalle', models.TextField(blank=True, null=True)),
                 ('metodo', models.CharField(blank=True, max_length=10, null=True)),
                 ('path', models.TextField(blank=True, null=True)),
