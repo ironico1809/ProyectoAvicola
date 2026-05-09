@@ -18,6 +18,15 @@ function toNumber(value) {
   return Number.isFinite(n) ? n : null;
 }
 
+function calculateAge(entryDate) {
+  if (!entryDate) return 0;
+  const start = new Date(entryDate);
+  const today = new Date();
+  const diffTime = today - start;
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  return Math.max(0, diffDays);
+}
+
 function todayISO() {
   try {
     return new Date().toISOString().slice(0, 10);
@@ -78,10 +87,18 @@ function Alimentacion() {
       setRows(Array.isArray(alimentRes.data) ? alimentRes.data : []);
       setInsumos(Array.isArray(insumosRes.data) ? insumosRes.data : []);
 
-      const activos = dataLotes.filter(l => String(l.estado).toLowerCase() === "crianza");
+      // Preparar filas masivas con lotes en curso (Crianza, Crecimiento o Engorde)
+      const activos = dataLotes.filter(l => {
+        const st = String(l.estado || "").toLowerCase();
+        return st === "crianza" || st === "crecimiento" || st === "engorde" || st === "activo";
+      });
       setBulkRows(activos.map(l => ({
         id_lote: l.id_lote,
         nombre: `Lote ${l.id_lote}`,
+        raza: l.raza_tipo || "S/R",
+        aves: l.cantidad_actual || 0,
+        edad: calculateAge(l.fecha_ingreso),
+        estado: l.estado,
         cantidad_kg: "",
         tipo_alimento: "",
         insumo_id: "",
@@ -120,7 +137,6 @@ function Alimentacion() {
     if (!id_lote) return setFormError("Selecciona un lote.");
     if (!cantidad_kg || cantidad_kg <= 0) return setFormError("Cantidad inválida.");
 
-    // Verificación previa en el frontend
     if (form.insumo_id) {
       const insumo = insumos.find(i => String(i.id_insumo) === String(form.insumo_id));
       if (insumo && cantidad_kg > parseFloat(insumo.stock_actual)) {
@@ -176,7 +192,6 @@ function Alimentacion() {
     }
   };
 
-  // Insumo seleccionado para el preview de stock
   const insumoSeleccionado = useMemo(() => {
     if (!form.insumo_id) return null;
     return insumos.find(i => String(i.id_insumo) === String(form.insumo_id)) || null;
@@ -189,7 +204,13 @@ function Alimentacion() {
   }, [insumoSeleccionado, form.cantidad_kg]);
 
   const lotesOptions = useMemo(() => {
-    return lotes.map(l => ({ value: String(l.id_lote), label: `Lote ${l.id_lote} — ${l.raza || ""}` }));
+    return lotes.map(l => {
+      const edad = calculateAge(l.fecha_ingreso);
+      return { 
+        value: String(l.id_lote), 
+        label: `Lote ${l.id_lote} — ${l.raza_tipo || "S/R"} (${edad} días, ${l.cantidad_actual} aves)` 
+      };
+    });
   }, [lotes]);
 
   const alimentosOptions = useMemo(() => {
@@ -200,6 +221,14 @@ function Alimentacion() {
         label: `${i.nombre} (${i.stock_actual} ${i.unidad_medida} disp.)`,
       }));
   }, [insumos]);
+
+  const tiposAlimentoUnicos = useMemo(() => {
+    const set = new Set();
+    rows.forEach(r => {
+      if (r.tipo_alimento) set.add(r.tipo_alimento.trim());
+    });
+    return Array.from(set).sort();
+  }, [rows]);
 
   return (
     <div className="alim-layout">
@@ -238,23 +267,21 @@ function Alimentacion() {
             </div>
           </div>
 
-          <div className="alim-filters" style={{gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: 20}}>
-            <div>
-              <label className="alim-label">Lote</label>
-              <select className="alim-select" value={filtroLote} onChange={(e) => setFiltroLote(e.target.value)}>
-                <option value="">Todos los lotes</option>
-                {lotes.map(l => <option key={l.id_lote} value={l.id_lote}>Lote {l.id_lote}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="alim-label">Insumo / Alimento</label>
-              <select className="alim-select" value={filtroInsumo} onChange={(e) => setFiltroInsumo(e.target.value)}>
-                <option value="">Todos</option>
-                {insumos.filter(i => i.tipo === "Alimento").map(i => (
-                  <option key={i.id_insumo} value={i.id_insumo}>{i.nombre}</option>
-                ))}
-              </select>
-            </div>
+          <div className="alim-filters" style={{gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: 20, alignItems: 'end'}}>
+            <ComboBox
+              label="Lote"
+              value={filtroLote}
+              onChange={val => setFiltroLote(val)}
+              options={lotes.map(l => ({ value: String(l.id_lote), label: `Lote ${l.id_lote}` }))}
+              placeholder="Todos"
+            />
+            <ComboBox
+              label="Insumo / Alimento"
+              value={filtroInsumo}
+              onChange={val => setFiltroInsumo(val)}
+              options={insumos.filter(i => i.tipo === "Alimento").map(i => ({ value: String(i.id_insumo), label: i.nombre }))}
+              placeholder="Todos"
+            />
             <InputField label="Desde" type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} />
             <InputField label="Hasta" type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)} />
           </div>
@@ -317,7 +344,6 @@ function Alimentacion() {
                 placeholder="No descontar inventario"
               />
 
-              {/* Preview de stock en tiempo real */}
               {insumoSeleccionado && (
                 <div className={`alim-stock-preview ${stockTras !== null && stockTras < parseFloat(insumoSeleccionado.stock_minimo) ? "alim-stock-preview--warn" : ""}`}>
                   <div className="alim-stock-preview__row">
@@ -347,7 +373,16 @@ function Alimentacion() {
                 <InputField label="Fecha" type="date" value={form.fecha} onChange={e => setForm({...form, fecha: e.target.value})} />
                 <InputField label="Cantidad (kg)" type="number" step="0.01" value={form.cantidad_kg} onChange={e => setForm({...form, cantidad_kg: e.target.value})} placeholder="0.00" />
               </div>
-              <InputField label="Tipo / Marca del Alimento" value={form.tipo_alimento} onChange={e => setForm({...form, tipo_alimento: e.target.value})} placeholder="Ej: Balanceado Iniciador" />
+              
+              <ComboBox
+                label="Tipo / Marca del Alimento"
+                value={form.tipo_alimento}
+                onChange={val => setForm({...form, tipo_alimento: val})}
+                allowCustom={true}
+                options={tiposAlimentoUnicos.map(t => ({ value: t, label: t }))}
+                placeholder="Escribe o selecciona..."
+              />
+
               <textarea
                 className="alim-textarea"
                 placeholder="Observaciones opcionales..."
@@ -369,7 +404,7 @@ function Alimentacion() {
                 <table className="rep-table">
                   <thead>
                     <tr>
-                      <th>Lote</th>
+                      <th>Información del Lote</th>
                       <th>Insumo (Alimento)</th>
                       <th>Kilos (kg)</th>
                       <th>Tipo/Marca</th>
@@ -378,30 +413,54 @@ function Alimentacion() {
                   <tbody>
                     {bulkRows.map((r, idx) => (
                       <tr key={r.id_lote}>
-                        <td><div style={{display:'flex', alignItems:'center', gap:8}}><Bird size={14}/> <strong>{r.nombre}</strong></div></td>
                         <td>
-                          <select className="rep-select" style={{padding:'6px 10px', fontSize:12}} value={r.insumo_id} onChange={e => {
+                          <div style={{display:'flex', flexDirection:'column', gap:2}}>
+                            <div style={{display:'flex', alignItems:'center', gap:8}}>
+                              <Bird size={14} color="#f59e0b"/> 
+                              <strong>{r.nombre}</strong>
+                              <span style={{fontSize:10, background:'#f1f5f9', padding:'2px 6px', borderRadius:4, fontWeight:600, color:'#64748b'}}>
+                                {r.estado}
+                              </span>
+                            </div>
+                            <div style={{fontSize:11, color:'#94a3b8', marginLeft:22}}>
+                              {r.raza} • {r.aves} aves • <span style={{color:'#0f172a', fontWeight:700}}>{r.edad} días de edad</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{minWidth: 200}}>
+                          <ComboBox
+                            value={r.insumo_id}
+                            onChange={val => {
                               const newRows = [...bulkRows];
-                              newRows[idx].insumo_id = e.target.value;
+                              newRows[idx].insumo_id = val;
                               setBulkRows(newRows);
-                            }}>
-                            <option value="">Ninguno</option>
-                            {insumos.filter(i => i.tipo === 'Alimento').map(i => <option key={i.id_insumo} value={i.id_insumo}>{i.nombre} ({i.stock_actual} {i.unidad_medida})</option>)}
-     </select>
+                            }}
+                            options={insumos.filter(i => i.tipo === 'Alimento').map(i => ({
+                              value: String(i.id_insumo),
+                              label: `${i.nombre} (${i.stock_actual} ${i.unit_medida || "kg"})`
+                            }))}
+                            placeholder="Ninguno"
+                          />
                         </td>
                         <td>
-                          <input type="number" className="rep-input" style={{padding:'6px 10px', fontSize:12, width:90}} placeholder="0.00" value={r.cantidad_kg} onChange={e => {
+                          <input type="number" className="rep-input" style={{padding:'10px 12px', fontSize:13, width:90}} placeholder="0.00" value={r.cantidad_kg} onChange={e => {
                               const newRows = [...bulkRows];
                               newRows[idx].cantidad_kg = e.target.value;
                               setBulkRows(newRows);
                             }} />
                         </td>
-                        <td>
-                          <input type="text" className="rep-input" style={{padding:'6px 10px', fontSize:12}} placeholder="Marca..." value={r.tipo_alimento} onChange={e => {
+                        <td style={{minWidth: 180}}>
+                          <ComboBox
+                            value={r.tipo_alimento}
+                            onChange={val => {
                               const newRows = [...bulkRows];
-                              newRows[idx].tipo_alimento = e.target.value;
+                              newRows[idx].tipo_alimento = val;
                               setBulkRows(newRows);
-                            }} />
+                            }}
+                            allowCustom={true}
+                            options={tiposAlimentoUnicos.map(t => ({ value: t, label: t }))}
+                            placeholder="Marca..."
+                          />
                         </td>
                       </tr>
                     ))}
