@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'apps.usuarios',
     'apps.permisos',
+    'apps.temperatura',
     'apps.galpones',
     'apps.lotes',
     'apps.alimentacion',

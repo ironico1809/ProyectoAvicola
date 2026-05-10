@@ -19,6 +19,8 @@ import Movimientos from "./pages/Inventario/Movimientos/Movimientos";
 
 import RegistroSanitario from "./pages/Sanitario/Registro/RegistroSanitario";
 import HistorialClinico from "./pages/Sanitario/Historial/HistorialClinico";
+import Temperatura from "./pages/Temperatura/Temperatura";
+import TemperatureAlert from "./components/TemperatureAlert";
 
 function App() {
   return (
@@ -44,7 +46,9 @@ function App() {
         <Route path="/bitacora" element={<Bitacora />} />
         <Route path="/permisos" element={<Permisos />} />
         <Route path="/roles" element={<Roles />} />
+        <Route path="/temperatura" element={<Temperatura />} />
       </Routes>
+      <TemperatureAlert />
     </BrowserRouter>
   );
 }
