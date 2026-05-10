@@ -317,7 +317,7 @@ function Alimentacion() {
             </div>
           </div>
 
-          <div className="alim-filters" style={{gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: 20, alignItems: 'end'}}>
+          <div className="alim-filters" style={{gap: '12px', marginBottom: 20, alignItems: 'end'}}>
             <ComboBox
               label="Lote"
               value={filtroLote}
@@ -395,7 +395,7 @@ function Alimentacion() {
       </main>
 
       {showModal && (
-        <Modal titulo={modoRegistro === "individual" ? "Nuevo Registro de Alimentación" : "Registro Masivo"} onClose={() => setShowModal(false)} width={modoRegistro === "masivo" ? "850px" : "450px"}>
+        <Modal titulo={modoRegistro === "individual" ? "Nuevo Registro de Alimentación" : "Registro Masivo"} onClose={() => setShowModal(false)} width={modoRegistro === "masivo" ? "min(96vw, 1100px)" : "450px"}>
           {modoRegistro === "individual" ? (
             <form className="alim-form" onSubmit={handleRegistrarIndividual}>
               <ComboBox
@@ -439,7 +439,7 @@ function Alimentacion() {
                 </div>
               )}
 
-              <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:12}}>
+              <div className="alim-form-row">
                 <InputField label="Fecha" type="date" value={form.fecha} onChange={e => setForm({...form, fecha: e.target.value})} />
                 <InputField label="Cantidad (kg)" type="number" step="0.01" value={form.cantidad_kg} onChange={e => setForm({...form, cantidad_kg: e.target.value})} placeholder="0.00" />
               </div>
@@ -465,78 +465,98 @@ function Alimentacion() {
             </form>
           ) : (
             <div className="alim-bulk-container" style={{display:'flex', flexDirection:'column', gap:16}}>
-              <div style={{display:'flex', alignItems:'center', gap:12, background:'#f8fafc', padding:12, borderRadius:12, border:'1px solid #e2e8f0'}}>
-                <Calendar size={18} color="#64748b" />
+              {/* Fecha global */}
+              <div style={{display:'flex', alignItems:'center', gap:12, background:'#f8fafc', padding:'10px 16px', borderRadius:12, border:'1px solid #e2e8f0'}}>
+                <Calendar size={16} color="#64748b" />
                 <span style={{fontSize:13, fontWeight:600, color:'#475569'}}>Fecha Global:</span>
-                <input type="date" className="rep-input" value={bulkFecha} onChange={e => setBulkFecha(e.target.value)} style={{width:'auto', padding:'6px 12px'}} />
+                <input
+                  type="date"
+                  className="rep-input"
+                  value={bulkFecha}
+                  onChange={e => setBulkFecha(e.target.value)}
+                  style={{width:'auto', padding:'6px 12px', paddingLeft:'12px'}}
+                />
               </div>
-              <div className="rep-table-container" style={{maxHeight: 400, overflowY:'auto'}}>
-                <table className="rep-table">
-                  <thead>
-                    <tr>
-                      <th>Información del Lote</th>
-                      <th>Insumo (Alimento)</th>
-                      <th>Kilos (kg)</th>
-                      <th>Tipo/Marca</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {bulkRows.map((r, idx) => (
-                      <tr key={r.id_lote}>
-                        <td>
-                          <div style={{display:'flex', flexDirection:'column', gap:2}}>
-                            <div style={{display:'flex', alignItems:'center', gap:8}}>
-                              <Bird size={14} color="#f59e0b"/> 
-                              <strong>{r.nombre}</strong>
-                              <span style={{fontSize:10, background:'#f1f5f9', padding:'2px 6px', borderRadius:4, fontWeight:600, color:'#64748b'}}>
-                                {r.estado}
-                              </span>
-                            </div>
-                            <div style={{fontSize:11, color:'#94a3b8', marginLeft:22}}>
-                              {r.raza} • {r.aves} aves • <span style={{color:'#0f172a', fontWeight:700}}>{r.edad} días de edad</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td style={{minWidth: 200}}>
-                          <ComboBox
-                            value={r.insumo_id}
-                            onChange={val => {
-                              const newRows = [...bulkRows];
-                              newRows[idx].insumo_id = val;
-                              setBulkRows(newRows);
-                            }}
-                            options={insumos.filter(i => i.tipo === 'Alimento').map(i => ({
-                              value: String(i.id_insumo),
-                              label: `${i.nombre} (${i.stock_actual} ${i.unit_medida || "kg"})`
-                            }))}
-                            placeholder="Ninguno"
-                          />
-                        </td>
-                        <td>
-                          <input type="number" className="rep-input" style={{padding:'10px 12px', fontSize:13, width:90}} placeholder="0.00" value={r.cantidad_kg} onChange={e => {
-                              const newRows = [...bulkRows];
-                              newRows[idx].cantidad_kg = e.target.value;
-                              setBulkRows(newRows);
-                            }} />
-                        </td>
-                        <td style={{minWidth: 180}}>
-                          <ComboBox
-                            value={r.tipo_alimento}
-                            onChange={val => {
-                              const newRows = [...bulkRows];
-                              newRows[idx].tipo_alimento = val;
-                              setBulkRows(newRows);
-                            }}
-                            allowCustom={true}
-                            options={tiposAlimentoUnicos.map(t => ({ value: t, label: t }))}
-                            placeholder="Marca..."
-                          />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+
+              {/* Cabecera de columnas */}
+              <div className="alim-bulk-header">
+                <span className="alim-bulk-col-lote">Lote</span>
+                <span className="alim-bulk-col-insumo">Insumo / Alimento</span>
+                <span className="alim-bulk-col-kilos">Kilos (kg)</span>
+                <span className="alim-bulk-col-marca">Tipo / Marca</span>
               </div>
+
+              {/* Filas por lote */}
+              <div style={{display:'flex', flexDirection:'column', gap:8, maxHeight:380, overflowY:'auto', paddingRight:4}}>
+                {bulkRows.map((r, idx) => (
+                  <div key={r.id_lote} className="alim-bulk-row">
+                    {/* Info lote */}
+                    <div className="alim-bulk-col-lote" style={{display:'flex', flexDirection:'column', gap:2}}>
+                      <div style={{display:'flex', alignItems:'center', gap:6}}>
+                        <Bird size={13} color="#f59e0b"/>
+                        <strong style={{fontSize:13}}>{r.nombre}</strong>
+                        <span style={{fontSize:10, background:'#f1f5f9', padding:'1px 6px', borderRadius:4, fontWeight:600, color:'#64748b', whiteSpace:'nowrap'}}>
+                          {r.estado}
+                        </span>
+                      </div>
+                      <div style={{fontSize:11, color:'#94a3b8', paddingLeft:19}}>
+                        {r.raza} · {r.aves} aves · <strong style={{color:'#374151'}}>{r.edad}d</strong>
+                      </div>
+                    </div>
+
+                    {/* Insumo */}
+                    <div className="alim-bulk-col-insumo">
+                      <ComboBox
+                        value={r.insumo_id}
+                        onChange={val => {
+                          const newRows = [...bulkRows];
+                          newRows[idx].insumo_id = val;
+                          setBulkRows(newRows);
+                        }}
+                        options={insumos.filter(i => i.tipo === 'Alimento').map(i => ({
+                          value: String(i.id_insumo),
+                          label: `${i.nombre} (${i.stock_actual} ${i.unidad_medida})`
+                        }))}
+                        placeholder="— Ninguno —"
+                      />
+                    </div>
+
+                    {/* Kilos */}
+                    <div className="alim-bulk-col-kilos">
+                      <input
+                        type="number"
+                        className="alim-select alim-select--sm"
+                        style={{width:'100%', textAlign:'right'}}
+                        placeholder="0.00"
+                        step="0.01"
+                        min="0"
+                        value={r.cantidad_kg}
+                        onChange={e => {
+                          const newRows = [...bulkRows];
+                          newRows[idx].cantidad_kg = e.target.value;
+                          setBulkRows(newRows);
+                        }}
+                      />
+                    </div>
+
+                    {/* Tipo/Marca */}
+                    <div className="alim-bulk-col-marca">
+                      <ComboBox
+                        value={r.tipo_alimento}
+                        onChange={val => {
+                          const newRows = [...bulkRows];
+                          newRows[idx].tipo_alimento = val;
+                          setBulkRows(newRows);
+                        }}
+                        allowCustom={true}
+                        options={tiposAlimentoUnicos.map(t => ({ value: t, label: t }))}
+                        placeholder="Marca..."
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
               {formError && <p className="alim-formError">⚠ {formError}</p>}
               <div style={{display:'flex', justifyContent:'flex-end', gap:12}}>
                 <button className="rep-btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
@@ -565,7 +585,7 @@ function Alimentacion() {
               options={alimentosOptions}
               placeholder="Sin insumo vinculado"
             />
-            <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:12}}>
+            <div className="alim-form-row">
               <InputField label="Fecha" type="date" value={form.fecha} onChange={e => setForm({...form, fecha: e.target.value})} />
               <InputField label="Cantidad (kg)" type="number" step="0.01" value={form.cantidad_kg} onChange={e => setForm({...form, cantidad_kg: e.target.value})} placeholder="0.00" />
             </div>

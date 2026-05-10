@@ -2,9 +2,10 @@ import csv
 import io
 from datetime import datetime
 
-from django.db.models import Avg, Count, DecimalField, ExpressionWrapper, F, Sum
+from django.db.models import Avg, Count, DecimalField, ExpressionWrapper, F, Q, Sum
 from django.db.models.functions import TruncDay, TruncMonth
 from django.http import HttpResponse
+from django.utils import timezone
 
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -13,6 +14,7 @@ from rest_framework.views import APIView
 
 from apps.alimentacion.models import Alimentacion
 from apps.bitacora.models import BitacoraEvento
+from apps.insumos.models import ControlSanitario, Insumo, MovimientoAlmacen
 from apps.lotes.models import Lote
 from apps.reportes.serializers import ReporteGenerarSerializer
 
@@ -182,6 +184,21 @@ class ReporteGenerarView(APIView):
                 agrupar_por=agrupar_por,
             )
 
+        if entidad == 'insumos':
+            return self._report_insumos(
+                fecha_inicio=fecha_inicio,
+                fecha_fin=fecha_fin,
+                agrupar_por=agrupar_por,
+            )
+
+        if entidad == 'sanitario':
+            return self._report_sanitario(
+                fecha_inicio=fecha_inicio,
+                fecha_fin=fecha_fin,
+                lote_ids=lote_ids,
+                agrupar_por=agrupar_por,
+            )
+
         raise ValueError('Entidad no soportada.')
 
     def _report_alimentacion(
@@ -283,6 +300,29 @@ class ReporteGenerarView(APIView):
                 }
                 for r in agg
             ]
+            series = rows
+
+        elif agrupar_por == 'lote':
+            agg = (
+                qs.values('lote_id', 'lote__galpon__nombre', 'lote__cantidad_inicial', 'lote__cantidad_actual')
+                .annotate(total_kg=Sum('cantidad_kg'), registros=Count('id_alimentacion'))
+                .order_by('lote_id')
+            )
+            rows = []
+            for r in agg:
+                aves_ini = r['lote__cantidad_inicial'] or 0
+                aves_act = r['lote__cantidad_actual'] or 0
+                kg = r['total_kg'] or 0
+                mortalidad = round(((aves_ini - aves_act) / aves_ini) * 100, 4) if aves_ini > 0 else 0
+                conversion = round(float(kg) / aves_act, 4) if aves_act > 0 else 0
+                rows.append({
+                    'lote_id': r['lote_id'],
+                    'periodo': f"Lote {r['lote_id']}",
+                    'galpon': r['lote__galpon__nombre'],
+                    'total_kg': float(kg),
+                    'mortalidad_pct': mortalidad,
+                    'conversion_alimenticia': conversion,
+                })
             series = rows
 
         else:
@@ -448,6 +488,28 @@ class ReporteGenerarView(APIView):
             ]
             series = rows
 
+        elif agrupar_por == 'estado':
+            agg = (
+                qs.values('estado')
+                .annotate(
+                    total_lotes=Count('id_lote'),
+                    aves_actuales=Sum('cantidad_actual'),
+                    mortalidad_promedio=Avg(mortalidad_expr),
+                )
+                .order_by('estado')
+            )
+            rows = [
+                {
+                    'estado': r['estado'] or 'Sin especificar',
+                    'periodo': r['estado'] or 'Sin especificar',
+                    'total_lotes': int(r['total_lotes'] or 0),
+                    'aves_actuales': int(r['aves_actuales'] or 0),
+                    'mortalidad_promedio_pct': float(r['mortalidad_promedio'] or 0),
+                }
+                for r in agg
+            ]
+            series = rows
+
         else:
             qs = qs.order_by('-id_lote')
             rows = []
@@ -546,3 +608,277 @@ class ReporteGenerarView(APIView):
             'usuarios_distintos': int(summary.get('usuarios') or 0),
         }
         return rows, summary, series
+
+    # ── Inventario / Insumos ──────────────────────────────────────────────────
+    def _report_insumos(self, *, fecha_inicio, fecha_fin, agrupar_por):
+        """Reporte de movimientos de almacén y estado del catálogo de insumos."""
+        mov_qs = MovimientoAlmacen.objects.select_related('insumo', 'proveedor').all()
+
+        if fecha_inicio:
+            mov_qs = mov_qs.filter(fecha_hora__date__gte=fecha_inicio)
+        if fecha_fin:
+            mov_qs = mov_qs.filter(fecha_hora__date__lte=fecha_fin)
+
+        rows = []
+        series = []
+
+        if agrupar_por == 'tipo':
+            agg = (
+                mov_qs.values('insumo__tipo')
+                .annotate(
+                    total_entradas=Sum('cantidad', filter=Q(tipo_movimiento='Entrada')),
+                    total_salidas=Sum('cantidad', filter=Q(tipo_movimiento='Salida')),
+                    movimientos=Count('id'),
+                )
+                .order_by('insumo__tipo')
+            )
+            rows = [
+                {
+                    'tipo': r['insumo__tipo'] or 'Sin tipo',
+                    'periodo': r['insumo__tipo'] or 'Sin tipo',
+                    'total_entradas': float(r['total_entradas'] or 0),
+                    'total_salidas': float(r['total_salidas'] or 0),
+                    'movimientos': int(r['movimientos'] or 0),
+                }
+                for r in agg
+            ]
+            series = rows
+
+        elif agrupar_por in {'dia', 'mes'}:
+            trunc = TruncDay('fecha_hora') if agrupar_por == 'dia' else TruncMonth('fecha_hora')
+            agg = (
+                mov_qs.annotate(periodo=trunc)
+                .values('periodo')
+                .annotate(
+                    total_entradas=Sum('cantidad', filter=Q(tipo_movimiento='Entrada')),
+                    total_salidas=Sum('cantidad', filter=Q(tipo_movimiento='Salida')),
+                    movimientos=Count('id'),
+                )
+                .order_by('periodo')
+            )
+            rows = [
+                {
+                    'periodo': (r['periodo'].date().isoformat() if hasattr(r['periodo'], 'date') else str(r['periodo'])),
+                    'total_entradas': float(r['total_entradas'] or 0),
+                    'total_salidas': float(r['total_salidas'] or 0),
+                    'movimientos': int(r['movimientos'] or 0),
+                }
+                for r in agg
+            ]
+            series = rows
+
+        else:
+            # Catálogo de insumos con estado de stock
+            insumo_qs = Insumo.objects.all().order_by('tipo', 'nombre')
+            rows = [
+                {
+                    'id_insumo': i.id_insumo,
+                    'nombre': i.nombre,
+                    'tipo': i.tipo,
+                    'unidad_medida': i.unidad_medida,
+                    'stock_actual': float(i.stock_actual),
+                    'stock_minimo': float(i.stock_minimo),
+                    'bajo_stock': i.bajo_stock,
+                    'periodo': i.nombre,
+                }
+                for i in insumo_qs
+            ]
+
+        # summary
+        cat = Insumo.objects.aggregate(
+            total_insumos=Count('id_insumo'),
+            bajo_stock_count=Count('id_insumo', filter=Q(stock_actual__lte=F('stock_minimo'))),
+        )
+        mov_summary = mov_qs.aggregate(
+            total_entradas=Sum('cantidad', filter=Q(tipo_movimiento='Entrada')),
+            total_salidas=Sum('cantidad', filter=Q(tipo_movimiento='Salida')),
+        )
+        summary = {
+            'total_insumos': int(cat.get('total_insumos') or 0),
+            'insumos_bajo_stock': int(cat.get('bajo_stock_count') or 0),
+            'total_entradas': float(mov_summary.get('total_entradas') or 0),
+            'total_salidas': float(mov_summary.get('total_salidas') or 0),
+        }
+        return rows, summary, series
+
+    # ── Sanitario ─────────────────────────────────────────────────────────────
+    def _report_sanitario(self, *, fecha_inicio, fecha_fin, lote_ids, agrupar_por):
+        """Reporte de tratamientos sanitarios aplicados."""
+        qs = ControlSanitario.objects.select_related('lote', 'insumo').all()
+
+        if fecha_inicio:
+            qs = qs.filter(fecha_aplicacion__gte=fecha_inicio)
+        if fecha_fin:
+            qs = qs.filter(fecha_aplicacion__lte=fecha_fin)
+        if lote_ids:
+            qs = qs.filter(lote_id__in=lote_ids)
+
+        rows = []
+        series = []
+
+        if agrupar_por == 'tipo':
+            agg = (
+                qs.values('tipo_tratamiento')
+                .annotate(aplicaciones=Count('id'), dosis_total=Sum('dosis'))
+                .order_by('tipo_tratamiento')
+            )
+            rows = [
+                {
+                    'tipo_tratamiento': r['tipo_tratamiento'],
+                    'periodo': r['tipo_tratamiento'],
+                    'aplicaciones': int(r['aplicaciones'] or 0),
+                    'dosis_total': float(r['dosis_total'] or 0),
+                }
+                for r in agg
+            ]
+            series = rows
+
+        elif agrupar_por in {'dia', 'mes'}:
+            trunc = TruncDay('fecha_aplicacion') if agrupar_por == 'dia' else TruncMonth('fecha_aplicacion')
+            agg = (
+                qs.annotate(periodo=trunc)
+                .values('periodo')
+                .annotate(aplicaciones=Count('id'), dosis_total=Sum('dosis'))
+                .order_by('periodo')
+            )
+            rows = [
+                {
+                    'periodo': (r['periodo'].date().isoformat() if hasattr(r['periodo'], 'date') else str(r['periodo'])),
+                    'aplicaciones': int(r['aplicaciones'] or 0),
+                    'dosis_total': float(r['dosis_total'] or 0),
+                }
+                for r in agg
+            ]
+            series = rows
+
+        elif agrupar_por == 'lote':
+            agg = (
+                qs.values('lote_id')
+                .annotate(aplicaciones=Count('id'), dosis_total=Sum('dosis'))
+                .order_by('lote_id')
+            )
+            rows = [
+                {
+                    'lote_id': r['lote_id'],
+                    'periodo': f"Lote {r['lote_id']}",
+                    'aplicaciones': int(r['aplicaciones'] or 0),
+                    'dosis_total': float(r['dosis_total'] or 0),
+                }
+                for r in agg
+            ]
+            series = rows
+
+        else:
+            qs = qs.order_by('-fecha_aplicacion')
+            rows = [
+                {
+                    'id': c.id,
+                    'fecha_aplicacion': c.fecha_aplicacion.isoformat() if c.fecha_aplicacion else None,
+                    'lote_id': c.lote_id,
+                    'insumo': c.insumo.nombre if c.insumo else None,
+                    'tipo_tratamiento': c.tipo_tratamiento,
+                    'dosis': float(c.dosis),
+                    'unidad_dosis': c.unidad_dosis,
+                    'responsable': c.responsable,
+                    'periodo': c.fecha_aplicacion.isoformat() if c.fecha_aplicacion else None,
+                }
+                for c in qs[:2000]
+            ]
+
+        agg_s = qs.aggregate(
+            total_aplicaciones=Count('id'),
+            dosis_total=Sum('dosis'),
+        )
+        summary = {
+            'total_aplicaciones': int(agg_s.get('total_aplicaciones') or 0),
+            'dosis_total': float(agg_s.get('dosis_total') or 0),
+        }
+        return rows, summary, series
+
+
+# ── Dashboard de KPIs ─────────────────────────────────────────────────────────
+class DashboardResumenView(APIView):
+    """Endpoint GET /reportes/dashboard/ — devuelve KPIs generales del sistema."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        hoy = timezone.localdate()
+        primer_dia_mes = hoy.replace(day=1)
+
+        # ── Lotes activos ──
+        lotes_activos = Lote.objects.filter(
+            estado__in=['Crianza', 'Crecimiento', 'Engorde', 'Activo']
+        )
+        total_aves = lotes_activos.aggregate(t=Sum('cantidad_actual'))['t'] or 0
+        total_aves_ini = lotes_activos.aggregate(t=Sum('cantidad_inicial'))['t'] or 0
+        mortalidad_pct = 0
+        if total_aves_ini > 0:
+            mortalidad_pct = round(((total_aves_ini - total_aves) / total_aves_ini) * 100, 2)
+
+        # ── Alimentación del mes ──
+        alim_mes = Alimentacion.objects.filter(fecha__gte=primer_dia_mes)
+        consumo_mes_kg = float(alim_mes.aggregate(t=Sum('cantidad_kg'))['t'] or 0)
+
+        # ── Conversión estimada ──
+        conversion_estimada = None
+        if total_aves > 0 and consumo_mes_kg > 0:
+            conversion_estimada = round(consumo_mes_kg / total_aves, 4)
+
+        # ── Insumos críticos ──
+        insumos_criticos = list(
+            Insumo.objects.filter(stock_actual__lte=F('stock_minimo'))
+            .order_by('stock_actual')
+            .values('id_insumo', 'nombre', 'tipo', 'stock_actual', 'stock_minimo', 'unidad_medida')[:10]
+        )
+        for i in insumos_criticos:
+            i['stock_actual'] = float(i['stock_actual'])
+            i['stock_minimo'] = float(i['stock_minimo'])
+
+        # ── Tratamientos sanitarios del mes ──
+        tratamientos_mes = ControlSanitario.objects.filter(
+            fecha_aplicacion__gte=primer_dia_mes
+        ).count()
+
+        # ── Movimientos de inventario del mes ──
+        entradas_mes = float(
+            MovimientoAlmacen.objects.filter(
+                fecha_hora__date__gte=primer_dia_mes,
+                tipo_movimiento='Entrada'
+            ).aggregate(t=Sum('cantidad'))['t'] or 0
+        )
+        salidas_mes = float(
+            MovimientoAlmacen.objects.filter(
+                fecha_hora__date__gte=primer_dia_mes,
+                tipo_movimiento='Salida'
+            ).aggregate(t=Sum('cantidad'))['t'] or 0
+        )
+
+        # ── Consumo últimos 7 días (serie para mini-chart) ──
+        from datetime import timedelta
+        hace_7 = hoy - timedelta(days=6)
+        serie_7d = (
+            Alimentacion.objects.filter(fecha__gte=hace_7)
+            .annotate(periodo=TruncDay('fecha'))
+            .values('periodo')
+            .annotate(kg=Sum('cantidad_kg'))
+            .order_by('periodo')
+        )
+        consumo_7d = [
+            {'fecha': r['periodo'].isoformat(), 'kg': float(r['kg'] or 0)}
+            for r in serie_7d
+        ]
+
+        return Response({
+            'aves_activas': int(total_aves),
+            'lotes_activos': lotes_activos.count(),
+            'mortalidad_pct': mortalidad_pct,
+            'consumo_mes_kg': consumo_mes_kg,
+            'conversion_estimada': conversion_estimada,
+            'insumos_criticos': insumos_criticos,
+            'insumos_criticos_count': len(insumos_criticos),
+            'tratamientos_mes': tratamientos_mes,
+            'entradas_mes': entradas_mes,
+            'salidas_mes': salidas_mes,
+            'consumo_7d': consumo_7d,
+        })

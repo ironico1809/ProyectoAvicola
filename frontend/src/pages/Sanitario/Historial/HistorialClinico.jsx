@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ClipboardList, Search } from "lucide-react";
+import { ClipboardList, Search, Edit, Trash2 } from "lucide-react";
 import Sidebar from "../../../components/Sidebar";
 import ComboBox from "../../../components/ComboBox";
 import api from "../../../api/axios";
@@ -10,24 +10,21 @@ function HistorialClinico() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const isMobile = useIsMobile();
 
-  const [loading, setLoading] = useState(true);
   const [lotes, setLotes] = useState([]);
-  const [loteSelected, setLoteSelected] = useState("");
   const [historial, setHistorial] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [loteSelected, setLoteSelected] = useState("");
 
   useEffect(() => {
     fetchLotes();
   }, []);
 
   const fetchLotes = async () => {
-    setLoading(true);
     try {
       const res = await api.get("/lotes/");
       setLotes(res.data);
     } catch (e) {
       console.error("Error cargando lotes", e);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -35,7 +32,7 @@ function HistorialClinico() {
     if (!loteSelected) return;
     setLoading(true);
     try {
-      const res = await api.get("/sanitario/historial/", {
+      const res = await api.get("/sanitario/aplicaciones/", {
         params: { lote: loteSelected },
       });
       setHistorial(res.data);
@@ -56,9 +53,9 @@ function HistorialClinico() {
       >
         <header className="inv-header">
           <div className="inv-title-group">
-            <h1 className="inv-title">Historial Clínico de Lotes</h1>
+            <h1 className="inv-title">Historial Clínico por Lote</h1>
             <p className="inv-subtitle">
-              <ClipboardList size={14} /> Cronología de tratamientos por lote
+              <ClipboardList size={14} /> Consulta de tratamientos aplicados
             </p>
           </div>
         </header>
@@ -66,7 +63,7 @@ function HistorialClinico() {
         <section className="est-panel">
           <div className="est-panel-header">
             <h3 className="est-panel-title">
-              <Search size={18} /> Seleccionar lote
+              <Search size={18} /> Filtrar por Lote
             </h3>
           </div>
 
@@ -104,7 +101,7 @@ function HistorialClinico() {
         <section className="est-panel">
           <div className="est-panel-header">
             <h3 className="est-panel-title">
-              <ClipboardList size={18} /> Historial
+              <ClipboardList size={18} /> Registros encontrados
             </h3>
           </div>
 
@@ -113,51 +110,61 @@ function HistorialClinico() {
               <thead>
                 <tr>
                   <th>Fecha</th>
+                  <th>Lote</th>
                   <th>Tipo</th>
                   <th>Insumo</th>
                   <th>Dosis</th>
                   <th>Responsable</th>
-                  <th>Observación</th>
+                  <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {loading ? (
+                {!loteSelected ? (
                   <tr>
-                    <td colSpan={6} style={{ padding: 16, color: "#64748b" }}>
-                      Cargando...
+                    <td colSpan={7} style={{ padding: 24, color: "#94a3b8", textAlign: "center" }}>
+                      Selecciona un lote para ver su historial.
                     </td>
                   </tr>
-                ) : !loteSelected ? (
+                ) : loading ? (
                   <tr>
-                    <td colSpan={6} style={{ padding: 16, color: "#64748b" }}>
-                      Selecciona un lote para ver el historial.
+                    <td colSpan={7} style={{ padding: 16, color: "#64748b" }}>
+                      Cargando registros...
                     </td>
                   </tr>
                 ) : historial.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ padding: 16, color: "#64748b" }}>
-                      Sin tratamientos registrados para este lote.
+                    <td colSpan={7} style={{ padding: 16, color: "#64748b" }}>
+                      No se encontraron aplicaciones para este lote.
                     </td>
                   </tr>
                 ) : (
                   historial.map((h) => (
                     <tr key={h.id}>
                       <td style={{ fontSize: 11 }}>{h.fecha_aplicacion}</td>
+                      <td>
+                        <strong>{h.lote}</strong>
+                      </td>
                       <td>{h.tipo_tratamiento}</td>
                       <td>{h.insumo_nombre || "-"}</td>
-                      <td>
-                        <strong>{h.dosis}</strong> {h.unidad_dosis}
-                      </td>
+                      <td>{h.dosis} {h.unit_dosis || h.unidad_dosis}</td>
                       <td>{h.responsable || "-"}</td>
-                      <td
-                        style={{
-                          maxWidth: 320,
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {h.observacion || "-"}
+                      <td>
+                        <div className="btn-action-group">
+                          <button
+                            className="btn-action btn-action--edit"
+                            title="Editar"
+                            onClick={() => alert('Próximamente: Edición de historial')}
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button
+                            className="btn-action btn-action--delete"
+                            title="Eliminar"
+                            onClick={() => alert('Próximamente: Eliminación de historial')}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))

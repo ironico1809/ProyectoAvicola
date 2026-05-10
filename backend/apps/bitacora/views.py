@@ -9,34 +9,26 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.pagination import PageNumberPagination
 
 from apps.bitacora.models import BitacoraEvento
 from apps.bitacora.serializers import BitacoraEventoSerializer
 
 
+class BitacoraPagination(PageNumberPagination):
+    page_size = 50
+    page_size_query_param = 'page_size'
+    max_page_size = 500
+
+
 class BitacoraListView(APIView):
-    """Lista eventos de bitácora.
-
-    Endpoint:
-      - GET /bitacora/
-
-        Filtros opcionales:
-            - ?usuario_id=
-            - ?accion=
-            - ?desde= (ISO datetime, filtra por `fecha_hora`)
-            - ?hasta= (ISO datetime, filtra por `fecha_hora`)
-            - ?limit= (default 200, max 1000)
-    """
+    """Lista eventos de bitácora con paginación y optimización N+1."""
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        """Retorna una lista de eventos.
-
-        - Entrada: query params (filtros y limit).
-        - Salida: `200 OK` con array JSON de eventos serializados.
-        """
-        qs = BitacoraEvento.objects.all()
+        # Optimizamos con select_related para traer el nombre del usuario en una sola consulta
+        qs = BitacoraEvento.objects.select_related('usuario').all().order_by('-fecha_hora', '-id')
 
         usuario_id = request.query_params.get('usuario_id')
         if usuario_id:
@@ -58,11 +50,12 @@ class BitacoraListView(APIView):
             if dt:
                 qs = qs.filter(fecha_hora__lte=dt)
 
-        try:
-            limit = int(request.query_params.get('limit', 200))
-        except ValueError:
-            limit = 200
-        limit = max(1, min(limit, 1000))
+        paginator = BitacoraPagination()
+        page = paginator.paginate_queryset(qs, request)
+        
+        if page is not None:
+            serializer = BitacoraEventoSerializer(page, many=True)
+            return paginator.get_paginated_response(serializer.data)
 
-        data = BitacoraEventoSerializer(qs[:limit], many=True).data
-        return Response(data, status=status.HTTP_200_OK)
+        serializer = BitacoraEventoSerializer(qs, many=True)
+        return Response(serializer.data)

@@ -1,7 +1,12 @@
-function Modal({ titulo, onClose, children }) {
+function Modal({ titulo, onClose, children, width }) {
+  const style = {
+    ...modalStyle,
+    maxWidth: width || "460px",
+    width: "100%",
+  };
   return (
     <div style={overlayStyle} onClick={onClose}>
-      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
+      <div style={style} onClick={(e) => e.stopPropagation()}>
         <div style={headerStyle}>
           <h3 style={titleStyle}>{titulo}</h3>
           <button onClick={onClose} style={closeBtnStyle}>

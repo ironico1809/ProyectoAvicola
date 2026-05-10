@@ -8,7 +8,7 @@ class ReporteGenerarSerializer(serializers.Serializer):
     """
 
     entidad = serializers.ChoiceField(
-        choices=['alimentacion', 'lotes', 'bitacora'])
+        choices=['alimentacion', 'lotes', 'bitacora', 'insumos', 'sanitario'])
 
     # filtros comunes
     fecha_inicio = serializers.DateField(required=False, allow_null=True)
@@ -36,9 +36,8 @@ class ReporteGenerarSerializer(serializers.Serializer):
     usuario_id = serializers.IntegerField(required=False, allow_null=True)
 
     agrupar_por = serializers.ChoiceField(
-        choices=['dia', 'mes', 'galpon', 'tipo_alimento', 'raza_tipo'], required=False, allow_null=True
+    	choices=['dia', 'mes', 'galpon', 'tipo_alimento', 'raza_tipo', 'lote', 'estado'], required=False, allow_null=True
     )
-
     # salida
     formato = serializers.ChoiceField(
         choices=['json', 'csv', 'excel'], required=False, default='json'
