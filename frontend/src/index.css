@@ -11,3 +11,65 @@ body,
   min-height: 100vh;
   font-family: "Poppins", sans-serif;
 }
+
+/* Global Action Buttons */
+.btn-action-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.btn-action:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.btn-action--edit {
+  background: #fff7ed;
+  color: #d97706;
+}
+.btn-action--edit:hover {
+  background: #ffedd5;
+  color: #b45309;
+}
+
+.btn-action--delete {
+  background: #fef2f2;
+  color: #dc2626;
+}
+.btn-action--delete:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.btn-action--view {
+  background: #f0f9ff;
+  color: #0284c7;
+}
+.btn-action--view:hover {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.btn-action--blue {
+  background: #eff6ff;
+  color: #2563eb;
+}
+.btn-action--blue:hover {
+  background: #dbeafe;
+  color: #1d4ed8;
+}

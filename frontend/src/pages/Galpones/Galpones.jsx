@@ -12,6 +12,7 @@ import Sidebar from "../../components/Sidebar";
 import Modal from "../../components/Modal";
 import InputField from "../../components/InputField";
 import Button from "../../components/Button";
+import ComboBox from "../../components/ComboBox";
 import api from "../../api/axios";
 import useIsMobile from "../../hooks/useIsMobile";
 
@@ -159,17 +160,18 @@ function Galpones() {
         onChange={handleChange}
         value={form.descripcion}
       />
-      <div className="galp-selectWrap">
-        <select
-          name="estado"
-          onChange={handleChange}
-          value={form.estado}
-          className="galp-select"
-        >
-          <option value="activo">Activo</option>
-          <option value="inactivo">Inactivo</option>
-        </select>
-      </div>
+      
+      <ComboBox
+        label="Estado"
+        value={form.estado}
+        onChange={(val) => setForm({ ...form, estado: val })}
+        options={[
+          { value: "activo", label: "Activo" },
+          { value: "inactivo", label: "Inactivo" },
+        ]}
+        placeholder="Seleccionar estado..."
+      />
+
       {formError && <p className="galp-dangerText">⚠️ {formError}</p>}
       <Button
         text={showEditModal ? "Guardar Cambios" : "Crear Galpón"}
@@ -188,7 +190,6 @@ function Galpones() {
         className="galp-main"
         style={{
           marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px",
-          paddingLeft: isMobile && !sidebarOpen ? "64px" : undefined,
         }}
       >
         <div className="galp-header">
@@ -265,21 +266,21 @@ function Galpones() {
                         <span style={estadoBadge(g.estado)}>{g.estado}</span>
                       </td>
                       <td>
-                        <div className="galp-actions">
+                        <div className="btn-action-group">
                           <button
                             onClick={() => {
                               setGalponSeleccionado(g);
                               setShowVerModal(true);
                             }}
-                            className="galp-actionBtn galp-actionBtn--blue"
-                            aria-label="Ver"
+                            className="btn-action btn-action--view"
+                            title="Ver"
                           >
                             <Eye size={16} />
                           </button>
                           <button
                             onClick={() => handleEditarClick(g)}
-                            className="galp-actionBtn galp-actionBtn--amber"
-                            aria-label="Editar"
+                            className="btn-action btn-action--edit"
+                            title="Editar"
                           >
                             <Edit size={16} />
                           </button>
@@ -288,8 +289,8 @@ function Galpones() {
                               setGalponSeleccionado(g);
                               setShowDeleteModal(true);
                             }}
-                            className="galp-actionBtn galp-actionBtn--red"
-                            aria-label="Eliminar"
+                            className="btn-action btn-action--delete"
+                            title="Eliminar"
                           >
                             <Trash2 size={16} />
                           </button>

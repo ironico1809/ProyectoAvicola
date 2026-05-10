@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ClipboardList, Search } from "lucide-react";
 import Sidebar from "../../../components/Sidebar";
+import ComboBox from "../../../components/ComboBox";
 import api from "../../../api/axios";
 import useIsMobile from "../../../hooks/useIsMobile";
 import "../../Inventario/Inventario.css";
@@ -78,22 +79,16 @@ function HistorialClinico() {
               flexWrap: "wrap",
             }}
           >
-            <div className="rep-filter-item" style={{ minWidth: 260 }}>
-              <label className="rep-filter-label">Lote</label>
-              <select
-                className="rep-select"
-                value={loteSelected}
-                onChange={(e) => setLoteSelected(e.target.value)}
-                style={{ paddingLeft: 12 }}
-              >
-                <option value="">Seleccionar...</option>
-                {lotes.map((l) => (
-                  <option key={l.id_lote} value={l.id_lote}>
-                    Lote {l.id_lote} ({l.estado})
-                  </option>
-                ))}
-              </select>
-            </div>
+            <ComboBox
+              label="Lote"
+              value={loteSelected}
+              onChange={(val) => setLoteSelected(val)}
+              options={lotes.map((l) => ({
+                value: String(l.id_lote),
+                label: `Lote ${l.id_lote} (${l.estado})`,
+              }))}
+              placeholder="Buscar lote..."
+            />
 
             <button
               className="inv-btn-primary"

@@ -11,6 +11,7 @@ import Sidebar from "../../components/Sidebar";
 import Modal from "../../components/Modal";
 import InputField from "../../components/InputField";
 import Button from "../../components/Button";
+import ComboBox from "../../components/ComboBox";
 import api from "../../api/axios";
 import useIsMobile from "../../hooks/useIsMobile";
 
@@ -66,7 +67,6 @@ function Usuarios() {
     e.preventDefault();
     setSaving(true);
     try {
-      // Ruta de registro confirmada por tu mapa de Django
       await api.post("/usuarios/registro/", form);
       setShowModal(false);
       resetForm();
@@ -83,7 +83,7 @@ function Usuarios() {
     setForm({
       nom_usuario: u.nom_usuario,
       email: u.email,
-      password: "", // Obligatorio llenar por el backend
+      password: "", 
       tipo_usuario: u.tipo_usuario || "Operario",
       estado: u.estado,
     });
@@ -98,7 +98,6 @@ function Usuarios() {
     }
     setSaving(true);
     try {
-      // Usamos PATCH y la ruta con ID
       await api.patch(`/usuarios/${usuarioSeleccionado.id}/`, form);
       setShowEditModal(false);
       fetchUsuarios();
@@ -178,30 +177,28 @@ function Usuarios() {
         />
       </div>
 
-      <div className="users-selectWrap">
-        <select
-          name="tipo_usuario"
-          onChange={handleChange}
-          value={form.tipo_usuario}
-          className="users-select"
-        >
-          <option value="Administrador">Administrador</option>
-          <option value="Veterinario">Veterinario</option>
-          <option value="Operario">Operario</option>
-        </select>
-      </div>
+      <ComboBox
+        label="Rol / Tipo de Usuario"
+        value={form.tipo_usuario}
+        onChange={(val) => setForm({ ...form, tipo_usuario: val })}
+        options={[
+          { value: "Administrador", label: "Administrador" },
+          { value: "Veterinario", label: "Veterinario" },
+          { value: "Operario", label: "Operario" },
+        ]}
+        placeholder="Seleccionar rol..."
+      />
 
-      <div className="users-selectWrap">
-        <select
-          name="estado"
-          onChange={handleChange}
-          value={form.estado}
-          className="users-select"
-        >
-          <option value="Activo">Activo</option>
-          <option value="Inactivo">Inactivo</option>
-        </select>
-      </div>
+      <ComboBox
+        label="Estado"
+        value={form.estado}
+        onChange={(val) => setForm({ ...form, estado: val })}
+        options={[
+          { value: "Activo", label: "Activo" },
+          { value: "Inactivo", label: "Inactivo" },
+        ]}
+        placeholder="Seleccionar estado..."
+      />
 
       {formError && <p className="users-dangerText">⚠️ {formError}</p>}
       <Button
@@ -220,7 +217,6 @@ function Usuarios() {
         className="users-main"
         style={{
           marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px",
-          paddingLeft: isMobile && !sidebarOpen ? "64px" : undefined,
         }}
       >
         <div className="users-header">
@@ -283,11 +279,11 @@ function Usuarios() {
                       </span>
                     </td>
                     <td>
-                      <div className="users-actions">
+                      <div className="btn-action-group">
                         <button
                           onClick={() => handleEditarClick(u)}
-                          className="users-actionBtn users-actionBtn--amber"
-                          aria-label="Editar"
+                          className="btn-action btn-action--edit"
+                          title="Editar"
                         >
                           <Edit size={16} />
                         </button>
@@ -296,8 +292,8 @@ function Usuarios() {
                             setUsuarioSeleccionado(u);
                             setShowDeleteModal(true);
                           }}
-                          className="users-actionBtn users-actionBtn--red"
-                          aria-label="Eliminar"
+                          className="btn-action btn-action--delete"
+                          title="Eliminar"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -323,7 +319,7 @@ function Usuarios() {
               >
                 1
               </button>
-              <button className="users-pageBtn" type="button">
+              <button className="galp-pageBtn" type="button">
                 Siguiente <ChevronRight size={16} />
               </button>
             </div>

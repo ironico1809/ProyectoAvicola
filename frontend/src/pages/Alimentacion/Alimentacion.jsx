@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Search, Wheat, Table, Save, Calendar, Bird, PackageCheck, AlertTriangle, TrendingDown } from "lucide-react";
+import { Plus, Search, Wheat, Table, Save, Calendar, Bird, PackageCheck, AlertTriangle, TrendingDown, Edit, Trash2 } from "lucide-react";
 
 import Sidebar from "../../components/Sidebar";
 import Modal from "../../components/Modal";
@@ -53,6 +53,10 @@ function Alimentacion() {
   const [fechaFin, setFechaFin] = useState("");
 
   const [showModal, setShowModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [aliSeleccionado, setAliSeleccionado] = useState(null);
+
   const [formError, setFormError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -137,7 +141,7 @@ function Alimentacion() {
     if (!id_lote) return setFormError("Selecciona un lote.");
     if (!cantidad_kg || cantidad_kg <= 0) return setFormError("Cantidad inválida.");
 
-    if (form.insumo_id) {
+    if (form.insumo_id && !showEditModal) {
       const insumo = insumos.find(i => String(i.id_insumo) === String(form.insumo_id));
       if (insumo && cantidad_kg > parseFloat(insumo.stock_actual)) {
         return setFormError(
@@ -148,15 +152,26 @@ function Alimentacion() {
 
     setSaving(true);
     try {
-      await api.post("/alimentacion/", {
-        ...form,
-        id_lote,
-        insumo_id: form.insumo_id ? Number(form.insumo_id) : null,
-        cantidad_kg
-      });
-      setSuccess("Alimentación registrada. El stock del almacén fue actualizado automáticamente.");
-      setShowModal(false);
-      setForm({ id_lote: "", insumo_id: "", fecha: todayISO(), cantidad_kg: "", tipo_alimento: "", observacion: "" });
+      if (showEditModal && aliSeleccionado) {
+        await api.patch(`/alimentacion/${aliSeleccionado.id_alimentacion}/`, {
+          ...form,
+          id_lote,
+          insumo_id: form.insumo_id ? Number(form.insumo_id) : null,
+          cantidad_kg
+        });
+        setSuccess("Registro actualizado correctamente.");
+        setShowEditModal(false);
+      } else {
+        await api.post("/alimentacion/", {
+          ...form,
+          id_lote,
+          insumo_id: form.insumo_id ? Number(form.insumo_id) : null,
+          cantidad_kg
+        });
+        setSuccess("Alimentación registrada. El stock del almacén fue actualizado automáticamente.");
+        setShowModal(false);
+      }
+      resetForm();
       fetchInitial();
     } catch (err) {
       const msg = err?.response?.data?.detail || "Error al guardar.";
@@ -190,6 +205,41 @@ function Alimentacion() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleEditClick = (r) => {
+    setAliSeleccionado(r);
+    setForm({
+      id_lote: String(r.id_lote),
+      insumo_id: r.insumo_id ? String(r.insumo_id) : "",
+      fecha: r.fecha,
+      cantidad_kg: String(r.cantidad_kg),
+      tipo_alimento: r.tipo_alimento || "",
+      observacion: r.observacion || "",
+    });
+    setFormError("");
+    setSuccess("");
+    setShowEditModal(true);
+  };
+
+  const handleDeleteAli = async () => {
+    setSaving(true);
+    try {
+      await api.delete(`/alimentacion/${aliSeleccionado.id_alimentacion}/`);
+      setSuccess("Registro eliminado.");
+      setShowDeleteModal(false);
+      setAliSeleccionado(null);
+      fetchInitial();
+    } catch (e) {
+      setFormError("Error al eliminar el registro.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const resetForm = () => {
+    setForm({ id_lote: "", insumo_id: "", fecha: todayISO(), cantidad_kg: "", tipo_alimento: "", observacion: "" });
+    setAliSeleccionado(null);
   };
 
   const insumoSeleccionado = useMemo(() => {
@@ -240,7 +290,7 @@ function Alimentacion() {
             <p className="est-subtitle"><Wheat size={14} /> Control de nutrición y consumo · Inventario integrado</p>
           </div>
           <div className="est-header-right">
-             <button className="alim-primaryBtn" onClick={() => { setModoRegistro("individual"); setShowModal(true); }}>
+             <button className="alim-primaryBtn" onClick={() => { resetForm(); setModoRegistro("individual"); setShowModal(true); }}>
               <Plus size={16} /> Registro Individual
             </button>
              <button className="alim-primaryBtn" style={{background:'#3b82f6'}} onClick={() => { setModoRegistro("masivo"); setShowModal(true); }}>
@@ -296,7 +346,7 @@ function Alimentacion() {
                   <th>Insumo / Alimento</th>
                   <th>Cantidad</th>
                   <th>Tipo / Marca</th>
-                  <th>Observación</th>
+                  <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -315,7 +365,27 @@ function Alimentacion() {
                     </td>
                     <td style={{fontWeight:700, color:'#b45309'}}>{r.cantidad_kg} kg</td>
                     <td className="alim-muted">{r.tipo_alimento || "—"}</td>
-                    <td className="alim-muted">{r.observacion || "—"}</td>
+                    <td>
+                      <div className="btn-action-group">
+                        <button
+                          className="btn-action btn-action--edit"
+                          onClick={() => handleEditClick(r)}
+                          title="Editar"
+                        >
+                          <Edit size={16} />
+                        </button>
+                        <button
+                          className="btn-action btn-action--delete"
+                          onClick={() => {
+                            setAliSeleccionado(r);
+                            setShowDeleteModal(true);
+                          }}
+                          title="Eliminar"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -474,6 +544,65 @@ function Alimentacion() {
               </div>
             </div>
           )}
+        </Modal>
+      )}
+
+      {showEditModal && (
+        <Modal titulo="Editar Registro de Alimentación" onClose={() => setShowEditModal(false)} width="450px">
+          <form className="alim-form" onSubmit={handleRegistrarIndividual}>
+            <ComboBox
+              label="Lote de Aves"
+              value={form.id_lote}
+              onChange={val => setForm({...form, id_lote: val})}
+              options={lotesOptions}
+              placeholder="Seleccionar lote..."
+              required
+            />
+            <ComboBox
+              label="Insumo (Solo informativo en edición)"
+              value={form.insumo_id}
+              onChange={val => setForm({...form, insumo_id: val})}
+              options={alimentosOptions}
+              placeholder="Sin insumo vinculado"
+            />
+            <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:12}}>
+              <InputField label="Fecha" type="date" value={form.fecha} onChange={e => setForm({...form, fecha: e.target.value})} />
+              <InputField label="Cantidad (kg)" type="number" step="0.01" value={form.cantidad_kg} onChange={e => setForm({...form, cantidad_kg: e.target.value})} placeholder="0.00" />
+            </div>
+            <ComboBox
+              label="Tipo / Marca del Alimento"
+              value={form.tipo_alimento}
+              onChange={val => setForm({...form, tipo_alimento: val})}
+              allowCustom={true}
+              options={tiposAlimentoUnicos.map(t => ({ value: t, label: t }))}
+              placeholder="Escribe o selecciona..."
+            />
+            <textarea
+              className="alim-textarea"
+              placeholder="Observaciones..."
+              value={form.observacion}
+              onChange={e => setForm({...form, observacion: e.target.value})}
+              rows={2}
+            />
+            {formError && <p className="alim-formError">⚠ {formError}</p>}
+            <Button text="Guardar Cambios" loading={saving} icon={<Save size={18} />} />
+          </form>
+        </Modal>
+      )}
+
+      {showDeleteModal && (
+        <Modal titulo="Eliminar Registro" onClose={() => setShowDeleteModal(false)}>
+          <div style={{ padding: "10px 0 20px" }}>
+            <p style={{ color: "#4b5563", fontSize: 14 }}>
+              ¿Eliminar el registro de alimentación <strong>#{aliSeleccionado?.id_alimentacion}</strong>?
+            </p>
+          </div>
+          <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+            <button className="rep-btn-secondary" onClick={() => setShowDeleteModal(false)}>Cancelar</button>
+            <button className="rep-btn-primary" style={{ background: "#dc2626" }} onClick={handleDeleteAli} disabled={saving}>
+              {saving ? "Eliminando..." : "Sí, eliminar"}
+            </button>
+          </div>
         </Modal>
       )}
     </div>

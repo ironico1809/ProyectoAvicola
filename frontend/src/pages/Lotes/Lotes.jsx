@@ -770,10 +770,10 @@ function Lotes() {
                         </span>
                       </td>
                       <td style={tdStyle}>
-                        <div style={{ display: "flex", gap: "8px" }}>
+                        <div className="btn-action-group">
                           <button
                             onClick={() => handleEditarClick(l)}
-                            style={actionBtnStyle("#f59e0b")}
+                            className="btn-action btn-action--edit"
                             title="Editar"
                           >
                             <Edit size={16} />
@@ -783,7 +783,7 @@ function Lotes() {
                               setLoteSeleccionado(l);
                               setShowDeleteModal(true);
                             }}
-                            style={actionBtnStyle("#dc2626")}
+                            className="btn-action btn-action--delete"
                             title="Eliminar"
                           >
                             <Trash2 size={16} />
@@ -1164,16 +1164,6 @@ const activePageBtnStyle = {
   border: "1px solid #e5e7eb",
   color: "#1c1c1c",
 };
-
-const actionBtnStyle = (color) => ({
-  background: color,
-  color: "white",
-  border: "none",
-  borderRadius: "6px",
-  padding: "6px",
-  cursor: "pointer",
-  display: "flex",
-});
 
 const btnCancelarStyle = {
   flex: 1,

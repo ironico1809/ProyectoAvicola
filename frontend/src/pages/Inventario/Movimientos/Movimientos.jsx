@@ -160,42 +160,30 @@ function Movimientos() {
               gridTemplateColumns: "repeat(5, 1fr)",
               gap: 12,
               padding: 12,
+              alignItems: "end"
             }}
           >
-            <div className="rep-filter-item">
-              <label className="rep-filter-label">Insumo</label>
-              <select
-                className="rep-select"
-                value={filters.insumo}
-                onChange={(e) =>
-                  setFilters({ ...filters, insumo: e.target.value })
-                }
-                style={{ paddingLeft: 12 }}
-              >
-                <option value="">Todos</option>
-                {insumos.map((i) => (
-                  <option key={i.id_insumo} value={i.id_insumo}>
-                    {i.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <ComboBox
+              label="Insumo"
+              value={filters.insumo}
+              onChange={(val) => setFilters({ ...filters, insumo: val })}
+              options={insumos.map((i) => ({
+                value: String(i.id_insumo),
+                label: i.nombre,
+              }))}
+              placeholder="Todos"
+            />
 
-            <div className="rep-filter-item">
-              <label className="rep-filter-label">Tipo</label>
-              <select
-                className="rep-select"
-                value={filters.tipo_movimiento}
-                onChange={(e) =>
-                  setFilters({ ...filters, tipo_movimiento: e.target.value })
-                }
-                style={{ paddingLeft: 12 }}
-              >
-                <option value="">Todos</option>
-                <option value="Entrada">Entrada</option>
-                <option value="Salida">Salida</option>
-              </select>
-            </div>
+            <ComboBox
+              label="Tipo"
+              value={filters.tipo_movimiento}
+              onChange={(val) => setFilters({ ...filters, tipo_movimiento: val })}
+              options={[
+                { value: "Entrada", label: "Entrada" },
+                { value: "Salida", label: "Salida" },
+              ]}
+              placeholder="Todos"
+            />
 
             <div className="rep-filter-item">
               <label className="rep-filter-label">Fecha inicio</label>
