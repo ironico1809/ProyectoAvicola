@@ -30,7 +30,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
     Incluye empresa_id y must_change_password para que el frontend
     pueda gestionar el contexto de tenant y el flujo de primer login.
     """
-    empresa_id = serializers.IntegerField(source='empresa_id', read_only=True)
+    empresa_id = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Usuario
