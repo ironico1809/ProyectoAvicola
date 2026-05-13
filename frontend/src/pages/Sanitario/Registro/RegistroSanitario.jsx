@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Plus, Stethoscope } from "lucide-react";
 import Sidebar from "../../../components/Sidebar";
+import Topbar from "../../../components/Topbar";
 import Modal from "../../../components/Modal";
 import InputField from "../../../components/InputField";
 import ComboBox from "../../../components/ComboBox";
@@ -114,21 +115,22 @@ function RegistroSanitario() {
 
   return (
     <div className="inv-layout">
-      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
+      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} showMobileTrigger={false} />
 
       <main
         className="inv-main"
-        style={{ marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px" }}
+        style={{ 
+          marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px",
+          padding: isMobile ? "16px" : "32px",
+          paddingTop: isMobile ? "80px" : "32px",
+          transition: "margin-left 0.3s ease",
+          flex: 1
+        }}
       >
-        <header className="inv-header">
-          <div className="inv-title-group">
-            <h1 className="inv-title">Registro de Aplicaciones Sanitarias</h1>
-            <p className="inv-subtitle">
-              <Stethoscope size={14} /> Vacunas, medicamentos y tratamientos por
-              lote
-            </p>
-          </div>
+        <Topbar titulo="Registro de Aplicaciones Sanitarias" subtitulo="Vacunas, medicamentos y tratamientos por lote" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
+        <div className="inv-header" style={{ marginBottom: '20px' }}>
+          <div style={{ flex: 1 }} />
           <div className="inv-header-actions">
             <button
               className="inv-btn-primary"
@@ -137,17 +139,17 @@ function RegistroSanitario() {
               <Plus size={16} /> Registrar aplicación
             </button>
           </div>
-        </header>
+        </div>
 
-        <section className="est-panel">
-          <div className="est-panel-header">
-            <h3 className="est-panel-title">
+        <section className="inv-panel">
+          <div className="inv-panel-header">
+            <h3 className="inv-panel-title">
               <Stethoscope size={18} /> Últimas aplicaciones
             </h3>
           </div>
 
-          <div className="est-table-wrap">
-            <table className="est-table">
+          <div className="inv-table-wrap">
+            <table className="inv-table">
               <thead>
                 <tr>
                   <th>Fecha</th>
@@ -160,13 +162,13 @@ function RegistroSanitario() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={5} style={{ padding: 16, color: "#64748b" }}>
+                    <td colSpan={5} className="inv-empty">
                       Cargando...
                     </td>
                   </tr>
                 ) : last10.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ padding: 16, color: "#64748b" }}>
+                    <td colSpan={5} className="inv-empty">
                       No hay registros.
                     </td>
                   </tr>
@@ -196,7 +198,7 @@ function RegistroSanitario() {
           titulo="Registrar aplicación"
           onClose={() => setShowModal(false)}
         >
-          <form className="alim-form" onSubmit={handleCreate}>
+          <form className="inv-form" onSubmit={handleCreate}>
             <ComboBox
               label="Lote de Aves"
               value={form.lote}

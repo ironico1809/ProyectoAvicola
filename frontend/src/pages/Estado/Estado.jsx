@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Warehouse, Thermometer, RefreshCw, Layers, Calendar, AlertCircle, CheckCircle2, Bird } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
+import Topbar from "../../components/Topbar";
 import StatCard from "../../components/StatCard";
 import api from "../../api/axios";
 import useIsMobile from "../../hooks/useIsMobile";
@@ -99,26 +100,24 @@ function Estado() {
 
   return (
     <div className="est-layout">
-      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
-      <main className="est-main" style={{ marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px" }}>
+      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} showMobileTrigger={false} />
+      <main className="est-main" style={{ 
+          marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px",
+          padding: isMobile ? "20px" : "32px",
+          paddingTop: isMobile ? "80px" : "32px",
+          transition: "margin-left 0.3s ease"
+        }}>
         
-        <header className="est-header">
-          <div className="est-title-group">
-            <h1 className="est-title">Estado General</h1>
-            <p className="est-subtitle">
-              <span className="est-live-indicator" />
-              Monitoreo en tiempo real de la granja
-            </p>
-          </div>
-          <div className="est-header-right">
-            <span className="est-refresh-badge">
-              <RefreshCw size={12} /> Sincronizado cada 10s
-            </span>
-            <span className="est-updated-text">
-              {lastUpdated ? `Última actualización: ${lastUpdated.toLocaleTimeString()}` : "Cargando..."}
-            </span>
-          </div>
-        </header>
+        <Topbar titulo="Estado General" subtitulo="Monitoreo en tiempo real de la granja" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+
+        <div className="est-header-right" style={{ marginBottom: 20, display: 'flex', justifyContent: 'flex-end', gap: 12, alignItems: 'center' }}>
+          <span className="est-refresh-badge">
+            <RefreshCw size={12} /> Sincronizado cada 10s
+          </span>
+          <span className="est-updated-text" style={{ fontSize: 12, color: '#64748b' }}>
+            {lastUpdated ? `Última actualización: ${lastUpdated.toLocaleTimeString()}` : "Cargando..."}
+          </span>
+        </div>
 
         <section className="est-stats-grid">
           <StatCard
@@ -148,12 +147,12 @@ function Estado() {
         </section>
 
         <div className="est-cards-grid">
-          <div className="est-panel">
-            <div className="est-panel-header">
-              <h3 className="est-panel-title"><Warehouse size={20} color="#f59e0b" /> Capacidad de Galpones</h3>
+          <div className="panel">
+            <div className="panel-header">
+              <h3 className="panel-title"><Warehouse size={20} color="#f59e0b" /> Capacidad de Galpones</h3>
             </div>
-            <div className="est-table-wrap">
-              <table className="est-table">
+            <div className="table-wrap">
+              <table className="table">
                 <thead>
                   <tr>
                     <th>Nombre</th>
@@ -174,7 +173,7 @@ function Estado() {
                         <td>{g._cap.toLocaleString()}</td>
                         <td>{g._aves.toLocaleString()}</td>
                         <td>
-                          <span className={`est-badge ${g._tipo === "riesgo" ? "est-badge-danger" : "est-badge-success"}`}>
+                          <span className={`badge ${g._tipo === "riesgo" ? "badge--danger" : "badge--success"}`}>
                             {g._tipo === "riesgo" ? <AlertCircle size={14} /> : <CheckCircle2 size={14} />}
                             {g._tipo === "riesgo" ? "Límite" : "Óptimo"}
                           </span>
@@ -187,12 +186,12 @@ function Estado() {
             </div>
           </div>
 
-          <div className="est-panel">
-            <div className="est-panel-header">
-              <h3 className="est-panel-title"><Thermometer size={20} color="#f59e0b" /> Últimos Lotes</h3>
+          <div className="panel">
+            <div className="panel-header">
+              <h3 className="panel-title"><Thermometer size={20} color="#f59e0b" /> Últimos Lotes</h3>
             </div>
-            <div className="est-table-wrap">
-              <table className="est-table">
+            <div className="table-wrap">
+              <table className="table">
                 <thead>
                   <tr>
                     <th>ID</th>

@@ -2,7 +2,7 @@ import csv
 import io
 from datetime import datetime
 
-from django.db.models import Avg, Count, DecimalField, ExpressionWrapper, F, Q, Sum
+from django.db.models import Avg, Count, DecimalField, ExpressionWrapper, F, Max, Min, Q, Sum
 from django.db.models.functions import TruncDay, TruncMonth
 from django.http import HttpResponse
 from django.utils import timezone
@@ -16,6 +16,9 @@ from apps.alimentacion.models import Alimentacion
 from apps.bitacora.models import BitacoraEvento
 from apps.insumos.models import ControlSanitario, Insumo, MovimientoAlmacen
 from apps.lotes.models import Lote
+from apps.mortandad.models import RegistroMortalidad
+from apps.temperatura.models import TemperaturaGalpon
+from apps.usuarios.models import Usuario
 from apps.reportes.serializers import ReporteGenerarSerializer
 
 
@@ -199,7 +202,270 @@ class ReporteGenerarView(APIView):
                 agrupar_por=agrupar_por,
             )
 
+        if entidad == 'mortalidad':
+            return self._report_mortalidad(
+                fecha_inicio=fecha_inicio,
+                fecha_fin=fecha_fin,
+                galpon_ids=galpon_ids,
+                lote_ids=lote_ids,
+                agrupar_por=agrupar_por,
+            )
+
+        if entidad == 'usuarios':
+            return self._report_usuarios(
+                fecha_inicio=fecha_inicio,
+                fecha_fin=fecha_fin,
+                agrupar_por=agrupar_por,
+            )
+
+        if entidad == 'temperatura':
+            return self._report_temperatura(
+                fecha_inicio=fecha_inicio,
+                fecha_fin=fecha_fin,
+                galpon_ids=galpon_ids,
+                agrupar_por=agrupar_por,
+            )
+
         raise ValueError('Entidad no soportada.')
+
+    def _report_temperatura(self, *, fecha_inicio, fecha_fin, galpon_ids, agrupar_por):
+        """Reporte de temperaturas por galpón.
+
+        Fuente: apps.temperatura.TemperaturaGalpon
+        """
+        qs = TemperaturaGalpon.objects.select_related('galpon').all()
+
+        if fecha_inicio:
+            qs = qs.filter(fecha_hora__date__gte=fecha_inicio)
+        if fecha_fin:
+            qs = qs.filter(fecha_hora__date__lte=fecha_fin)
+        if galpon_ids:
+            qs = qs.filter(galpon_id__in=galpon_ids)
+
+        rows = []
+        series = []
+
+        if agrupar_por in {'dia', 'mes'}:
+            trunc = TruncDay('fecha_hora') if agrupar_por == 'dia' else TruncMonth('fecha_hora')
+            agg = (
+                qs.annotate(periodo=trunc)
+                .values('periodo')
+                .annotate(
+                    temperatura_promedio=Avg('temperatura'),
+                    temperatura_min=Min('temperatura'),
+                    temperatura_max=Max('temperatura'),
+                    registros=Count('id'),
+                    alertas=Count('id', filter=Q(estado__in=['FRIO', 'CALOR'])),
+                )
+                .order_by('periodo')
+            )
+            rows = [
+                {
+                    'periodo': (r['periodo'].date().isoformat() if hasattr(r['periodo'], 'date') else str(r['periodo'])),
+                    'temperatura_promedio': float(r['temperatura_promedio'] or 0),
+                    'temperatura_min': float(r['temperatura_min'] or 0),
+                    'temperatura_max': float(r['temperatura_max'] or 0),
+                    'registros': int(r['registros'] or 0),
+                    'alertas': int(r['alertas'] or 0),
+                }
+                for r in agg
+            ]
+            series = rows
+
+        elif agrupar_por == 'galpon':
+            agg = (
+                qs.values('galpon_id', 'galpon__nombre')
+                .annotate(
+                    temperatura_promedio=Avg('temperatura'),
+                    temperatura_min=Min('temperatura'),
+                    temperatura_max=Max('temperatura'),
+                    registros=Count('id'),
+                    alertas=Count('id', filter=Q(estado__in=['FRIO', 'CALOR'])),
+                )
+                .order_by('galpon__nombre')
+            )
+            rows = [
+                {
+                    'galpon_id': int(r['galpon_id']),
+                    'galpon': r['galpon__nombre'],
+                    'periodo': r['galpon__nombre'],
+                    'temperatura_promedio': float(r['temperatura_promedio'] or 0),
+                    'temperatura_min': float(r['temperatura_min'] or 0),
+                    'temperatura_max': float(r['temperatura_max'] or 0),
+                    'registros': int(r['registros'] or 0),
+                    'alertas': int(r['alertas'] or 0),
+                }
+                for r in agg
+            ]
+            series = rows
+
+        elif agrupar_por == 'estado':
+            agg = (
+                qs.values('estado')
+                .annotate(
+                    temperatura_promedio=Avg('temperatura'),
+                    temperatura_min=Min('temperatura'),
+                    temperatura_max=Max('temperatura'),
+                    registros=Count('id'),
+                )
+                .order_by('estado')
+            )
+            rows = [
+                {
+                    'estado': r['estado'] or 'SIN_ESTADO',
+                    'periodo': r['estado'] or 'SIN_ESTADO',
+                    'temperatura_promedio': float(r['temperatura_promedio'] or 0),
+                    'temperatura_min': float(r['temperatura_min'] or 0),
+                    'temperatura_max': float(r['temperatura_max'] or 0),
+                    'registros': int(r['registros'] or 0),
+                }
+                for r in agg
+            ]
+            series = rows
+
+        else:
+            qs = qs.order_by('-fecha_hora', '-id')
+            rows = [
+                {
+                    'id': int(t.id),
+                    'fecha_hora': t.fecha_hora.isoformat() if t.fecha_hora else None,
+                    'galpon_id': int(getattr(t, 'galpon_id', 0) or 0) or None,
+                    'galpon': getattr(getattr(t, 'galpon', None), 'nombre', None),
+                    'temperatura_c': float(t.temperatura or 0),
+                    'estado': t.estado,
+                    'fuente': t.fuente,
+                    'periodo': (t.fecha_hora.date().isoformat() if t.fecha_hora else None),
+                }
+                for t in qs[:2000]
+            ]
+
+        summary_agg = qs.aggregate(
+            temperatura_promedio=Avg('temperatura'),
+            temperatura_min=Min('temperatura'),
+            temperatura_max=Max('temperatura'),
+            registros=Count('id'),
+            alertas=Count('id', filter=Q(estado__in=['FRIO', 'CALOR'])),
+        )
+        summary = {
+            'temperatura_promedio': float(summary_agg.get('temperatura_promedio') or 0),
+            'temperatura_min': float(summary_agg.get('temperatura_min') or 0),
+            'temperatura_max': float(summary_agg.get('temperatura_max') or 0),
+            'registros': int(summary_agg.get('registros') or 0),
+            'alertas': int(summary_agg.get('alertas') or 0),
+        }
+        return rows, summary, series
+
+    def _report_mortalidad(self, *, fecha_inicio, fecha_fin, galpon_ids, lote_ids, agrupar_por):
+        """Reporte de bajas (mortalidad)."""
+        qs = RegistroMortalidad.objects.select_related('lote', 'lote__galpon').all()
+        if fecha_inicio:
+            qs = qs.filter(fecha_hora__date__gte=fecha_inicio)
+        if fecha_fin:
+            qs = qs.filter(fecha_hora__date__lte=fecha_fin)
+        if galpon_ids:
+            qs = qs.filter(lote__galpon_id__in=galpon_ids)
+        if lote_ids:
+            qs = qs.filter(lote_id__in=lote_ids)
+
+        rows = []
+        series = []
+
+        if agrupar_por in {'dia', 'mes'}:
+            trunc = TruncDay('fecha_hora') if agrupar_por == 'dia' else TruncMonth('fecha_hora')
+            agg = (
+                qs.annotate(periodo=trunc)
+                .values('periodo')
+                .annotate(bajas=Sum('cantidad'), eventos=Count('id_muerte'))
+                .order_by('periodo')
+            )
+            rows = [
+                {
+                    'periodo': (r['periodo'].date().isoformat() if hasattr(r['periodo'], 'date') else str(r['periodo'])),
+                    'total_bajas': int(r['bajas'] or 0),
+                    'eventos': int(r['eventos'] or 0),
+                }
+                for r in agg
+            ]
+            series = rows
+        elif agrupar_por == 'lote':
+            agg = (
+                qs.values('lote_id')
+                .annotate(bajas=Sum('cantidad'), eventos=Count('id_muerte'))
+                .order_by('lote_id')
+            )
+            rows = [
+                {
+                    'lote_id': r['lote_id'],
+                    'periodo': f"Lote {r['lote_id']}",
+                    'total_bajas': int(r['bajas'] or 0),
+                    'eventos': int(r['eventos'] or 0),
+                }
+                for r in agg
+            ]
+            series = rows
+
+        elif agrupar_por == 'galpon':
+            agg = (
+                qs.values('lote__galpon_id', 'lote__galpon__nombre')
+                .annotate(bajas=Sum('cantidad'), eventos=Count('id_muerte'))
+                .order_by('lote__galpon__nombre')
+            )
+            rows = [
+                {
+                    'galpon_id': int(r['lote__galpon_id']),
+                    'galpon': r['lote__galpon__nombre'],
+                    'periodo': r['lote__galpon__nombre'],
+                    'total_bajas': int(r['bajas'] or 0),
+                    'eventos': int(r['eventos'] or 0),
+                }
+                for r in agg
+            ]
+            series = rows
+        else:
+            qs = qs.order_by('-fecha_hora')
+            rows = [
+                {
+                    'id': m.id_muerte,
+                    'fecha': m.fecha_hora.isoformat(),
+                    'lote_id': m.lote_id,
+                    'galpon': getattr(getattr(m.lote, 'galpon', None), 'nombre', None),
+                    'cantidad': m.cantidad,
+                    'causa': m.causa,
+                    'periodo': m.fecha_hora.date().isoformat(),
+                }
+                for m in qs[:2000]
+            ]
+
+        summary = qs.aggregate(total_bajas=Sum('cantidad'), total_eventos=Count('id_muerte'))
+        summary = {
+            'total_bajas': int(summary.get('total_bajas') or 0),
+            'total_eventos': int(summary.get('total_eventos') or 0),
+        }
+        return rows, summary, series
+
+    def _report_usuarios(self, *, fecha_inicio, fecha_fin, agrupar_por):
+        """Reporte de personal / usuarios."""
+        qs = Usuario.objects.all()
+        # No hay campo fecha de creación en tu SQL actual, reportamos lista y estado
+        rows = [
+            {
+                'id': u.id,
+                'nom_usuario': u.nom_usuario,
+                'email': u.email,
+                'tipo': u.tipo_usuario,
+                'estado': u.estado,
+                'periodo': u.nom_usuario,
+            }
+            for u in qs
+        ]
+        
+        agg = qs.values('estado').annotate(total=Count('id'))
+        summary = {
+            'total_usuarios': qs.count(),
+            'por_estado': {r['estado'] or 'Sin estado': r['total'] for r in agg}
+        }
+        return rows, summary, []
+
 
     def _report_alimentacion(
             self,

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Plus, Search, Wheat, Table, Save, Calendar, Bird, PackageCheck, AlertTriangle, TrendingDown, Edit, Trash2 } from "lucide-react";
 
 import Sidebar from "../../components/Sidebar";
+import Topbar from "../../components/Topbar";
 import Modal from "../../components/Modal";
 import InputField from "../../components/InputField";
 import Button from "../../components/Button";
@@ -283,21 +284,38 @@ function Alimentacion() {
   return (
     <div className="alim-layout">
       <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} showMobileTrigger={false} />
-      <main className="alim-main" style={{ marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px" }}>
-        <header className="est-header" style={{marginBottom: 20}}>
-          <div className="est-title-group">
-            <h1 className="est-title">Gestión de Alimentación</h1>
-            <p className="est-subtitle"><Wheat size={14} /> Control de nutrición y consumo · Inventario integrado</p>
-          </div>
-          <div className="est-header-right">
-             <button className="alim-primaryBtn" onClick={() => { resetForm(); setModoRegistro("individual"); setShowModal(true); }}>
-              <Plus size={16} /> Registro Individual
-            </button>
-             <button className="alim-primaryBtn" style={{background:'#3b82f6'}} onClick={() => { setModoRegistro("masivo"); setShowModal(true); }}>
-              <Table size={16} /> Registro Masivo
-            </button>
-          </div>
-        </header>
+      <main className="alim-main" style={{ 
+          marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px",
+          padding: isMobile ? "16px" : "32px",
+          paddingTop: isMobile ? "80px" : "32px",
+          transition: "margin-left 0.3s ease",
+          flex: 1
+        }}>
+        
+        <Topbar titulo="Control de Alimentación" subtitulo="Registro y seguimiento del consumo" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+
+        <div className="alim-header" style={{ marginBottom: '20px' }}>
+          <div style={{ flex: 1 }} />
+          <button
+            onClick={() => {
+              resetForm();
+              setModoRegistro("individual");
+              setShowModal(true);
+            }}
+            className="alim-addBtn"
+          >
+            <Plus size={16} /> Registro Individual
+          </button>
+          <button
+            className="alim-bulkBtn"
+            onClick={() => {
+              setModoRegistro("masivo");
+              setShowModal(true);
+            }}
+          >
+            <Table size={16} /> Registro Masivo
+          </button>
+        </div>
 
         {(success || formError) && (
           <div style={{marginBottom:16}}>
@@ -471,7 +489,7 @@ function Alimentacion() {
                 <span style={{fontSize:13, fontWeight:600, color:'#475569'}}>Fecha Global:</span>
                 <input
                   type="date"
-                  className="rep-input"
+                  className="alim-input"
                   value={bulkFecha}
                   onChange={e => setBulkFecha(e.target.value)}
                   style={{width:'auto', padding:'6px 12px', paddingLeft:'12px'}}
@@ -559,8 +577,8 @@ function Alimentacion() {
 
               {formError && <p className="alim-formError">⚠ {formError}</p>}
               <div style={{display:'flex', justifyContent:'flex-end', gap:12}}>
-                <button className="rep-btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
-                <button className="rep-btn-primary" onClick={handleRegistrarMasivo} disabled={saving}><Save size={16} /> {saving ? "Guardando..." : "Guardar Todos"}</button>
+                <button className="alim-secondaryBtn" onClick={() => setShowModal(false)}>Cancelar</button>
+                <button className="alim-primaryBtn" onClick={handleRegistrarMasivo} disabled={saving}><Save size={16} /> {saving ? "Guardando..." : "Guardar Todos"}</button>
               </div>
             </div>
           )}
@@ -618,8 +636,8 @@ function Alimentacion() {
             </p>
           </div>
           <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-            <button className="rep-btn-secondary" onClick={() => setShowDeleteModal(false)}>Cancelar</button>
-            <button className="rep-btn-primary" style={{ background: "#dc2626" }} onClick={handleDeleteAli} disabled={saving}>
+            <button className="alim-secondaryBtn" onClick={() => setShowDeleteModal(false)}>Cancelar</button>
+            <button className="alim-primaryBtn" style={{ background: "#dc2626" }} onClick={handleDeleteAli} disabled={saving}>
               {saving ? "Eliminando..." : "Sí, eliminar"}
             </button>
           </div>

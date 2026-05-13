@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ClipboardList, Search, Edit, Trash2 } from "lucide-react";
 import Sidebar from "../../../components/Sidebar";
+import Topbar from "../../../components/Topbar";
 import ComboBox from "../../../components/ComboBox";
 import api from "../../../api/axios";
 import useIsMobile from "../../../hooks/useIsMobile";
@@ -45,24 +46,27 @@ function HistorialClinico() {
 
   return (
     <div className="inv-layout">
-      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
+      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} showMobileTrigger={false} />
 
       <main
         className="inv-main"
-        style={{ marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px" }}
+        style={{ 
+          marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px",
+          padding: isMobile ? "16px" : "32px",
+          paddingTop: isMobile ? "80px" : "32px",
+          transition: "margin-left 0.3s ease",
+          flex: 1
+        }}
       >
-        <header className="inv-header">
-          <div className="inv-title-group">
-            <h1 className="inv-title">Historial Clínico por Lote</h1>
-            <p className="inv-subtitle">
-              <ClipboardList size={14} /> Consulta de tratamientos aplicados
-            </p>
-          </div>
-        </header>
+        <Topbar titulo="Historial Clínico por Lote" subtitulo="Consulta de tratamientos aplicados" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-        <section className="est-panel">
-          <div className="est-panel-header">
-            <h3 className="est-panel-title">
+        <div className="inv-header" style={{ marginBottom: '20px' }}>
+          {/* Header content moved to Topbar, but keeping space if needed */}
+        </div>
+
+        <section className="inv-panel">
+          <div className="inv-panel-header">
+            <h3 className="inv-panel-title">
               <Search size={18} /> Filtrar por Lote
             </h3>
           </div>
@@ -98,15 +102,15 @@ function HistorialClinico() {
           </div>
         </section>
 
-        <section className="est-panel">
-          <div className="est-panel-header">
-            <h3 className="est-panel-title">
+        <section className="inv-panel">
+          <div className="inv-panel-header">
+            <h3 className="inv-panel-title">
               <ClipboardList size={18} /> Registros encontrados
             </h3>
           </div>
 
-          <div className="est-table-wrap">
-            <table className="est-table">
+          <div className="inv-table-wrap">
+            <table className="inv-table">
               <thead>
                 <tr>
                   <th>Fecha</th>
@@ -121,19 +125,19 @@ function HistorialClinico() {
               <tbody>
                 {!loteSelected ? (
                   <tr>
-                    <td colSpan={7} style={{ padding: 24, color: "#94a3b8", textAlign: "center" }}>
+                    <td colSpan={7} className="inv-empty">
                       Selecciona un lote para ver su historial.
                     </td>
                   </tr>
                 ) : loading ? (
                   <tr>
-                    <td colSpan={7} style={{ padding: 16, color: "#64748b" }}>
+                    <td colSpan={7} className="inv-empty">
                       Cargando registros...
                     </td>
                   </tr>
                 ) : historial.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={{ padding: 16, color: "#64748b" }}>
+                    <td colSpan={7} className="inv-empty">
                       No se encontraron aplicaciones para este lote.
                     </td>
                   </tr>

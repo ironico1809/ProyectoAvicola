@@ -9,6 +9,7 @@ import {
   Trash2,
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
+import Topbar from "../../components/Topbar";
 import Modal from "../../components/Modal";
 import InputField from "../../components/InputField";
 import Button from "../../components/Button";
@@ -184,21 +185,22 @@ function Galpones() {
 
   return (
     <div className="galp-layout">
-      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
+      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} showMobileTrigger={false} />
 
       <main
         className="galp-main"
         style={{
           marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px",
+          padding: isMobile ? "16px" : "32px",
+          paddingTop: isMobile ? "80px" : "32px",
+          transition: "margin-left 0.3s ease",
+          flex: 1
         }}
       >
-        <div className="galp-header">
-          <div>
-            <h1 className="galp-title">Gestión de Galpones</h1>
-            <p className="galp-subtitle">
-              Administrar los galpones de la granja
-            </p>
-          </div>
+        <Topbar titulo="Gestión de Galpones" subtitulo="Administrar los galpones de la granja" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+
+        <div className="galp-header" style={{ marginBottom: '20px' }}>
+          <div style={{ flex: 1 }} />
           <button
             onClick={() => {
               resetForm();

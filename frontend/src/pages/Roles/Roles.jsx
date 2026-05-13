@@ -10,6 +10,7 @@ import {
   Eye,
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
+import Topbar from "../../components/Topbar";
 import Modal from "../../components/Modal";
 import InputField from "../../components/InputField";
 import Button from "../../components/Button";
@@ -157,20 +158,20 @@ function Roles() {
 
   return (
     <div style={layoutStyle}>
-      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
+      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} showMobileTrigger={false} />
 
       <main
         style={{
           ...mainContentStyle,
           marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px",
-          paddingLeft: isMobile && !sidebarOpen ? "64px" : undefined,
+          padding: isMobile ? "16px" : "32px",
+          paddingTop: isMobile ? "80px" : "32px",
         }}
       >
-        <div style={headerStyle}>
-          <div>
-            <h1 style={titleStyle}>Gestión de Roles</h1>
-            <p style={subtitleStyle}>Administrar los roles del sistema</p>
-          </div>
+        <Topbar titulo="Gestión de Roles" subtitulo="Administrar los roles del sistema" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+
+        <div style={{...headerStyle, marginBottom: '20px'}}>
+          <div style={{ flex: 1 }} />
           <button
             onClick={() => {
               resetForm();

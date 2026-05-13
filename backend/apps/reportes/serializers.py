@@ -8,7 +8,7 @@ class ReporteGenerarSerializer(serializers.Serializer):
     """
 
     entidad = serializers.ChoiceField(
-        choices=['alimentacion', 'lotes', 'bitacora', 'insumos', 'sanitario'])
+        choices=['alimentacion', 'lotes', 'bitacora', 'insumos', 'sanitario', 'mortalidad', 'usuarios', 'temperatura'])
 
     # filtros comunes
     fecha_inicio = serializers.DateField(required=False, allow_null=True)

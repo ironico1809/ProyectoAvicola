@@ -10,11 +10,13 @@ import {
   Bird,
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
+import Topbar from "../../components/Topbar";
 import Modal from "../../components/Modal";
 import InputField from "../../components/InputField";
 import Button from "../../components/Button";
 import ComboBox from "../../components/ComboBox";
 import api from "../../api/axios";
+import useIsMobile from "../../hooks/useIsMobile";
 
 function toNumber(value) {
   if (value === "" || value === null || value === undefined) return null;
@@ -617,29 +619,27 @@ function Lotes() {
 
   return (
     <div style={layoutStyle}>
-      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
+      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} showMobileTrigger={false} />
 
       <main
         style={{
           ...mainContentStyle,
           marginLeft: isNarrow ? "0px" : sidebarOpen ? "240px" : "70px",
-          paddingLeft: isNarrow && !sidebarOpen ? "64px" : undefined,
+          padding: isNarrow ? "16px" : "32px",
+          paddingTop: isNarrow ? "80px" : "32px",
         }}
       >
+        <Topbar titulo="Gestión de Lotes" subtitulo="Registra lotes y visualiza el estado por galpón" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+
         <div
           style={{
             ...headerStyle,
+            marginBottom: '20px',
             flexDirection: isNarrow ? "column" : "row",
             alignItems: isNarrow ? "stretch" : "center",
           }}
         >
-          <div>
-            <h1 style={titleStyle}>Lotes</h1>
-            <p style={subtitleStyle}>
-              Registra lotes y visualiza el estado por galpón
-            </p>
-          </div>
-
+          <div style={{ flex: 1 }} />
           <button
             onClick={() => {
               resetForm();

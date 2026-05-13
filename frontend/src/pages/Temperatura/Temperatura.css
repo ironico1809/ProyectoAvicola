@@ -1,7 +1,5 @@
 .temperatura-page {
-  padding: 24px;
-  margin-left: 70px;
-  width: calc(100% - 70px);
+  padding: 0;
   box-sizing: border-box;
 }
 

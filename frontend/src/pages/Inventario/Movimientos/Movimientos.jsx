@@ -7,6 +7,7 @@ import {
   Search,
 } from "lucide-react";
 import Sidebar from "../../../components/Sidebar";
+import Topbar from "../../../components/Topbar";
 import Modal from "../../../components/Modal";
 import InputField from "../../../components/InputField";
 import Button from "../../../components/Button";
@@ -111,20 +112,22 @@ function Movimientos() {
 
   return (
     <div className="inv-layout">
-      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
+      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} showMobileTrigger={false} />
 
       <main
         className="inv-main"
-        style={{ marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px" }}
+        style={{ 
+          marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px",
+          padding: isMobile ? "16px" : "32px",
+          paddingTop: isMobile ? "80px" : "32px",
+          transition: "margin-left 0.3s ease",
+          flex: 1
+        }}
       >
-        <header className="inv-header">
-          <div className="inv-title-group">
-            <h1 className="inv-title">Movimientos de Almacén</h1>
-            <p className="inv-subtitle">
-              <History size={14} /> Entradas y salidas con trazabilidad
-            </p>
-          </div>
+        <Topbar titulo="Movimientos de Almacén" subtitulo="Entradas y salidas con trazabilidad" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
+        <div className="inv-header" style={{ marginBottom: '20px' }}>
+          <div style={{ flex: 1 }} />
           <div className="inv-header-actions">
             <button
               className="inv-btn-success"
@@ -145,11 +148,11 @@ function Movimientos() {
               <ArrowDownCircle size={16} /> Salida
             </button>
           </div>
-        </header>
+        </div>
 
-        <section className="est-panel">
-          <div className="est-panel-header">
-            <h3 className="est-panel-title">
+        <section className="inv-panel">
+          <div className="inv-panel-header">
+            <h3 className="inv-panel-title">
               <Search size={18} /> Filtros
             </h3>
           </div>
@@ -157,7 +160,7 @@ function Movimientos() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(5, 1fr)",
+              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
               gap: 12,
               padding: 12,
               alignItems: "end"
@@ -185,10 +188,10 @@ function Movimientos() {
               placeholder="Todos"
             />
 
-            <div className="rep-filter-item">
-              <label className="rep-filter-label">Fecha inicio</label>
+            <div className="inv-filter-group">
+              <label>Fecha inicio</label>
               <input
-                className="rep-input"
+                className="inv-input"
                 type="date"
                 value={filters.fecha_inicio}
                 onChange={(e) =>
@@ -197,10 +200,10 @@ function Movimientos() {
               />
             </div>
 
-            <div className="rep-filter-item">
-              <label className="rep-filter-label">Fecha fin</label>
+            <div className="inv-filter-group">
+              <label>Fecha fin</label>
               <input
-                className="rep-input"
+                className="inv-input"
                 type="date"
                 value={filters.fecha_fin}
                 onChange={(e) =>
@@ -209,10 +212,10 @@ function Movimientos() {
               />
             </div>
 
-            <div className="rep-filter-item">
-              <label className="rep-filter-label">Motivo</label>
+            <div className="inv-filter-group">
+              <label>Motivo</label>
               <input
-                className="rep-input"
+                className="inv-input"
                 value={filters.motivo}
                 onChange={(e) =>
                   setFilters({ ...filters, motivo: e.target.value })
@@ -250,15 +253,15 @@ function Movimientos() {
           </div>
         </section>
 
-        <section className="est-panel">
-          <div className="est-panel-header">
-            <h3 className="est-panel-title">
+        <section className="inv-panel">
+          <div className="inv-panel-header">
+            <h3 className="inv-panel-title">
               <History size={18} /> Historial
             </h3>
           </div>
 
-          <div className="est-table-wrap">
-            <table className="est-table">
+          <div className="inv-table-wrap">
+            <table className="inv-table">
               <thead>
                 <tr>
                   <th>Fecha</th>
@@ -271,13 +274,13 @@ function Movimientos() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={5} style={{ padding: 16, color: "#64748b" }}>
+                    <td colSpan={5} className="inv-empty">
                       Cargando...
                     </td>
                   </tr>
                 ) : movimientos.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ padding: 16, color: "#64748b" }}>
+                    <td colSpan={5} className="inv-empty">
                       No hay movimientos.
                     </td>
                   </tr>
@@ -289,7 +292,7 @@ function Movimientos() {
                       </td>
                       <td>
                         <span
-                          className={`est-badge ${m.tipo_movimiento === "Entrada" ? "est-badge-success" : "est-badge-danger"}`}
+                          className={`inv-badge ${m.tipo_movimiento === "Entrada" ? "inv-badge-entrada" : "inv-badge-salida"}`}
                         >
                           {m.tipo_movimiento === "Entrada" ? (
                             <ArrowUpCircle size={10} />
@@ -331,7 +334,7 @@ function Movimientos() {
           titulo={`Registrar movimiento (${tipoMov})`}
           onClose={() => setShowModalMov(false)}
         >
-          <form className="alim-form" onSubmit={handleCreateMov}>
+          <form className="inv-form" onSubmit={handleCreateMov}>
             <ComboBox
               label="Insumo"
               value={formMov.insumo}

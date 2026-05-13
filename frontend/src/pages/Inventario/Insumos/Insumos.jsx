@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Package, Plus, AlertTriangle, Search, Edit, Trash2, Save } from "lucide-react";
 import Sidebar from "../../../components/Sidebar";
+import Topbar from "../../../components/Topbar";
 import Modal from "../../../components/Modal";
 import InputField from "../../../components/InputField";
 import ComboBox from "../../../components/ComboBox";
@@ -157,7 +158,7 @@ function Insumos() {
   }, [insumos]);
 
   const formFields = (
-    <form className="alim-form" onSubmit={showEditModal ? handleUpdateInsumo : handleCreateInsumo}>
+    <form className="inv-form" onSubmit={showEditModal ? handleUpdateInsumo : handleCreateInsumo}>
       <InputField
         label="Nombre del Insumo"
         placeholder="Ej: Maíz Amarillo, Vacuna Newcastle..."
@@ -182,7 +183,7 @@ function Insumos() {
         required
       />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+      <div className="inv-form-row">
         <ComboBox
           label="Unidad de Medida"
           value={formInsumo.unidad_medida}
@@ -223,7 +224,7 @@ function Insumos() {
         required
       />
       <p style={{ fontSize: "11px", color: "#6b7280", marginTop: "-8px", marginLeft: "4px" }}>
-        <AlertTriangle size={10} inline /> Recibirás una alerta cuando el stock sea igual o menor a este valor.
+        <AlertTriangle size={10} style={{display:'inline', marginRight:4}} /> Recibirás una alerta cuando el stock sea igual o menor a este valor.
       </p>
 
       <Button text={showEditModal ? "Guardar Cambios" : "Crear Insumo"} loading={saving} icon={showEditModal ? <Save size={18} /> : <Plus size={18} />} />
@@ -232,29 +233,34 @@ function Insumos() {
 
   return (
     <div className="inv-layout">
-      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
+      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} showMobileTrigger={false} />
 
       <main
         className="inv-main"
-        style={{ marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px" }}
+        style={{ 
+          marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px",
+          padding: isMobile ? "16px" : "32px",
+          paddingTop: isMobile ? "80px" : "32px",
+          transition: "margin-left 0.3s ease",
+          flex: 1
+        }}
       >
-        <header className="inv-header">
-          <div className="inv-title-group">
-            <h1 className="inv-title">Catálogo de Insumos</h1>
-            <p className="inv-subtitle">
-              <Package size={14} /> Registro maestro de productos e insumos
-            </p>
-          </div>
+        <Topbar titulo="Catálogo de Insumos" subtitulo="Gestión maestro de productos e insumos" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
+        <div className="inv-header" style={{ marginBottom: '20px' }}>
+          <div style={{ flex: 1 }} />
           <div className="inv-header-actions">
             <button
               className="inv-btn-primary"
-              onClick={() => { resetForm(); setShowModalInsumo(true); }}
+              onClick={() => {
+                resetForm();
+                setShowModalInsumo(true);
+              }}
             >
               <Plus size={16} /> Nuevo Insumo
             </button>
           </div>
-        </header>
+        </div>
 
         {alertas.length > 0 && (
           <div className="inv-alerts-section">
@@ -270,15 +276,15 @@ function Insumos() {
           </div>
         )}
 
-        <section className="est-panel">
-          <div className="est-panel-header">
-            <h3 className="est-panel-title">
+        <section className="inv-panel">
+          <div className="inv-panel-header">
+            <h3 className="inv-panel-title">
               <Package size={18} /> Lista de Insumos
             </h3>
           </div>
 
-          <div className="est-table-wrap">
-            <table className="est-table">
+          <div className="inv-table-wrap">
+            <table className="inv-table">
               <thead>
                 <tr>
                   <th>Nombre</th>
@@ -299,7 +305,7 @@ function Insumos() {
                           setQbe({ ...qbe, nombre: e.target.value })
                         }
                         placeholder="Filtrar..."
-                        className="rep-input"
+                        className="inv-input"
                         style={{ width: "100%" }}
                       />
                     </div>
@@ -309,7 +315,7 @@ function Insumos() {
                       value={qbe.tipo}
                       onChange={(e) => setQbe({ ...qbe, tipo: e.target.value })}
                       placeholder="Filtrar..."
-                      className="rep-input"
+                      className="inv-input"
                       style={{ width: "100%" }}
                     />
                   </th>
@@ -320,7 +326,7 @@ function Insumos() {
                         setQbe({ ...qbe, stock_actual: e.target.value })
                       }
                       placeholder="Filtrar..."
-                      className="rep-input"
+                      className="inv-input"
                       style={{ width: "100%" }}
                     />
                   </th>
@@ -331,7 +337,7 @@ function Insumos() {
                         setQbe({ ...qbe, stock_minimo: e.target.value })
                       }
                       placeholder="Filtrar..."
-                      className="rep-input"
+                      className="inv-input"
                       style={{ width: "100%" }}
                     />
                   </th>
@@ -341,13 +347,13 @@ function Insumos() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={5} style={{ padding: 16, color: "#64748b" }}>
+                    <td colSpan={5} className="inv-empty">
                       Cargando...
                     </td>
                   </tr>
                 ) : filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ padding: 16, color: "#64748b" }}>
+                    <td colSpan={5} className="inv-empty">
                       Sin resultados.
                     </td>
                   </tr>
@@ -358,10 +364,7 @@ function Insumos() {
                         <strong>{i.nombre}</strong>
                       </td>
                       <td>
-                        <span
-                          className="est-badge"
-                          style={{ background: "#f1f5f9" }}
-                        >
+                        <span className="inv-badge inv-badge-gray">
                           {i.tipo}
                         </span>
                       </td>
@@ -376,7 +379,7 @@ function Insumos() {
                       >
                         {i.stock_actual} {i.unidad_medida}
                       </td>
-                      <td className="alim-muted">{i.stock_minimo}</td>
+                      <td style={{ color: '#94a3b8' }}>{i.stock_minimo}</td>
                       <td>
                         <div className="btn-action-group">
                           <button
@@ -430,10 +433,9 @@ function Insumos() {
             </p>
           </div>
           <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-            <button className="rep-btn-secondary" onClick={() => setShowDeleteModal(false)}>Cancelar</button>
+            <button className="inv-btn-ghost" onClick={() => setShowDeleteModal(false)}>Cancelar</button>
             <button
-              className="rep-btn-primary"
-              style={{ background: "#dc2626" }}
+              className="inv-btn-danger"
               onClick={handleDeleteInsumo}
               disabled={saving}
             >

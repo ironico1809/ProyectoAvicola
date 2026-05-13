@@ -1,8 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Activity } from "lucide-react";
+import {
+  AlertTriangle,
+  Activity,
+  Trash2,
+  FileText,
+  CheckCircle,
+  Clock,
+  XCircle,
+  Info,
+} from "lucide-react";
 import html2pdf from "html2pdf.js";
 
 import Sidebar from "../../components/Sidebar";
+import Topbar from "../../components/Topbar";
 import AlertItem from "../../components/AlertItem";
 import api from "../../api/axios";
 import useIsMobile from "../../hooks/useIsMobile";
@@ -21,8 +31,11 @@ function toNumber(value) {
 function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click(); a.remove();
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
@@ -31,31 +44,39 @@ function Reportes() {
   const isMobile = useIsMobile();
 
   const [galpones, setGalpones] = useState([]);
-  const [lotes, setLotes]       = useState([]);
+  const [lotes, setLotes] = useState([]);
 
-  const [entidad,      setEntidad]      = useState("alimentacion");
-  const [agruparPor,   setAgruparPor]   = useState("dia");
-  const [fechaInicio,  setFechaInicio]  = useState("");
-  const [fechaFin,     setFechaFin]     = useState("");
-  const [galponIds,    setGalponIds]    = useState([]);
-  const [loteId,       setLoteId]       = useState("");
-  const [estadoLote,   setEstadoLote]   = useState("");
-  const [tipoAlimento, setTipoAlimento] = useState("");
+  const [entidad, setEntidad] = useState("alimentacion");
+  const [agruparPor, setAgruparPor] = useState("dia");
+  const [fechaInicio, setFechaInicio] = useState("");
+  const [fechaFin, setFechaFin] = useState("");
+  const [galponIds, setGalponIds] = useState([]);
+  const [loteIds, setLoteIds] = useState([]);
 
   const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState("");
-  const [rows,    setRows]    = useState([]);
+  const [error, setError] = useState("");
+  const [rows, setRows] = useState([]);
   const [summary, setSummary] = useState({});
-  const [series,  setSeries]  = useState([]);
+  const [series, setSeries] = useState([]);
 
-  useEffect(() => { fetchBase(); }, []);
+  // Historial de reportes generados en la sesión
+  const [historial, setHistorial] = useState([]);
+
+  useEffect(() => {
+    fetchBase();
+  }, []);
 
   const fetchBase = async () => {
     try {
-      const [galRes, lotRes] = await Promise.all([api.get("/galpones/"), api.get("/lotes/")]);
+      const [galRes, lotRes] = await Promise.all([
+        api.get("/galpones/"),
+        api.get("/lotes/"),
+      ]);
       setGalpones(Array.isArray(galRes.data) ? galRes.data : []);
       setLotes(Array.isArray(lotRes.data) ? lotRes.data : []);
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const payload = useMemo(() => {
@@ -64,80 +85,138 @@ function Reportes() {
     if (fechaInicio) p.fecha_inicio = fechaInicio;
     if (fechaFin) p.fecha_fin = fechaFin;
     if (galponIds?.length) p.galpon_ids = galponIds;
-    const lid = toNumber(loteId); if (lid) p.lote_id = lid;
-    if (estadoLote?.trim()) p.estado_lote = estadoLote;
-    if (tipoAlimento?.trim()) p.tipo_alimento = tipoAlimento;
+    const numericLoteIds = (Array.isArray(loteIds) ? loteIds : [])
+      .map((x) => toNumber(x))
+      .filter((x) => Number.isFinite(x));
+    if (numericLoteIds.length) p.lote_ids = numericLoteIds;
     return p;
-  }, [entidad, agruparPor, fechaInicio, fechaFin, galponIds, loteId, estadoLote, tipoAlimento]);
+  }, [entidad, agruparPor, fechaInicio, fechaFin, galponIds, loteIds]);
 
   const handleGenerar = async () => {
-    setLoading(true); setError("");
+    setLoading(true);
+    setError("");
+    const newReport = {
+      id: Math.floor(Math.random() * 10000),
+      tipo: entidad.charAt(0).toUpperCase() + entidad.slice(1),
+      descripcion: `Agrupado por ${agruparPor || "detalle"}`,
+      comando: "-",
+      fecha: new Date(),
+      estado: "generando",
+    };
+    setHistorial((prev) => [newReport, ...prev]);
+
     try {
       const res = await api.post("/reportes/generar/", payload);
       const d = res?.data || {};
       setRows(Array.isArray(d.rows) ? d.rows : []);
       setSummary(d.summary && typeof d.summary === "object" ? d.summary : {});
       setSeries(Array.isArray(d.series) ? d.series : []);
-    } catch (e) { setError(String(e?.response?.data?.detail || "No se pudo generar el reporte.")); }
-    finally { setLoading(false); }
+
+      setHistorial((prev) =>
+        prev.map((r) =>
+          r.id === newReport.id ? { ...r, estado: "completado" } : r,
+        ),
+      );
+    } catch (e) {
+      const msg = String(
+        e?.response?.data?.detail || "No se pudo generar el reporte.",
+      );
+      setError(msg);
+      setHistorial((prev) =>
+        prev.map((r) =>
+          r.id === newReport.id ? { ...r, estado: "error" } : r,
+        ),
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLimpiar = () => {
-    setEntidad("alimentacion"); setAgruparPor("dia");
-    setFechaInicio(""); setFechaFin("");
-    setGalponIds([]); setLoteId(""); setEstadoLote(""); setTipoAlimento("");
-    setError(""); setRows([]); setSummary({}); setSeries([]);
+    setEntidad("alimentacion");
+    setAgruparPor("dia");
+    setFechaInicio("");
+    setFechaFin("");
+    setGalponIds([]);
+    setLoteIds([]);
+    setError("");
+    setRows([]);
+    setSummary({});
+    setSeries([]);
   };
 
   const handleDescargarExcel = async () => {
-    setLoading(true); setError("");
+    setLoading(true);
+    setError("");
     try {
-      const res = await api.post("/reportes/generar/", { ...payload, formato: "excel" }, { responseType: "blob" });
-      const ext = String(res?.headers?.["content-type"] || "").includes("spreadsheetml") ? "xlsx" : "csv";
-      downloadBlob(res.data, `reporte.${ext}`);
-    } catch (e) { setError("No se pudo descargar el reporte."); }
-    finally { setLoading(false); }
+      const res = await api.post(
+        "/reportes/generar/",
+        { ...payload, formato: "excel" },
+        { responseType: "blob" },
+      );
+      const ext = String(res?.headers?.["content-type"] || "").includes(
+        "spreadsheetml",
+      )
+        ? "xlsx"
+        : "csv";
+      downloadBlob(res.data, `reporte_${entidad}.${ext}`);
+    } catch (e) {
+      setError("No se pudo descargar el reporte.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDescargarPDF = () => {
     const el = document.getElementById("reporte-imprimible");
     if (!el) return;
-    html2pdf().from(el).set({
-      margin: 10, filename: `reporte_avigranja_${Date.now()}.pdf`,
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
-    }).save();
+    html2pdf()
+      .from(el)
+      .set({
+        margin: 10,
+        filename: `reporte_${entidad}_${Date.now()}.pdf`,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
+      })
+      .save();
+  };
+
+  const eliminarDelHistorial = (id) => {
+    setHistorial((prev) => prev.filter((r) => r.id !== id));
   };
 
   return (
     <div className="rep-layout">
       <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} showMobileTrigger={false} />
-      <main className="rep-main" style={{ marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px" }}>
+      <main
+        className="rep-main"
+        style={{ 
+          marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px",
+          padding: isMobile ? "16px" : "32px",
+          paddingTop: isMobile ? "80px" : "32px",
+          transition: "margin-left 0.3s ease",
+          flex: 1
+        }}
+      >
+        <Topbar titulo="Reportes con IA" subtitulo="Análisis y exportación de datos" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-        <header className="est-header" style={{ marginBottom: 4 }}>
-          <div className="est-title-group">
-            <h1 className="est-title">Reportes Dinámicos</h1>
-            <p className="est-subtitle"><Activity size={14} /> Analítica, métricas y exportación de datos</p>
-          </div>
-        </header>
-
-        {error && (
-          <div style={{ marginBottom: 14 }}>
-            <AlertItem type="danger" icon={<AlertTriangle size={18} color="#dc2626" />} title="Atención" desc={error} />
-          </div>
-        )}
-
-        <div className="rep-grid">
+        <div className="rep-container">
           <FiltroReportes
-            entidad={entidad}           setEntidad={setEntidad}
-            agruparPor={agruparPor}     setAgruparPor={setAgruparPor}
-            fechaInicio={fechaInicio}   setFechaInicio={setFechaInicio}
-            fechaFin={fechaFin}         setFechaFin={setFechaFin}
-            galpones={galpones}         galponIds={galponIds}   setGalponIds={setGalponIds}
-            lotes={lotes}               loteId={loteId}         setLoteId={setLoteId}
-            estadoLote={estadoLote}     setEstadoLote={setEstadoLote}
-            tipoAlimento={tipoAlimento} setTipoAlimento={setTipoAlimento}
+            entidad={entidad}
+            setEntidad={setEntidad}
+            agruparPor={agruparPor}
+            setAgruparPor={setAgruparPor}
+            fechaInicio={fechaInicio}
+            setFechaInicio={setFechaInicio}
+            fechaFin={fechaFin}
+            setFechaFin={setFechaFin}
+            galpones={galpones}
+            galponIds={galponIds}
+            setGalponIds={setGalponIds}
+            lotes={lotes}
+            loteIds={loteIds}
+            setLoteIds={setLoteIds}
             rows={rows}
             loading={loading}
             onGenerar={handleGenerar}
@@ -145,11 +224,161 @@ function Reportes() {
             onDescargarExcel={handleDescargarExcel}
             onDescargarPDF={handleDescargarPDF}
           />
-          <div id="reporte-imprimible" style={{ display: "flex", flexDirection: "column", width: "100%" }}>
-            <VisualizadorReporte
-              entidad={entidad} rows={rows} summary={summary}
-              series={series} loading={loading} error={error} filters={payload}
+
+          {error && (
+            <AlertItem
+              type="danger"
+              icon={<AlertTriangle size={18} color="#dc2626" />}
+              title="Atención"
+              desc={error}
             />
+          )}
+
+          <div id="reporte-imprimible" className="rep-dashboard-area">
+            <VisualizadorReporte
+              entidad={entidad}
+              rows={rows}
+              summary={summary}
+              series={series}
+              loading={loading}
+              error={error}
+              filters={payload}
+            />
+          </div>
+
+          {/* HISTORIAL DE REPORTES */}
+          <div className="rep-history-card">
+            <div className="rep-history-header">
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <Clock size={18} color="#4f46e5" />
+                <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>
+                  Historial de Reportes
+                </h3>
+              </div>
+              <button
+                className="rep-btn-clear"
+                onClick={() => setHistorial([])}
+                style={{ padding: "4px 10px" }}
+              >
+                Limpiar todo
+              </button>
+            </div>
+            <div className="rep-table-scroll">
+              <table className="rep-history-table">
+                <thead>
+                  <tr>
+                    <th>Tipo</th>
+                    <th>Descripción</th>
+                    <th>Fecha</th>
+                    <th>Estado</th>
+                    <th style={{ textAlign: "right" }}>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historial.map((r) => (
+                    <tr key={r.id}>
+                      <td style={{ fontWeight: 600 }}>{r.tipo}</td>
+                      <td style={{ fontSize: 12, color: "#64748b" }}>
+                        {r.descripcion}
+                      </td>
+                      <td style={{ fontSize: 12 }}>
+                        {r.fecha.toLocaleString()}
+                      </td>
+                      <td>
+                        <span
+                          className={`rep-status-pill rep-status-${r.estado}`}
+                        >
+                          {r.estado === "completado" && (
+                            <CheckCircle size={12} />
+                          )}
+                          {r.estado === "generando" && (
+                            <Clock size={12} className="animate-spin" />
+                          )}
+                          {r.estado === "error" && <XCircle size={12} />}
+                          {r.estado}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: "right" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "flex-end",
+                            gap: 8,
+                          }}
+                        >
+                          {r.estado === "completado" && (
+                            <>
+                              <button
+                                className="rep-action-btn"
+                                title="Excel"
+                                onClick={handleDescargarExcel}
+                              >
+                                <FileText size={16} color="#166534" />
+                              </button>
+                              <button
+                                className="rep-action-btn"
+                                title="PDF"
+                                onClick={handleDescargarPDF}
+                              >
+                                <FileText size={16} color="#dc2626" />
+                              </button>
+                            </>
+                          )}
+                          <button
+                            className="rep-action-btn"
+                            title="Eliminar"
+                            onClick={() => eliminarDelHistorial(r.id)}
+                          >
+                            <Trash2 size={16} color="#ef4444" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {historial.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan="5"
+                        style={{
+                          textAlign: "center",
+                          padding: 40,
+                          color: "#94a3b8",
+                        }}
+                      >
+                        No hay reportes generados en esta sesión.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* INFORMACIÓN DE AYUDA */}
+          <div className="rep-help-info">
+            <Info size={24} color="#2563eb" />
+            <div>
+              <h4>Consejos para usar reportes con IA:</h4>
+              <ul>
+                <li>
+                  <strong>Menciona la entidad:</strong> "inventario",
+                  "alimentación", "mortandad/mortalidad", "temperatura",
+                  "lotes", "bitácora", "sanitario", "personal".
+                </li>
+                <li>
+                  <strong>Define el periodo:</strong> "de hoy", "de ayer", "de
+                  este mes", "de la semana pasada".
+                </li>
+                <li>
+                  <strong>Agrupación:</strong> "por día", "por mes", "por
+                  galpón", "por lote".
+                </li>
+                <li>
+                  <strong>Acción directa:</strong> Agrega "y generar" al final
+                  para que el sistema procese el reporte de inmediato.
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
       </main>

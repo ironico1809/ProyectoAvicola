@@ -232,9 +232,9 @@ function Bitacora() {
         <Topbar titulo="Bitácora" subtitulo="Control de auditoría y rastreo" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
         {/* Panel de Filtros Avanzados */}
-        <section className="est-panel" style={{marginBottom: 20, padding: 20}}>
-          <div className="est-panel-header" style={{marginBottom: 16}}>
-            <h3 className="est-panel-title"><Filter size={16}/> Filtros de Auditoría</h3>
+        <section className="panel" style={{marginBottom: 20}}>
+          <div className="panel-header">
+            <h3 className="panel-title"><Filter size={16}/> Filtros de Auditoría</h3>
           </div>
           
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: 12, alignItems: 'end' }}>
@@ -265,10 +265,10 @@ function Bitacora() {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16, paddingTop: 16, borderTop: '1px solid #f1f5f9' }}>
-            <button className="alim-secondaryBtn" onClick={handleLimpiarFiltros} style={{gap: 6}}>
+            <button className="btn-secondary" onClick={handleLimpiarFiltros}>
               <X size={14}/> Limpiar
             </button>
-            <button className="alim-primaryBtn" onClick={() => loadInitialData()} style={{gap: 6}}>
+            <button className="btn-primary" onClick={() => loadInitialData()}>
               <Search size={14}/> Aplicar Filtros
             </button>
           </div>
@@ -308,7 +308,7 @@ function Bitacora() {
                         <td>{log.id}</td>
                         <td><strong>{log.usuario_nombre ?? "Sistema"}</strong></td>
                         <td>
-                          <span className="est-badge" style={{background: '#f8fafc', border: '1px solid #e2e8f0', textTransform: 'capitalize'}}>
+                          <span className="badge badge--gray">
                             {log._accionLegible}
                           </span>
                         </td>
@@ -323,7 +323,7 @@ function Bitacora() {
 
               {nextPage && (
                 <div style={{ padding: 24, textAlign: 'center', background: '#f8fafc', borderTop: '1px solid #f1f5f9' }}>
-                  <button className="alim-secondaryBtn" onClick={loadMore} disabled={loadingMore} style={{ width: '240px', gap: 8, margin: '0 auto' }}>
+                  <button className="btn-secondary" onClick={loadMore} disabled={loadingMore} style={{ width: '240px', margin: '0 auto' }}>
                     {loadingMore ? <RefreshCw className="animate-spin" size={14}/> : <ChevronDown size={16}/>}
                     {loadingMore ? "Cargando..." : "Cargar registros anteriores"}
                   </button>

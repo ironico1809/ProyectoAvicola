@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Bird, Skull, Package, Thermometer, Zap, AlertCircle } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
+import Topbar from "../../components/Topbar";
 import StatCard from "../../components/StatCard";
 import AlertItem from "../../components/AlertItem";
 import api from "../../api/axios";
@@ -112,19 +113,7 @@ function Dashboard() {
           gap: "24px"
         }}
       >
-        <header className="est-header">
-          <div className="est-title-group">
-            <h1 className="est-title">Resumen de la Granja</h1>
-            <p className="est-subtitle">
-              <Zap size={14} /> Vista general de producción
-            </p>
-          </div>
-          <div className="est-header-right">
-             <button className="rep-btn-primary" onClick={fetchStats}>
-              Actualizar
-            </button>
-          </div>
-        </header>
+        <Topbar titulo="Resumen de la Granja" subtitulo="Vista general de producción" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
         <div
           style={{

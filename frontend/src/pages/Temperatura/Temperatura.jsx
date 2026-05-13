@@ -2,9 +2,12 @@ import { useEffect, useState } from "react";
 import api from "../../api/axios";
 import Sidebar from "../../components/Sidebar";
 import Topbar from "../../components/Topbar";
+import useIsMobile from "../../hooks/useIsMobile";
 import "./Temperatura.css";
 
 function Temperatura() {
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const isMobile = useIsMobile();
   /*
     temperaturas:
     Guarda la temperatura actual de cada galpón.
@@ -230,13 +233,24 @@ const cargarDatosIniciales = async () => {
   };
 
   return (
-    <div className="layout">
-      <Sidebar />
+    <div style={{ display: "flex", minHeight: "100vh", background: "#f8fafc" }}>
+      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} showMobileTrigger={false} />
 
-      <main className="main-content">
-        <Topbar title="Monitoreo de Temperatura" />
+      <main
+        style={{
+          marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px",
+          flex: 1,
+          padding: isMobile ? "16px" : "32px",
+          paddingTop: isMobile ? "80px" : "32px",
+          transition: "margin-left 0.3s ease",
+          display: "flex",
+          flexDirection: "column",
+          gap: "24px"
+        }}
+      >
+        <Topbar titulo="Monitoreo de Temperatura" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-        <div className="temperatura-page">
+        <div className="temperatura-page" style={{ margin: 0, width: '100%', padding: 0 }}>
           <div className="temperatura-header">
             <div>
               <h1>Monitoreo de Temperatura en tiempo real</h1>

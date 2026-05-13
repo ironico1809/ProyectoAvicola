@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Save, Shield, ShieldCheck, Plus } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
+import Topbar from "../../components/Topbar";
 import Modal from "../../components/Modal";
 import InputField from "../../components/InputField";
 import Button from "../../components/Button";
@@ -99,20 +100,20 @@ function Permisos() {
 
   return (
     <div style={layoutStyle}>
-      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
+      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} showMobileTrigger={false} />
 
       <main
         style={{
           ...mainStyle,
           marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px",
-          paddingLeft: isMobile && !sidebarOpen ? "64px" : undefined,
+          padding: isMobile ? "16px" : "32px",
+          paddingTop: isMobile ? "80px" : "32px",
         }}
       >
-        <div style={headerStyle}>
-          <div>
-            <h1 style={titleStyle}>Gestión de Permisos</h1>
-            <p style={subtitleStyle}>Asigna permisos a cada rol del sistema</p>
-          </div>
+        <Topbar titulo="Gestión de Permisos" subtitulo="Asigna permisos a cada rol del sistema" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+
+        <div style={{...headerStyle, marginBottom: '20px'}}>
+          <div style={{ flex: 1 }} />
           <button onClick={() => setShowModal(true)} style={btnAgregarStyle}>
             <Plus size={18} style={{ marginRight: "8px" }} /> Nuevo Permiso
           </button>

@@ -1,11 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, X } from "lucide-react";
 import api from "../api/axios";
 import "./TemperatureAlert.css";
 import { useLocation } from "react-router-dom";
 
 function TemperatureAlert() {
-    const location = useLocation();
+  const location = useLocation();
+
+  const POLL_MS = 15000;
+  const SNOOZE_MS = 5 * 60 * 1000;
+
+  const ocultarAlertaEnRuta =
+    location.pathname === "/" ||
+    location.pathname === "/register" ||
+    location.pathname.startsWith("/temperatura");
   /*
     alertas:
     Aquí guardamos las alertas que devuelve el backend.
@@ -20,20 +28,27 @@ function TemperatureAlert() {
   */
   const [visible, setVisible] = useState(true);
 
+  const lastSignatureRef = useRef("");
+  const snoozedUntilRef = useRef(0);
+
   /*
     useEffect:
     Se ejecuta cuando carga la aplicación.
     Consulta las alertas de temperatura cada 10 segundos.
   */
   useEffect(() => {
+    if (ocultarAlertaEnRuta) {
+      return;
+    }
+
     cargarAlertas();
 
     const intervalo = setInterval(() => {
       cargarAlertas();
-    }, 3000);
+    }, POLL_MS);
 
     return () => clearInterval(intervalo);
-  }, []);
+  }, [ocultarAlertaEnRuta]);
 
   /*
     cargarAlertas:
@@ -46,13 +61,23 @@ function TemperatureAlert() {
     try {
       const respuesta = await api.get("/temperatura/alertas/");
 
-      setAlertas(respuesta.data);
+      const data = Array.isArray(respuesta.data) ? respuesta.data : [];
+
+      const signature = data
+        .map((a) => `${a?.id ?? ""}:${a?.estado ?? ""}:${a?.temperatura ?? ""}`)
+        .join("|");
+
+      const changed = signature !== lastSignatureRef.current;
+      lastSignatureRef.current = signature;
+
+      setAlertas(data);
 
       /*
-        Si llegan nuevas alertas, volvemos a mostrar la caja.
-        Esto sirve por si el usuario la cerró antes.
+        Evitar saturación:
+        - Si el usuario cerró la alerta, la "silenciamos" por un tiempo.
+        - Solo reabrimos automáticamente cuando cambian las alertas.
       */
-      if (respuesta.data.length > 0) {
+      if (data.length > 0 && changed && Date.now() >= snoozedUntilRef.current) {
         setVisible(true);
       }
     } catch (error) {
@@ -64,10 +89,9 @@ function TemperatureAlert() {
     }
   };
 
-     const rutasSinAlerta = ["/", "/register"];
-        if (rutasSinAlerta.includes(location.pathname)) {
-         return null;
-    }
+  if (ocultarAlertaEnRuta) {
+    return null;
+  }
 
   /*
     Si no hay alertas, no mostramos nada.
@@ -83,54 +107,57 @@ function TemperatureAlert() {
   const alertaPrincipal = alertas[0];
 
   return (
-  <div className="temperature-alert alerta-multiple">
-    <div className="temperature-alert-icon">
-      <AlertTriangle size={24} />
-    </div>
-
-    <div className="temperature-alert-content">
-      <h3>
-        {alertas.length === 1
-          ? "Alerta de temperatura"
-          : "Alertas de temperatura"}
-      </h3>
-
-      <p>
-        {alertas.length === 1
-          ? "Se detectó 1 galpón con temperatura fuera del rango normal."
-          : `Se detectaron ${alertas.length} galpones con temperatura fuera del rango normal.`}
-      </p>
-
-      <div className="temperature-alert-list">
-        {alertas.map((alerta) => (
-          <div
-            key={alerta.id}
-            className={`temperature-alert-item ${
-              alerta.estado === "CALOR" ? "item-calor" : "item-frio"
-            }`}
-          >
-            <strong>{alerta.galpon_nombre}</strong>
-
-            <span>
-              {alerta.estado === "CALOR"
-                ? "Alerta de calor"
-                : "Alerta de frío"}{" "}
-              - {alerta.temperatura}°C
-            </span>
-          </div>
-        ))}
+    <div className="temperature-alert alerta-multiple">
+      <div className="temperature-alert-icon">
+        <AlertTriangle size={24} />
       </div>
-    </div>
 
-    <button
-      className="temperature-alert-close"
-      onClick={() => setVisible(false)}
-      type="button"
-    >
-      <X size={18} />
-    </button>
-  </div>
-);
+      <div className="temperature-alert-content">
+        <h3>
+          {alertas.length === 1
+            ? "Alerta de temperatura"
+            : "Alertas de temperatura"}
+        </h3>
+
+        <p>
+          {alertas.length === 1
+            ? "Se detectó 1 galpón con temperatura fuera del rango normal."
+            : `Se detectaron ${alertas.length} galpones con temperatura fuera del rango normal.`}
+        </p>
+
+        <div className="temperature-alert-list">
+          {alertas.map((alerta) => (
+            <div
+              key={alerta.id}
+              className={`temperature-alert-item ${
+                alerta.estado === "CALOR" ? "item-calor" : "item-frio"
+              }`}
+            >
+              <strong>{alerta.galpon_nombre}</strong>
+
+              <span>
+                {alerta.estado === "CALOR"
+                  ? "Alerta de calor"
+                  : "Alerta de frío"}{" "}
+                - {alerta.temperatura}°C
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <button
+        className="temperature-alert-close"
+        onClick={() => {
+          setVisible(false);
+          snoozedUntilRef.current = Date.now() + SNOOZE_MS;
+        }}
+        type="button"
+      >
+        <X size={18} />
+      </button>
+    </div>
+  );
 }
 
 export default TemperatureAlert;

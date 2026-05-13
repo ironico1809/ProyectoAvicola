@@ -8,6 +8,7 @@ import {
   Trash2,
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
+import Topbar from "../../components/Topbar";
 import Modal from "../../components/Modal";
 import InputField from "../../components/InputField";
 import Button from "../../components/Button";
@@ -211,21 +212,22 @@ function Usuarios() {
 
   return (
     <div className="users-layout">
-      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
+      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} showMobileTrigger={false} />
 
       <main
         className="users-main"
-        style={{
+        style={{ 
           marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px",
+          padding: isMobile ? "16px" : "32px",
+          paddingTop: isMobile ? "80px" : "32px",
+          transition: "margin-left 0.3s ease",
+          flex: 1
         }}
       >
-        <div className="users-header">
-          <div>
-            <h1 className="users-title">Gestión de Usuarios</h1>
-            <p className="users-subtitle">
-              Administrar los usuarios del sistema
-            </p>
-          </div>
+        <Topbar titulo="Gestión de Usuarios" subtitulo="Administrar los usuarios del sistema" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+
+        <div className="users-header" style={{ marginBottom: '20px' }}>
+          <div style={{ flex: 1 }} />
           <button
             onClick={() => {
               resetForm();
