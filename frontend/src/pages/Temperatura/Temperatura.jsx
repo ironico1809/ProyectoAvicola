@@ -169,41 +169,64 @@ const cargarDatosIniciales = async () => {
 
   /*
     registrarTemperaturaManual:
-    Envía una temperatura escrita manualmente al backend.
-    Esto sirve para probar alertas de frío o calor.
+    Envía una temperatura de contingencia al backend.
+    Valida rango lógico antes de enviar (0–60°C).
+    El backend registra automáticamente el usuario logueado.
   */
   const registrarTemperaturaManual = async (e) => {
     e.preventDefault();
 
+    setMensajeManual("");
+    setError("");
+
+    // Validación: campos obligatorios
+    if (!formManual.id_galpon || formManual.temperatura === "") {
+      setError("Debe seleccionar un galpón e ingresar una temperatura.");
+      return;
+    }
+
+    const tempNum = parseFloat(formManual.temperatura);
+
+    // Validación: debe ser un número válido
+    if (isNaN(tempNum)) {
+      setError("La temperatura debe ser un número válido.");
+      return;
+    }
+
+    // Validación: rango lógico para un galpón avícola
+    if (tempNum < 0) {
+      setError("La temperatura no puede ser menor a 0°C.");
+      return;
+    }
+
+    if (tempNum > 60) {
+      setError(
+        "La temperatura ingresada supera los 60°C. Verifique el valor — puede ser un error de tipeo."
+      );
+      return;
+    }
+
     try {
-      setMensajeManual("");
-      setError("");
-
-      if (!formManual.id_galpon || !formManual.temperatura) {
-        setError("Debe seleccionar un galpón e ingresar una temperatura.");
-        return;
-      }
-
       await api.post("/temperatura/manual/", {
         id_galpon: formManual.id_galpon,
-        temperatura: formManual.temperatura,
+        temperatura: tempNum,
       });
 
-      setMensajeManual("Temperatura registrada correctamente.");
+      setMensajeManual("Registro de contingencia guardado exitosamente.");
 
       setFormManual({
         id_galpon: "",
         temperatura: "",
       });
 
-      /*
-        Después de registrar manualmente,
-        recargamos temperatura e historial.
-      */
-      await cargarTemperaturasTiempoReal();
-      await cargarHistorial();
+      // Refrescar datos tras el registro
+      await Promise.all([cargarTemperaturasTiempoReal(), cargarHistorial()]);
     } catch (err) {
-      setError("No se pudo registrar la temperatura manual.");
+      const detalle =
+        err?.response?.data?.temperatura?.[0] ||
+        err?.response?.data?.non_field_errors?.[0] ||
+        "No se pudo registrar la temperatura. Intente nuevamente.";
+      setError(detalle);
     }
   };
 
@@ -283,7 +306,6 @@ const cargarDatosIniciales = async () => {
                   >
                     <div className="temperatura-card-header">
                       <h2>{item.galpon_nombre}</h2>
-                      <span>{item.fuente}</span>
                     </div>
 
                     <div className="temperatura-valor">
@@ -309,7 +331,7 @@ const cargarDatosIniciales = async () => {
                 <div className="temperatura-formulario">
                   <h2>Registrar temperatura manual</h2>
                   <p>
-                    Esta opción sirve para probar alertas sin esperar la simulación automática.
+                    Use esta opción para registrar una temperatura de contingencia cuando el sensor no esté disponible.
                   </p>
 
                   <form onSubmit={registrarTemperaturaManual}>
@@ -334,9 +356,14 @@ const cargarDatosIniciales = async () => {
                       name="temperatura"
                       value={formManual.temperatura}
                       onChange={handleChangeManual}
-                      placeholder="Ejemplo: 38"
+                      placeholder="Ejemplo: 28.5"
                       step="0.01"
+                      min="0"
+                      max="60"
                     />
+                    <small style={{ color: "#6b7280", marginTop: "-6px" }}>
+                      Rango válido: 0°C – 60°C
+                    </small>
 
                     <button type="submit">
                       Guardar temperatura
@@ -353,7 +380,7 @@ const cargarDatosIniciales = async () => {
                         <th>Galpón</th>
                         <th>Temperatura</th>
                         <th>Estado</th>
-                        <th>Fuente</th>
+                        <th>Registrado por</th>
                         <th>Fecha</th>
                       </tr>
                     </thead>
@@ -368,7 +395,7 @@ const cargarDatosIniciales = async () => {
                               {item.estado}
                             </span>
                           </td>
-                          <td>{item.fuente}</td>
+                          <td>{item.usuario_nombre ?? "—"}</td>
                           <td>{formatearFecha(item.fecha_hora)}</td>
                         </tr>
                       ))}

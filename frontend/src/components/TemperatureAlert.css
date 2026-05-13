@@ -24,7 +24,7 @@
 .temperature-alert-icon {
   display: flex;
   align-items: flex-start;
-  color: #f59e0b;
+  /* El color se aplica desde el componente vía inline style según el tipo de alerta */
   margin-top: 2px;
 }
 

@@ -56,12 +56,20 @@ function TemperatureAlert() {
     GET /temperatura/alertas/
 
     Ese endpoint devuelve solamente temperaturas con estado FRIO o CALOR.
+    Filtramos además en el cliente para descartar cualquier valor fuera
+    del rango lógico (0–60°C) que pudiera llegar por error.
   */
   const cargarAlertas = async () => {
     try {
       const respuesta = await api.get("/temperatura/alertas/");
 
-      const data = Array.isArray(respuesta.data) ? respuesta.data : [];
+      const raw = Array.isArray(respuesta.data) ? respuesta.data : [];
+
+      // Guardia de rango lógico: descartar valores absurdos
+      const data = raw.filter((a) => {
+        const temp = parseFloat(a?.temperatura);
+        return !isNaN(temp) && temp >= 0 && temp <= 60;
+      });
 
       const signature = data
         .map((a) => `${a?.id ?? ""}:${a?.estado ?? ""}:${a?.temperatura ?? ""}`)
@@ -101,14 +109,36 @@ function TemperatureAlert() {
   }
 
   /*
-    Tomamos la primera alerta para mostrarla arriba.
-    Si hay más de una, abajo mostramos el contador.
+    Tomamos la primera alerta para determinar el color dominante
+    del contenedor cuando hay una sola alerta.
+    Con múltiples alertas mezcladas usamos el color de advertencia (amarillo).
   */
   const alertaPrincipal = alertas[0];
 
+  // Color dominante del contenedor:
+  // - 1 alerta CALOR  → rojo
+  // - 1 alerta FRIO   → azul
+  // - varias alertas  → amarillo (mixto)
+  // - todas CALOR     → rojo
+  // - todas FRIO      → azul
+  const todosCalor = alertas.every((a) => a.estado === "CALOR");
+  const todosFrio  = alertas.every((a) => a.estado === "FRIO");
+
+  const claseContenedor = todosCalor
+    ? "alerta-calor"
+    : todosFrio
+    ? "alerta-frio"
+    : "alerta-multiple";
+
+  const colorIcono = todosCalor
+    ? "#ef4444"
+    : todosFrio
+    ? "#3b82f6"
+    : "#f59e0b";
+
   return (
-    <div className="temperature-alert alerta-multiple">
-      <div className="temperature-alert-icon">
+    <div className={`temperature-alert ${claseContenedor}`}>
+      <div className="temperature-alert-icon" style={{ color: colorIcono }}>
         <AlertTriangle size={24} />
       </div>
 
@@ -121,7 +151,7 @@ function TemperatureAlert() {
 
         <p>
           {alertas.length === 1
-            ? "Se detectó 1 galpón con temperatura fuera del rango normal."
+            ? `Se detectó 1 galpón con temperatura fuera del rango normal.`
             : `Se detectaron ${alertas.length} galpones con temperatura fuera del rango normal.`}
         </p>
 
@@ -137,9 +167,9 @@ function TemperatureAlert() {
 
               <span>
                 {alerta.estado === "CALOR"
-                  ? "Alerta de calor"
-                  : "Alerta de frío"}{" "}
-                - {alerta.temperatura}°C
+                  ? "🌡 Alerta de calor"
+                  : "❄ Alerta de frío"}{" "}
+                — {alerta.temperatura}°C
               </span>
             </div>
           ))}
