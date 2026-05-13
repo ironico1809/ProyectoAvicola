@@ -7,6 +7,9 @@ Incluye:
 Importante:
 - No se usa `django.contrib.auth.models.User`.
 - Password se guarda hasheado (helpers `make_password`/`check_password`).
+- `empresa`: FK al tenant (Empresa). Añadido en FASE 1 SaaS.
+- `must_change_password`: si True, el frontend obliga a cambiar la clave
+  en el primer login (usuarios creados automáticamente por el webhook de Stripe).
 """
 
 from django.db import models
@@ -31,6 +34,22 @@ Notas:
     password = models.CharField(max_length=255)
     tipo_usuario = models.CharField(max_length=50, blank=True, null=True)
     estado = models.CharField(max_length=20, blank=True, null=True)
+
+    # ── SaaS: tenant al que pertenece este usuario ──────────────────────────
+    empresa = models.ForeignKey(
+        'empresas.Empresa',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=1,
+        db_column='empresa_id',
+        related_name='usuarios',
+    )
+
+    # ── SaaS: fuerza cambio de contraseña en el primer ingreso ───────────────
+    # Se activa en True cuando el webhook de Stripe crea el usuario automáticamente.
+    # El frontend redirige a /cambio-password si este campo es True.
+    must_change_password = models.BooleanField(default=False)
 
     # Método para encriptar y guardar la contraseña
     def set_password(self, raw_password):

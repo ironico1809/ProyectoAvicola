@@ -57,9 +57,24 @@ class TemperaturaGalpon(models.Model):
         auto_now_add=True
     )
 
+    # ── SaaS: tenant ──────────────────────────────────────────────────────────
+    empresa = models.ForeignKey(
+        'empresas.Empresa',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        default=1,
+        db_column='empresa_id',
+        related_name='temperaturas',
+    )
+
     class Meta:
         db_table = 'temperatura_galpon'
         ordering = ['-fecha_hora', '-id']
 
-    def __str__(self):
-        return f"{self.galpon.nombre} - {self.temperatura}°C - {self.estado}"
+    def __str__(self) -> str:
+        # self.galpon (objeto instancia) en lugar de self.galpon_id (entero raw)
+        # para que Pyright infiera correctamente el tipo Galpon con django-stubs.
+        # str() garantiza que el retorno sea siempre str aunque nombre sea None.
+        galpon_nombre: str = str(self.galpon.nombre) if self.galpon else 'Sin galpón' # type: ignore
+        return f"{galpon_nombre} - {self.temperatura}°C - {self.estado}" 

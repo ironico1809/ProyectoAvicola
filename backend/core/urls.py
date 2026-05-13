@@ -9,9 +9,13 @@ urlpatterns = [
     path('galpones/', include('apps.galpones.urls')),
     path('lotes/', include('apps.lotes.urls')),
     path('alimentacion/', include('apps.alimentacion.urls')),
-    path('mortandad/', include('apps.mortandad.urls')), 
+    path('mortandad/', include('apps.mortandad.urls')),
     path('bitacora/', include('apps.bitacora.urls')),
 	path('reportes/', include('apps.reportes.urls')),
 	path('insumos/', include('apps.insumos.urls')),
 	path('sanitario/', include('apps.sanitario.urls')),
+    # ── SaaS ──────────────────────────────────────────────────────────────────
+    path('empresas/', include('apps.empresas.urls')),
+    path('pagos/', include('apps.pagos.urls')),
 ]
+

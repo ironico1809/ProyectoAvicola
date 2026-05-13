@@ -8,6 +8,17 @@ class Proveedor(models.Model):
     telefono = models.CharField(max_length=20, blank=True, null=True)
     direccion = models.TextField(blank=True, null=True)
 
+    # ── SaaS: tenant ────────────────────────────────────────────────────────
+    empresa = models.ForeignKey(
+        'empresas.Empresa',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        default=1,
+        db_column='empresa_id',
+        related_name='proveedores',
+    )
+
     class Meta:
         db_table = 'proveedores'
         verbose_name_plural = 'proveedores'
@@ -32,6 +43,17 @@ class Insumo(models.Model):
         max_digits=10, decimal_places=2, default=0)
     stock_minimo = models.DecimalField(
         max_digits=10, decimal_places=2, default=0)
+
+    # ── SaaS: tenant ────────────────────────────────────────────────────────
+    empresa = models.ForeignKey(
+        'empresas.Empresa',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        default=1,
+        db_column='empresa_id',
+        related_name='insumos',
+    )
 
     class Meta:
         db_table = 'insumos'
@@ -65,6 +87,17 @@ class MovimientoAlmacen(models.Model):
     motivo = models.CharField(max_length=200)
     fecha_hora = models.DateTimeField(auto_now_add=True, db_default=Now())
     observacion = models.TextField(blank=True, null=True)
+
+    # ── SaaS: tenant ────────────────────────────────────────────────────────
+    empresa = models.ForeignKey(
+        'empresas.Empresa',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        default=1,
+        db_column='empresa_id',
+        related_name='movimientos_almacen',
+    )
 
     class Meta:
         db_table = 'movimientos_almacen'
@@ -105,6 +138,17 @@ class ControlSanitario(models.Model):
     responsable = models.CharField(max_length=200, blank=True, null=True)
     observacion = models.TextField(blank=True, null=True)
     fecha_registro = models.DateTimeField(auto_now_add=True, db_default=Now())
+
+    # ── SaaS: tenant ────────────────────────────────────────────────────────
+    empresa = models.ForeignKey(
+        'empresas.Empresa',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        default=1,
+        db_column='empresa_id',
+        related_name='controles_sanitarios',
+    )
 
     class Meta:
         db_table = 'control_sanitario'

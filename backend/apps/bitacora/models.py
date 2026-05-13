@@ -46,6 +46,19 @@ class BitacoraEvento(models.Model):
     descripcion = models.TextField(blank=True, null=True)
     fecha_hora = models.DateTimeField(auto_now_add=True)
 
+    # ── SaaS: tenant ──────────────────────────────────────────────────────────
+    # Permite filtrar la bitácora por empresa para que cada tenant
+    # solo vea sus propios eventos de auditoría.
+    empresa = models.ForeignKey(
+        'empresas.Empresa',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=1,
+        db_column='empresa_id',
+        related_name='bitacora_eventos',
+    )
+
     class Meta:
         db_table = 'bitacora'
         ordering = ['-fecha_hora', '-id']

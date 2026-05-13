@@ -3,5 +3,10 @@
   "pythonPath": "venv/Scripts/python.exe",
   "venvPath": ".",
   "venv": "venv",
-  "extraPaths": ["."]
+  "extraPaths": ["."],
+  "plugins": [
+    {
+      "name": "django"
+    }
+  ]
 }

@@ -14,6 +14,17 @@ class RegistroMortalidad(models.Model):
     causa = models.CharField(max_length=255, blank=True, null=True)
     fecha_hora = models.DateTimeField(auto_now_add=True)
 
+    # ── SaaS: tenant ──────────────────────────────────────────────────────────
+    empresa = models.ForeignKey(
+        'empresas.Empresa',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        default=1,
+        db_column='empresa_id',
+        related_name='registros_mortalidad',
+    )
+
     class Meta:
         # El nombre exacto de la tabla en tu base de datos
         db_table = 'registro_mortalidad'

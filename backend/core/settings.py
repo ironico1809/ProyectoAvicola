@@ -64,6 +64,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # ── SaaS Core (debe ir primero para que las FK de otras apps lo encuentren) ──
+    'apps.empresas',
+    'apps.pagos',
+    # ── Apps de negocio ─────────────────────────────────────────────────────
     'apps.usuarios',
     'apps.permisos',
     'apps.temperatura',
@@ -75,6 +79,7 @@ INSTALLED_APPS = [
     'apps.insumos',
     'apps.sanitario',
     'apps.mortandad',
+    # ── Librerías terceros ────────────────────────────────────────────────────
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
@@ -219,3 +224,30 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=8),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
 }
+
+# ──────────────────────────────────────────────────────────────────
+# Email
+# En desarrollo: imprime el correo en la terminal (sin servidor SMTP real).
+# Para producción: cambiar a 'django.core.mail.backends.smtp.EmailBackend'
+# y configurar EMAIL_HOST, EMAIL_PORT, etc. en el .env.
+# ──────────────────────────────────────────────────────────────────
+EMAIL_BACKEND = os.getenv(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend',
+)
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = _env_bool('EMAIL_USE_TLS', default=True)
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'AviGranja <noreply@avigranja.com>')
+
+# ──────────────────────────────────────────────────────────────────
+# Stripe
+# Leer siempre desde .env. Nunca hardcodear las keys.
+# Modo Test: usar keys que empiezan con sk_test_ / whsec_
+# ──────────────────────────────────────────────────────────────────
+STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')
+STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
+STRIPE_SUCCESS_URL = os.getenv('STRIPE_SUCCESS_URL', 'http://localhost:5173/pago-exitoso')
+STRIPE_CANCEL_URL = os.getenv('STRIPE_CANCEL_URL', 'http://localhost:5173/pricing')

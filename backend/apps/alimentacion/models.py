@@ -22,6 +22,17 @@ class Alimentacion(models.Model):
     tipo_alimento = models.CharField(max_length=100, blank=True, null=True)
     observacion = models.TextField(blank=True, null=True)
 
+    # ── SaaS: tenant ──────────────────────────────────────────────────────────
+    empresa = models.ForeignKey(
+        'empresas.Empresa',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        default=1,
+        db_column='empresa_id',
+        related_name='alimentaciones',
+    )
+
     class Meta:
         db_table = 'alimentacion'
         ordering = ['-fecha', '-id_alimentacion']

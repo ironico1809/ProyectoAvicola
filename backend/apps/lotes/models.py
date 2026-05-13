@@ -19,6 +19,17 @@ class Lote(models.Model):
         max_digits=10, decimal_places=2, blank=True, null=True)
     estado = models.CharField(max_length=20, default='Crianza')
 
+    # ── SaaS: tenant ──────────────────────────────────────────────────────────
+    empresa = models.ForeignKey(
+        'empresas.Empresa',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        default=1,
+        db_column='empresa_id',
+        related_name='lotes',
+    )
+
     class Meta:
         db_table = 'lote'
 

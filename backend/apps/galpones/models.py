@@ -24,6 +24,17 @@ class Galpon(models.Model):
     descripcion = models.TextField(blank=True, null=True)
     estado = models.CharField(max_length=20, default='activo')
 
+    # ── SaaS: tenant al que pertenece este galpón ────────────────────────────
+    empresa = models.ForeignKey(
+        'empresas.Empresa',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        default=1,
+        db_column='empresa_id',
+        related_name='galpones',
+    )
+
     class Meta:
         db_table = 'galpones'
 

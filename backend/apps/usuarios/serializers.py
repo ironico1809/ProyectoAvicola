@@ -25,10 +25,24 @@ class LoginSerializer(serializers.Serializer):
 
 
 class UsuarioSerializer(serializers.ModelSerializer):
-    """Salida estándar de un `Usuario` (sin password)."""
+    """Salida estándar de un `Usuario` (sin password).
+
+    Incluye empresa_id y must_change_password para que el frontend
+    pueda gestionar el contexto de tenant y el flujo de primer login.
+    """
+    empresa_id = serializers.IntegerField(source='empresa_id', read_only=True)
+
     class Meta:
         model = Usuario
-        fields = ['id', 'nom_usuario', 'email', 'tipo_usuario', 'estado']
+        fields = [
+            'id',
+            'nom_usuario',
+            'email',
+            'tipo_usuario',
+            'estado',
+            'empresa_id',
+            'must_change_password',
+        ]
 
 
 class RegistroUsuarioSerializer(serializers.ModelSerializer):
@@ -60,6 +74,8 @@ class UsuarioUpdateSerializer(serializers.ModelSerializer):
 
     - Permite actualizar datos y opcionalmente `password`.
     - Si `password` se envía, se hashea.
+    - `must_change_password`: el frontend lo pone en False después del
+      cambio de contraseña obligatorio en el primer ingreso.
     """
     password = serializers.CharField(
         write_only=True,
@@ -68,7 +84,7 @@ class UsuarioUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Usuario
-        fields = ['nom_usuario', 'email', 'password', 'tipo_usuario', 'estado']
+        fields = ['nom_usuario', 'email', 'password', 'tipo_usuario', 'estado', 'must_change_password']
 
     def update(self, instance, validated_data):
         """Aplica cambios sobre un usuario existente.
@@ -80,6 +96,8 @@ class UsuarioUpdateSerializer(serializers.ModelSerializer):
             setattr(instance, field_name, value)
         if raw_password:
             instance.password = make_password(raw_password)
+            # Si cambió la contraseña, ya no debe forzarse el cambio.
+            instance.must_change_password = False
         instance.save()
         return instance
 
