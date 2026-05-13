@@ -146,7 +146,8 @@ class TemperaturaManualCreateView(APIView):
             galpon=galpon,
             temperatura=temperatura,
             estado=estado,
-            fuente='MANUAL'
+            fuente='MANUAL',
+            usuario=request.user,
         )
 
         registrar_evento(
@@ -162,6 +163,8 @@ class TemperaturaManualCreateView(APIView):
                 'temperatura': registro.temperatura,
                 'estado': registro.estado,
                 'fuente': registro.fuente,
+                'usuario_id': request.user.id,
+                'usuario': request.user.nom_usuario,
             },
             usuario=request.user,
         )
@@ -302,7 +305,17 @@ class TemperaturaAlertasView(APIView):
     GET /temperatura/alertas/
 
     Sirve para mostrar alertas flotantes en cualquier pantalla del frontend.
+
+    Lee el ÚLTIMO registro real de cada galpón activo en lugar de generar
+    temperaturas nuevas. Esto evita que las alertas sean incoherentes entre
+    polls y que se inserten filas innecesarias en BD solo por consultar alertas.
+
+    Solo incluye registros cuya temperatura esté dentro del rango lógico
+    (0°C – 60°C) y cuyo estado sea FRIO o CALOR.
     """
+
+    TEMP_MIN = 0
+    TEMP_MAX = 60
 
     permission_classes = [IsAuthenticated]
 
@@ -312,28 +325,43 @@ class TemperaturaAlertasView(APIView):
         alertas = []
 
         for galpon in galpones:
-            temperatura = generar_temperatura_simulada()
-            estado = calcular_estado_temperatura(temperatura)
-
-            registro = TemperaturaGalpon.objects.create(
-                galpon=galpon,
-                temperatura=temperatura,
-                estado=estado,
-                fuente='SIMULADO'
+            # Leer el último registro real, sin generar uno nuevo.
+            ultimo = (
+                TemperaturaGalpon.objects
+                .filter(galpon=galpon)
+                .order_by('-fecha_hora', '-id')
+                .first()
             )
 
-            if estado in ['FRIO', 'CALOR']:
-                alertas.append({
-                    'id': registro.id,
-                    'id_galpon': galpon.id,
-                    'galpon_nombre': galpon.nombre,
-                    'temperatura': registro.temperatura,
-                    'estado': registro.estado,
-                    'fuente': registro.fuente,
-                    'fecha_hora': registro.fecha_hora,
-                    'alerta': True,
-                    'mensaje': obtener_mensaje_estado(estado),
-                })
+            if not ultimo:
+                continue
+
+            temp_float = float(ultimo.temperatura)
+
+            # Descartar valores fuera del rango lógico (0–60°C).
+            # Protege contra registros corruptos o errores de tipeo en BD.
+            if temp_float < self.TEMP_MIN or temp_float > self.TEMP_MAX:
+                continue
+
+            # Recalcular el estado desde la temperatura real del registro.
+            # No confiamos en el campo `estado` guardado en BD porque puede
+            # estar desincronizado si el registro fue editado o importado.
+            estado_real = calcular_estado_temperatura(temp_float)
+
+            # Solo alertar si el estado recalculado es FRIO o CALOR.
+            if estado_real not in ('FRIO', 'CALOR'):
+                continue
+
+            alertas.append({
+                'id': ultimo.id,
+                'id_galpon': galpon.id,
+                'galpon_nombre': galpon.nombre,
+                'temperatura': ultimo.temperatura,
+                'estado': estado_real,
+                'fecha_hora': ultimo.fecha_hora,
+                'alerta': True,
+                'mensaje': obtener_mensaje_estado(estado_real),
+            })
 
         return Response(alertas, status=status.HTTP_200_OK)
 

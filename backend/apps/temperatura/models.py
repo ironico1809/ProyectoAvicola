@@ -41,6 +41,17 @@ class TemperaturaGalpon(models.Model):
         default='SIMULADO'
     )
 
+    # Usuario que registró la temperatura manualmente.
+    # Null para registros simulados.
+    usuario = models.ForeignKey(
+        'usuarios.Usuario',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='temperaturas_registradas',
+        db_column='usuario_id'
+    )
+
     # Fecha y hora exacta del registro.
     fecha_hora = models.DateTimeField(
         auto_now_add=True
