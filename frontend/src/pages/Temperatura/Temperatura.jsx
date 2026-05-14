@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import api from "../../api/axios";
 import Sidebar from "../../components/Sidebar";
 import Topbar from "../../components/Topbar";
@@ -8,218 +8,121 @@ import "./Temperatura.css";
 function Temperatura() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const isMobile = useIsMobile();
-  /*
-    temperaturas:
-    Guarda la temperatura actual de cada galpón.
-    Estos datos vienen del endpoint:
-    GET /temperatura/tiempo-real/
-  */
+
   const [temperaturas, setTemperaturas] = useState([]);
-
-  /*
-    historial:
-    Guarda los últimos registros de temperatura.
-    Estos datos vienen del endpoint:
-    GET /temperatura/historial/
-  */
   const [historial, setHistorial] = useState([]);
-
-  /*
-    galpones:
-    Guarda la lista de galpones.
-    Se usa para el formulario manual.
-  */
   const [galpones, setGalpones] = useState([]);
-
-  /*
-    cargando:
-    Sirve para mostrar un mensaje mientras se cargan los datos.
-  */
   const [cargando, setCargando] = useState(true);
-
-  /*
-    error:
-    Guarda mensajes de error cuando algo falla.
-  */
   const [error, setError] = useState("");
-
-  /*
-    formManual:
-    Guarda los datos del formulario manual.
-    id_galpon = galpón seleccionado.
-    temperatura = temperatura escrita por el usuario.
-  */
-  const [formManual, setFormManual] = useState({
-    id_galpon: "",
-    temperatura: "",
-  });
-
-  /*
-    mensajeManual:
-    Muestra mensaje cuando se registra una temperatura manual.
-  */
   const [mensajeManual, setMensajeManual] = useState("");
 
-  /*
-    useEffect:
-    Se ejecuta cuando entra a la pantalla.
-    Primero carga galpones, temperaturas e historial.
-    Luego activa un intervalo para actualizar cada 5 segundos.
-  */
+  const [formManual, setFormManual] = useState({ id_galpon: "", temperatura: "" });
+
+  const simulacionIniciadaRef = useRef(new Set());
+
   useEffect(() => {
     cargarDatosIniciales();
 
-    /*
-      setInterval:
-      Esto hace que el sistema consulte el backend cada 5 segundos.
-      Así simulamos el monitoreo en tiempo real.
-    */
     const intervalo = setInterval(() => {
-        /*
-      Actualiza en paralelo para que no tarde.
-         */
-         Promise.all([
-          cargarTemperaturasTiempoReal(),
-          cargarHistorial(),
-         ]);
+      Promise.all([cargarTemperaturasTiempoReal(), cargarHistorial()]);
     }, 15000);
 
-    /*
-      return:
-      Limpia el intervalo cuando el usuario sale de la pantalla.
-      Esto evita que React siga consultando al backend innecesariamente.
-    */
     return () => clearInterval(intervalo);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /*
-    cargarDatosIniciales:
-    Carga todo lo necesario al abrir la pantalla.
-  */
-const cargarDatosIniciales = async () => {
-  try {
-    setCargando(true);
-    setError("");
+  const cargarDatosIniciales = async () => {
+    try {
+      setCargando(true);
+      setError("");
+      await Promise.all([
+        cargarGalpones(),
+        cargarTemperaturasTiempoReal(),
+        cargarHistorial(),
+      ]);
+    } catch (err) {
+      console.error("Error cargando temperaturas:", err);
+      setError("No se pudieron cargar los datos de temperatura.");
+    } finally {
+      setCargando(false);
+    }
+  };
 
-    /*
-      Promise.all ejecuta las 3 peticiones al mismo tiempo.
-      Antes se ejecutaban una por una, por eso podía tardar más.
-    */
-    await Promise.all([
-      cargarGalpones(),
-      cargarTemperaturasTiempoReal(),
-      cargarHistorial(),
-    ]);
-  } catch (err) {
-    console.error("Error cargando temperaturas:", err);
-    setError("No se pudieron cargar los datos de temperatura.");
-  } finally {
-    setCargando(false);
-  }
-};
-
-  /*
-    cargarGalpones:
-    Trae los galpones registrados.
-    Se usa para llenar el select del formulario manual.
-  */
   const cargarGalpones = async () => {
-    const respuesta = await api.get("/galpones/");
-    setGalpones(respuesta.data);
+    const res = await api.get("/galpones/");
+    const lista = res.data;
+    setGalpones(lista);
+
+    for (const g of lista) {
+      // Intentar iniciar simulación para cualquier galpón activo con coordenadas
+      // que aún no tenga base en el WeatherManager (incluye galpones recién activados)
+      if (g.estado === "activo" && g.latitud && g.longitud && !simulacionIniciadaRef.current.has(g.id)) {
+        simulacionIniciadaRef.current.add(g.id);
+        try {
+          await api.post("/temperatura/simulacion/iniciar/", {
+            galpon_id: g.id,
+            lat: parseFloat(g.latitud),
+            lon: parseFloat(g.longitud),
+          });
+        } catch {
+          // fallback a simulación por hora
+        }
+      }
+      // Si el galpón pasó a inactivo, removerlo del set para que si vuelve a activo
+      // se reinicie la simulación correctamente
+      if (g.estado === "inactivo") {
+        simulacionIniciadaRef.current.delete(g.id);
+      }
+    }
   };
 
-  /*
-    cargarTemperaturasTiempoReal:
-    Llama al endpoint que genera temperaturas simuladas.
-
-    IMPORTANTE:
-    Cada vez que se llama a este endpoint, el backend:
-    1. Genera temperatura nueva.
-    2. Calcula estado.
-    3. Guarda en BD.
-    4. Devuelve datos al frontend.
-  */
   const cargarTemperaturasTiempoReal = async () => {
-    const respuesta = await api.get("/temperatura/tiempo-real/");
-    setTemperaturas(respuesta.data);
+    const res = await api.get("/temperatura/tiempo-real/");
+    setTemperaturas(res.data);
   };
 
-  /*
-    cargarHistorial:
-    Trae los últimos registros de temperatura guardados en BD.
-  */
   const cargarHistorial = async () => {
-    const respuesta = await api.get("/temperatura/historial/");
-    setHistorial(respuesta.data);
+    const res = await api.get("/temperatura/historial/");
+    setHistorial(res.data);
   };
 
-  /*
-    handleChangeManual:
-    Actualiza los datos del formulario manual
-    cuando el usuario escribe o selecciona un galpón.
-  */
+  // ── Registro manual ───────────────────────────────────────────────────────
+
   const handleChangeManual = (e) => {
     const { name, value } = e.target;
-
-    setFormManual({
-      ...formManual,
-      [name]: value,
-    });
+    setFormManual({ ...formManual, [name]: value });
   };
 
-  /*
-    registrarTemperaturaManual:
-    Envía una temperatura de contingencia al backend.
-    Valida rango lógico antes de enviar (0–60°C).
-    El backend registra automáticamente el usuario logueado.
-  */
   const registrarTemperaturaManual = async (e) => {
     e.preventDefault();
-
     setMensajeManual("");
     setError("");
 
-    // Validación: campos obligatorios
     if (!formManual.id_galpon || formManual.temperatura === "") {
       setError("Debe seleccionar un galpón e ingresar una temperatura.");
       return;
     }
 
     const tempNum = parseFloat(formManual.temperatura);
-
-    // Validación: debe ser un número válido
-    if (isNaN(tempNum)) {
-      setError("La temperatura debe ser un número válido.");
-      return;
-    }
-
-    // Validación: rango lógico para un galpón avícola
-    if (tempNum < 0) {
-      setError("La temperatura no puede ser menor a 0°C.");
-      return;
-    }
-
-    if (tempNum > 60) {
-      setError(
-        "La temperatura ingresada supera los 60°C. Verifique el valor — puede ser un error de tipeo."
-      );
-      return;
-    }
+    if (isNaN(tempNum)) { setError("La temperatura debe ser un número válido."); return; }
+    if (tempNum < 0) { setError("La temperatura no puede ser menor a 0°C."); return; }
+    if (tempNum > 60) { setError("La temperatura ingresada supera los 60°C. Verifique el valor."); return; }
 
     try {
-      await api.post("/temperatura/manual/", {
-        id_galpon: formManual.id_galpon,
-        temperatura: tempNum,
-      });
+      await Promise.all([
+        api.post("/temperatura/manual/", {
+          id_galpon: formManual.id_galpon,
+          temperatura: tempNum,
+        }),
+        api.post("/temperatura/clima/manual/", {
+          galpon_id: formManual.id_galpon,
+          temp: tempNum,
+          humidity: 60,
+        }),
+      ]);
 
-      setMensajeManual("Registro de contingencia guardado exitosamente.");
-
-      setFormManual({
-        id_galpon: "",
-        temperatura: "",
-      });
-
-      // Refrescar datos tras el registro
+      setMensajeManual("Temperatura registrada exitosamente.");
+      setFormManual({ id_galpon: "", temperatura: "" });
       await Promise.all([cargarTemperaturasTiempoReal(), cargarHistorial()]);
     } catch (err) {
       const detalle =
@@ -230,11 +133,8 @@ const cargarDatosIniciales = async () => {
     }
   };
 
-  /*
-    obtenerClaseEstado:
-    Devuelve una clase CSS según el estado.
-    Esto sirve para cambiar color visualmente.
-  */
+  // ── Helpers de UI ─────────────────────────────────────────────────────────
+
   const obtenerClaseEstado = (estado) => {
     if (estado === "FRIO") return "estado-frio";
     if (estado === "CALOR") return "estado-calor";
@@ -242,13 +142,8 @@ const cargarDatosIniciales = async () => {
     return "estado-sin-datos";
   };
 
-  /*
-    formatearFecha:
-    Convierte la fecha del backend a un formato más entendible.
-  */
   const formatearFecha = (fecha) => {
     if (!fecha) return "Sin fecha";
-
     return new Date(fecha).toLocaleString("es-BO", {
       dateStyle: "short",
       timeStyle: "medium",
@@ -268,20 +163,38 @@ const cargarDatosIniciales = async () => {
           transition: "margin-left 0.3s ease",
           display: "flex",
           flexDirection: "column",
-          gap: "24px"
+          gap: "24px",
         }}
       >
-        <Topbar titulo="Monitoreo de Temperatura" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <Topbar
+          titulo="Monitoreo de Temperatura"
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+        />
 
-        <div className="temperatura-page" style={{ margin: 0, width: '100%', padding: 0 }}>
+        <div className="temperatura-page" style={{ margin: 0, width: "100%", padding: 0 }}>
           <div className="temperatura-header">
             <div>
               <h1>Monitoreo de Temperatura en tiempo real</h1>
             </div>
-
             <button
               className="btn-actualizar"
-              onClick={() => {
+              onClick={async () => {
+                // Limpia cualquier override manual del WeatherManager
+                // para que el siguiente poll use la base real de OpenWeather
+                try {
+                  const ids = galpones.map((g) => g.id);
+                  await Promise.all(
+                    ids.map((id) =>
+                      api.post("/temperatura/clima/manual/", {
+                        galpon_id: id,
+                        desactivar: true,
+                      })
+                    )
+                  );
+                } catch {
+                  // Si falla no bloqueamos la actualización
+                }
                 cargarTemperaturasTiempoReal();
                 cargarHistorial();
               }}
@@ -291,7 +204,6 @@ const cargarDatosIniciales = async () => {
           </div>
 
           {error && <div className="alerta-error">{error}</div>}
-
           {mensajeManual && <div className="alerta-ok">{mensajeManual}</div>}
 
           {cargando ? (
@@ -308,30 +220,31 @@ const cargarDatosIniciales = async () => {
                       <h2>{item.galpon_nombre}</h2>
                     </div>
 
-                    <div className="temperatura-valor">
-                      {item.temperatura}°C
-                    </div>
+                    <div className="temperatura-valor">{item.temperatura}°C</div>
 
                     <div className="temperatura-estado">
                       Estado: <strong>{item.estado}</strong>
                     </div>
 
-                    <p className="temperatura-mensaje">
-                      {item.mensaje}
-                    </p>
+                    <p className="temperatura-mensaje">{item.mensaje}</p>
 
-                    <small>
-                      Última actualización: {formatearFecha(item.fecha_hora)}
-                    </small>
+                    <small>Última actualización: {formatearFecha(item.fecha_hora)}</small>
                   </div>
                 ))}
+
+                {temperaturas.length === 0 && (
+                  <p style={{ color: "#6b7280" }}>
+                    No hay galpones activos con temperatura registrada.
+                  </p>
+                )}
               </section>
 
               <section className="temperatura-secciones">
                 <div className="temperatura-formulario">
                   <h2>Registrar temperatura manual</h2>
                   <p>
-                    Use esta opción para registrar una temperatura de contingencia cuando el sensor no esté disponible.
+                    Use esta opción para registrar una temperatura de contingencia
+                    cuando el sensor no esté disponible.
                   </p>
 
                   <form onSubmit={registrarTemperaturaManual}>
@@ -342,10 +255,10 @@ const cargarDatosIniciales = async () => {
                       onChange={handleChangeManual}
                     >
                       <option value="">Seleccione un galpón</option>
-
-                      {galpones.map((galpon) => (
-                        <option key={galpon.id} value={galpon.id}>
-                          {galpon.nombre}
+                      {galpones.map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {g.nombre}
+                          {g.ubicacion_nombre ? ` — ${g.ubicacion_nombre}` : ""}
                         </option>
                       ))}
                     </select>
@@ -365,9 +278,7 @@ const cargarDatosIniciales = async () => {
                       Rango válido: 0°C – 60°C
                     </small>
 
-                    <button type="submit">
-                      Guardar temperatura
-                    </button>
+                    <button type="submit">Guardar temperatura</button>
                   </form>
                 </div>
 
@@ -384,7 +295,6 @@ const cargarDatosIniciales = async () => {
                         <th>Fecha</th>
                       </tr>
                     </thead>
-
                     <tbody>
                       {historial.map((item) => (
                         <tr key={item.id}>
@@ -399,12 +309,9 @@ const cargarDatosIniciales = async () => {
                           <td>{formatearFecha(item.fecha_hora)}</td>
                         </tr>
                       ))}
-
                       {historial.length === 0 && (
                         <tr>
-                          <td colSpan="5">
-                            No hay registros de temperatura todavía.
-                          </td>
+                          <td colSpan="5">No hay registros de temperatura todavía.</td>
                         </tr>
                       )}
                     </tbody>

@@ -19,3 +19,6 @@ psycopg[binary]==3.2.10
 
 # Exportación (Reportes)
 openpyxl==3.1.5
+
+# HTTP requests (OpenWeatherMap API)
+requests==2.32.3
