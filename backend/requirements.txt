@@ -22,3 +22,6 @@ openpyxl==3.1.5
 
 # Pagos
 stripe==15.1.0
+
+# HTTP requests (OpenWeatherMap API)
+requests==2.32.3

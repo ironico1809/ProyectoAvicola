@@ -21,5 +21,8 @@ class GalponSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = Galpon
-        fields = ['id', 'nombre', 'capacidad', 'descripcion', 'estado']
+        fields = [
+            'id', 'nombre', 'capacidad', 'descripcion', 'estado',
+            'latitud', 'longitud', 'ubicacion_nombre',
+        ]
         read_only_fields = ['id']
