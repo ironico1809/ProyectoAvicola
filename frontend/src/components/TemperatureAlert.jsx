@@ -10,9 +10,17 @@ function TemperatureAlert() {
   const POLL_MS = 15000;
   const SNOOZE_MS = 5 * 60 * 1000;
 
+  // No mostrar en rutas públicas ni sin sesión activa
+  const token = localStorage.getItem("access_token");
+  const estaAutenticado = token && token !== "null" && token !== "undefined";
+
   const ocultarAlertaEnRuta =
+    !estaAutenticado ||
     location.pathname === "/" ||
+    location.pathname === "/login" ||
     location.pathname === "/register" ||
+    location.pathname === "/cambio-password" ||
+    location.pathname === "/pago-exitoso" ||
     location.pathname.startsWith("/temperatura");
   /*
     alertas:
