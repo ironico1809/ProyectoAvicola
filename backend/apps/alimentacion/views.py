@@ -4,8 +4,8 @@ from django.utils.dateparse import parse_date
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
+from apps.core.mixins import TenantSafeView
 from apps.alimentacion.models import Alimentacion
 from apps.alimentacion.serializers import AlimentacionSerializer
 from apps.bitacora.utils import registrar_evento
@@ -14,10 +14,6 @@ from apps.insumos.models import Insumo, MovimientoAlmacen
 
 
 def _descontar_stock(insumo_id, cantidad, lote_id):
-	"""
-	Valida stock y lo descuenta. Crea el movimiento de salida.
-	Lanza ValueError si no hay stock suficiente.
-	"""
 	insumo = Insumo.objects.select_for_update().get(pk=insumo_id)
 	if insumo.stock_actual < cantidad:
 		raise ValueError(
@@ -35,9 +31,14 @@ def _descontar_stock(insumo_id, cantidad, lote_id):
 	)
 
 
-class AlimentacionBulkCreateView(APIView):
-	"""Registro masivo de alimentación (CU11 - bulk)."""
+class AlimentacionBulkCreateView(TenantSafeView):
+	"""Registro masivo de alimentación aislado por tenant."""
 	permission_classes = [IsAuthenticated]
+
+	def perform_create(self, serializer):
+		user = getattr(self.request, 'user', None)
+		empresa_id = getattr(user, 'empresa_id', None)
+		return serializer.save(empresa_id=empresa_id)
 
 	def post(self, request):
 		registros = request.data.get('registros', [])
@@ -52,10 +53,9 @@ class AlimentacionBulkCreateView(APIView):
 					insumo_id = data.get('insumo_id')
 					serializer = AlimentacionSerializer(data=data)
 					if serializer.is_valid(raise_exception=True):
-						obj = serializer.save()
+						obj = self.perform_create(serializer)
 						creados.append(obj)
 
-						# Validación y descuento de stock
 						if insumo_id:
 							_descontar_stock(
 								insumo_id, obj.cantidad_kg, obj.lote_id)
@@ -84,14 +84,10 @@ class AlimentacionBulkCreateView(APIView):
 						status=status.HTTP_201_CREATED)
 
 
-class AlimentacionListCreateView(APIView):
-	"""CU11 y CU12.
-
-	- CU11: Registrar consumo -> POST /alimentacion/
-	- CU12: Consultar historial -> GET /alimentacion/ (con filtros)
-	"""
-
+class AlimentacionListCreateView(TenantSafeView):
+	"""Listado y creación individual de alimentación blindada por tenant."""
 	permission_classes = [IsAuthenticated]
+	queryset = Alimentacion.objects.all()
 
 	def _parse_query_date(self, value, field_name):
 		if not value:
@@ -102,20 +98,19 @@ class AlimentacionListCreateView(APIView):
 		return parsed, None
 
 	def get(self, request):
-		queryset = Alimentacion.objects.select_related(
-			'lote', 'insumo').all().order_by(
-			'-fecha', '-id_alimentacion')
+		base_qs = Alimentacion.objects.select_related('lote', 'insumo').all()
+		queryset = self.filter_by_tenant(base_qs).order_by('-fecha', '-id_alimentacion')
 
-		id_lote = request.query_params.get('id_lote')
+		id_lote = request.query_params.get('id_lote')  # type: ignore
 		if id_lote:
 			queryset = queryset.filter(lote_id=id_lote)
 
-		insumo_id = request.query_params.get('insumo_id')
+		insumo_id = request.query_params.get('insumo_id')  # type: ignore
 		if insumo_id:
 			queryset = queryset.filter(insumo_id=insumo_id)
 
-		fecha_inicio_raw = request.query_params.get('fecha_inicio')
-		fecha_fin_raw = request.query_params.get('fecha_fin')
+		fecha_inicio_raw = request.query_params.get('fecha_inicio')  # type: ignore
+		fecha_fin_raw = request.query_params.get('fecha_fin')  # type: ignore
 
 		fecha_inicio, err = self._parse_query_date(
 			fecha_inicio_raw, 'fecha_inicio')
@@ -139,6 +134,11 @@ class AlimentacionListCreateView(APIView):
 		return Response(AlimentacionSerializer(
 			queryset, many=True).data, status=status.HTTP_200_OK)
 
+	def perform_create(self, serializer):
+		user = getattr(self.request, 'user', None)
+		empresa_id = getattr(user, 'empresa_id', None)
+		return serializer.save(empresa_id=empresa_id)
+
 	def post(self, request):
 		insumo_id = request.data.get('insumo_id')
 		serializer = AlimentacionSerializer(data=request.data)
@@ -148,9 +148,8 @@ class AlimentacionListCreateView(APIView):
 
 		try:
 			with transaction.atomic():
-				alimentacion = serializer.save()
+				alimentacion = self.perform_create(serializer)
 
-				# Validación de stock y descuento automático (RF-13)
 				if insumo_id:
 					_descontar_stock(
 						insumo_id,
@@ -179,13 +178,14 @@ class AlimentacionListCreateView(APIView):
 			alimentacion).data, status=status.HTTP_201_CREATED)
 
 
-class AlimentacionDetailView(APIView):
-	"""Obtener, actualizar o eliminar un registro de alimentación."""
+class AlimentacionDetailView(TenantSafeView):
+	"""Obtener, actualizar o eliminar alimentación aislado por tenant."""
 	permission_classes = [IsAuthenticated]
+	queryset = Alimentacion.objects.all()
 
 	def get_object(self, pk):
 		try:
-			return Alimentacion.objects.get(pk=pk)
+			return self.get_queryset().get(pk=pk)
 		except Alimentacion.DoesNotExist:
 			return None
 
@@ -202,7 +202,8 @@ class AlimentacionDetailView(APIView):
 		
 		serializer = AlimentacionSerializer(obj, data=request.data, partial=True)
 		if serializer.is_valid():
-			obj = serializer.save()
+			empresa_id = getattr(obj, 'empresa_id', None)
+			obj = serializer.save(empresa_id=empresa_id)
 			registrar_evento(
 				request,
 				accion='editar',

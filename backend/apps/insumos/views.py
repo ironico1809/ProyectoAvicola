@@ -1,11 +1,11 @@
 from rest_framework import status, viewsets
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
-from django.db.models import Sum, Count
+from django.db.models import Sum, Count, F
 from django.utils.dateparse import parse_date
 
+from apps.core.mixins import TenantSafeView
 from apps.insumos.models import Insumo, Proveedor, MovimientoAlmacen
 from apps.insumos.serializers import (
     InsumoSerializer, ProveedorSerializer,
@@ -14,41 +14,44 @@ from apps.insumos.serializers import (
 from apps.bitacora.utils import registrar_evento
 
 
-class InsumoViewSet(viewsets.ModelViewSet):
+class InsumoViewSet(TenantSafeView, viewsets.ModelViewSet):
     queryset = Insumo.objects.all()
     serializer_class = InsumoSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        qs = Insumo.objects.all()
-        tipo = self.request.query_params.get('tipo')
+        qs = super().get_queryset()
+        tipo = self.request.query_params.get('tipo')  # type: ignore
         if tipo:
             qs = qs.filter(tipo=tipo)
         return qs
 
     def perform_create(self, serializer):
-        insumo = serializer.save()
+        user = getattr(self.request, 'user', None)
+        empresa_id = getattr(user, 'empresa_id', None)
+        insumo = serializer.save(empresa_id=empresa_id)
         registrar_evento(
             self.request,
             accion='crear',
             modulo='inventario',
             entidad='Insumo',
-            entidad_id=insumo.id_insumo,
-            entidad_nombre=insumo.nombre,
-            detalle=self.request.data,
+            entidad_id=getattr(insumo, 'id_insumo', None),
+            entidad_nombre=getattr(insumo, 'nombre', None),
+            detalle=self.request.data,  # type: ignore
             usuario=self.request.user
         )
 
     def perform_update(self, serializer):
-        insumo = serializer.save()
+        empresa_id = getattr(serializer.instance, 'empresa_id', None)
+        insumo = serializer.save(empresa_id=empresa_id)
         registrar_evento(
             self.request,
             accion='editar',
             modulo='inventario',
             entidad='Insumo',
-            entidad_id=insumo.id_insumo,
-            entidad_nombre=insumo.nombre,
-            detalle=self.request.data,
+            entidad_id=getattr(insumo, 'id_insumo', None),
+            entidad_nombre=getattr(insumo, 'nombre', None),
+            detalle=self.request.data,  # type: ignore
             usuario=self.request.user
         )
 
@@ -58,59 +61,71 @@ class InsumoViewSet(viewsets.ModelViewSet):
             accion='eliminar',
             modulo='inventario',
             entidad='Insumo',
-            entidad_id=instance.id_insumo,
-            entidad_nombre=instance.nombre,
+            entidad_id=getattr(instance, 'id_insumo', None),
+            entidad_nombre=getattr(instance, 'nombre', None),
             detalle={},
             usuario=self.request.user
         )
         instance.delete()
 
 
-class ProveedorViewSet(viewsets.ModelViewSet):
+class ProveedorViewSet(TenantSafeView, viewsets.ModelViewSet):
     queryset = Proveedor.objects.all()
     serializer_class = ProveedorSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        return super().get_queryset()
+
     def perform_create(self, serializer):
-        proveedor = serializer.save()
+        user = getattr(self.request, 'user', None)
+        empresa_id = getattr(user, 'empresa_id', None)
+        proveedor = serializer.save(empresa_id=empresa_id)
         registrar_evento(
             self.request,
             accion='crear',
             modulo='inventario',
             entidad='Proveedor',
-            entidad_id=proveedor.id,
-            entidad_nombre=proveedor.nombre,
-            detalle=self.request.data,
+            entidad_id=getattr(proveedor, 'id', None),
+            entidad_nombre=getattr(proveedor, 'nombre', None),
+            detalle=self.request.data,  # type: ignore
             usuario=self.request.user
         )
 
     def perform_update(self, serializer):
-        proveedor = serializer.save()
+        empresa_id = getattr(serializer.instance, 'empresa_id', None)
+        proveedor = serializer.save(empresa_id=empresa_id)
         registrar_evento(
             self.request,
             accion='editar',
             modulo='inventario',
             entidad='Proveedor',
-            entidad_id=proveedor.id,
-            entidad_nombre=proveedor.nombre,
-            detalle=self.request.data,
+            entidad_id=getattr(proveedor, 'id', None),
+            entidad_nombre=getattr(proveedor, 'nombre', None),
+            detalle=self.request.data,  # type: ignore
             usuario=self.request.user
         )
 
 
-class MovimientoAlmacenView(APIView):
+class MovimientoAlmacenView(TenantSafeView):
     permission_classes = [IsAuthenticated]
+    queryset = MovimientoAlmacen.objects.all()
+
+    def perform_create(self, serializer):
+        user = getattr(self.request, 'user', None)
+        empresa_id = getattr(user, 'empresa_id', None)
+        return serializer.save(empresa_id=empresa_id)
 
     def get(self, request):
-        qs = MovimientoAlmacen.objects.select_related(
-            'insumo', 'proveedor').all()
+        base_qs = MovimientoAlmacen.objects.select_related('insumo', 'proveedor').all()
+        # Mantenemos el select_related filtrando explícitamente por tenant
+        qs = self.filter_by_tenant(base_qs)
 
-        # Filtros opcionales
-        insumo_id = request.query_params.get('insumo')
-        tipo = request.query_params.get('tipo_movimiento')
-        fecha_inicio = request.query_params.get('fecha_inicio')
-        fecha_fin = request.query_params.get('fecha_fin')
-        motivo = request.query_params.get('motivo')
+        insumo_id = request.query_params.get('insumo')  # type: ignore
+        tipo = request.query_params.get('tipo_movimiento')  # type: ignore
+        fecha_inicio = request.query_params.get('fecha_inicio')  # type: ignore
+        fecha_fin = request.query_params.get('fecha_fin')  # type: ignore
+        motivo = request.query_params.get('motivo')  # type: ignore
 
         if insumo_id:
             qs = qs.filter(insumo_id=insumo_id)
@@ -136,8 +151,7 @@ class MovimientoAlmacenView(APIView):
                             status=status.HTTP_400_BAD_REQUEST)
 
         with transaction.atomic():
-            mov = serializer.save()
-            # Actualizar stock
+            mov = self.perform_create(serializer)
             insumo = mov.insumo
             if mov.tipo_movimiento == 'Entrada':
                 insumo.stock_actual += mov.cantidad
@@ -150,8 +164,8 @@ class MovimientoAlmacenView(APIView):
                 accion='crear',
                 modulo='inventario',
                 entidad='MovimientoAlmacen',
-                entidad_id=mov.id,
-                entidad_nombre=f"{mov.tipo_movimiento} de {mov.insumo.nombre}",
+                entidad_id=getattr(mov, 'id', None),
+                entidad_nombre=f"{getattr(mov, 'tipo_movimiento', '')} de {getattr(getattr(mov, 'insumo', None), 'nombre', '')}",
                 detalle=request.data,
                 usuario=request.user
             )
@@ -160,31 +174,33 @@ class MovimientoAlmacenView(APIView):
             mov).data, status=status.HTTP_201_CREATED)
 
 
-class AlertasStockView(APIView):
-    """RF-20: Alertas de bajo stock."""
+class AlertasStockView(TenantSafeView):
+    """RF-20: Alertas de bajo stock filtradas por tenant."""
     permission_classes = [IsAuthenticated]
+    queryset = Insumo.objects.all()
 
     def get(self, request):
-        from django.db.models import F
-        insumos_criticos = Insumo.objects.filter(
-            stock_actual__lte=F('stock_minimo'))
+        base_qs = self.get_queryset()
+        insumos_criticos = base_qs.filter(stock_actual__lte=F('stock_minimo'))
         return Response(InsumoSerializer(insumos_criticos, many=True).data)
 
 
-class StatsInventarioView(APIView):
-    """Estadísticas generales del inventario."""
+class StatsInventarioView(TenantSafeView):
+    """Estadísticas generales del inventario segmentadas por tenant."""
     permission_classes = [IsAuthenticated]
+    queryset = Insumo.objects.all()
 
     def get(self, request):
-        from django.db.models import F
-        total_insumos = Insumo.objects.count()
-        bajo_stock = Insumo.objects.filter(
-            stock_actual__lte=F('stock_minimo')).count()
-        total_proveedores = Proveedor.objects.count()
-        total_movimientos = MovimientoAlmacen.objects.count()
+        base_insumo = self.get_queryset()
+        base_prov = self.filter_by_tenant(Proveedor.objects.all())
+        base_mov = self.filter_by_tenant(MovimientoAlmacen.objects.all())
 
-        # Conteo por tipo de insumo
-        por_tipo = Insumo.objects.values('tipo').annotate(
+        total_insumos = base_insumo.count()
+        bajo_stock = base_insumo.filter(stock_actual__lte=F('stock_minimo')).count()
+        total_proveedores = base_prov.count()
+        total_movimientos = base_mov.count()
+
+        por_tipo = base_insumo.values('tipo').annotate(
             count=Count('id_insumo'),
             stock_total=Sum('stock_actual')
         )

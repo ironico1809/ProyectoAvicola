@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import LandingPage from "./pages/LandingPage/LandingPage";
 import Login from "./pages/Login/Login";
 import Dashboard from "./pages/Dashboard/Dashboard";
 import Register from "./pages/Register/Register";
@@ -22,33 +23,43 @@ import HistorialClinico from "./pages/Sanitario/Historial/HistorialClinico";
 import Temperatura from "./pages/Temperatura/Temperatura";
 import TemperatureAlert from "./components/TemperatureAlert";
 import Mortandad from "./pages/Mortandad/Mortandad";
+import ChangePasswordPage from "./pages/ChangePasswordPage/ChangePasswordPage";
+import SuccessPage from "./pages/SuccessPage/SuccessPage";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Login />} />
+        {/* ── Zona pública: Landing y Auth ────────────────── */}
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/galpones" element={<Galpones />} />
-        <Route path="/lotes" element={<Lotes />} />
-        <Route path="/alimentacion" element={<Alimentacion />} />
-        <Route path="/inventario" element={<Inventario />} />
-        <Route path="/inventario/insumos" element={<Insumos />} />
-        <Route path="/inventario/proveedores" element={<Proveedores />} />
-        <Route path="/inventario/movimientos" element={<Movimientos />} />
+        <Route path="/pago-exitoso" element={<SuccessPage />} />
 
-        <Route path="/sanitario/registro" element={<RegistroSanitario />} />
-        <Route path="/sanitario/historial" element={<HistorialClinico />} />
-        <Route path="/reportes" element={<Reportes />} />
-        <Route path="/mortandad" element={<Mortandad />} />
-        <Route path="/estado" element={<Estado />} />
-        <Route path="/usuarios" element={<Usuarios />} />
-        <Route path="/bitacora" element={<Bitacora />} />
-        <Route path="/permisos" element={<Permisos />} />
-        <Route path="/roles" element={<Roles />} />
-        <Route path="/temperatura" element={<Temperatura />} />
+        {/* ── Cambio de contraseña obligatorio (requiere token) ── */}
+        <Route path="/cambio-password" element={<ChangePasswordPage />} />
+
+        {/* ── Zona privada: Sistema de gestión avícola ────── */}
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/galpones" element={<ProtectedRoute><Galpones /></ProtectedRoute>} />
+        <Route path="/lotes" element={<ProtectedRoute><Lotes /></ProtectedRoute>} />
+        <Route path="/alimentacion" element={<ProtectedRoute><Alimentacion /></ProtectedRoute>} />
+        <Route path="/inventario" element={<ProtectedRoute><Inventario /></ProtectedRoute>} />
+        <Route path="/inventario/insumos" element={<ProtectedRoute><Insumos /></ProtectedRoute>} />
+        <Route path="/inventario/proveedores" element={<ProtectedRoute><Proveedores /></ProtectedRoute>} />
+        <Route path="/inventario/movimientos" element={<ProtectedRoute><Movimientos /></ProtectedRoute>} />
+
+        <Route path="/sanitario/registro" element={<ProtectedRoute><RegistroSanitario /></ProtectedRoute>} />
+        <Route path="/sanitario/historial" element={<ProtectedRoute><HistorialClinico /></ProtectedRoute>} />
+        <Route path="/reportes" element={<ProtectedRoute><Reportes /></ProtectedRoute>} />
+        <Route path="/mortandad" element={<ProtectedRoute><Mortandad /></ProtectedRoute>} />
+        <Route path="/estado" element={<ProtectedRoute><Estado /></ProtectedRoute>} />
+        <Route path="/usuarios" element={<ProtectedRoute><Usuarios /></ProtectedRoute>} />
+        <Route path="/bitacora" element={<ProtectedRoute><Bitacora /></ProtectedRoute>} />
+        <Route path="/permisos" element={<ProtectedRoute><Permisos /></ProtectedRoute>} />
+        <Route path="/roles" element={<ProtectedRoute><Roles /></ProtectedRoute>} />
+        <Route path="/temperatura" element={<ProtectedRoute><Temperatura /></ProtectedRoute>} />
       </Routes>
       <TemperatureAlert />
     </BrowserRouter>
@@ -56,3 +67,4 @@ function App() {
 }
 
 export default App;
+

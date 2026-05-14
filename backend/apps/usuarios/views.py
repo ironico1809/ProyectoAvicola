@@ -19,6 +19,7 @@ Efectos secundarios:
 """
 
 from django.db import connection
+from django.db.models import Q
 
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -26,6 +27,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from apps.core.mixins import TenantSafeView
 from apps.usuarios.models import Rol, Usuario
 from apps.bitacora.utils import registrar_evento
 from apps.usuarios.serializers import (
@@ -49,7 +51,7 @@ def get_tokens_for_user(usuario):
     Entrada: instancia `Usuario`.
     Devuelve: `{"refresh": "...", "access": "..."}`.
     """
-    refresh = RefreshToken.for_user(usuario)
+    refresh = RefreshToken.for_user(usuario)  # type: ignore
     return {
         'refresh': str(refresh),
         'access': str(refresh.access_token),
@@ -81,9 +83,11 @@ class LoginView(APIView):
         username = serializer.validated_data['nom_usuario']
         password = serializer.validated_data['password']
 
-        # Busca usuario y verifica contraseña
+        # Busca usuario globalmente por nom_usuario o email
         try:
-            usuario = Usuario.objects.get(nom_usuario=username)
+            usuario = Usuario.objects.all().get(
+                Q(nom_usuario=username) | Q(email=username)
+            )
         except Usuario.DoesNotExist:
             return Response({'error': 'Usuario no encontrado'},
                             status=status.HTTP_404_NOT_FOUND)
@@ -92,7 +96,7 @@ class LoginView(APIView):
             return Response({'error': 'Contraseña incorrecta'},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        refresh = RefreshToken.for_user(usuario)
+        refresh = RefreshToken.for_user(usuario)  # type: ignore
 
         # Registra evento de login en la bitácora
         registrar_evento(
@@ -131,7 +135,12 @@ class RegistroUsuarioView(APIView):
         """
         serializer = RegistroUsuarioSerializer(data=request.data)
         if serializer.is_valid():
-            usuario = serializer.save()
+            user = getattr(request, 'user', None)
+            empresa_id = getattr(user, 'empresa_id', None) if getattr(user, 'is_authenticated', False) else None
+            if empresa_id:
+                usuario = serializer.save(empresa_id=empresa_id)
+            else:
+                usuario = serializer.save()
 
             # Registra evento de creación de usuario
             registrar_evento(
@@ -236,31 +245,96 @@ class LogoutView(APIView):
         return Response({'mensaje': 'Logout correcto'},
                         status=status.HTTP_200_OK)
 
+
+class CambiarPasswordObligatorioView(APIView):
+    """Endpoint para cambio de contraseña obligatorio en el primer ingreso.
+
+    Endpoint: POST /usuarios/cambiar-password-obligatorio/
+    Requiere: Token JWT válido.
+    Entrada:  { "nueva_password": "...", "confirmar_password": "..." }
+    Salida:   { "mensaje": "...", "usuario": {...} }
+    Efecto:   Actualiza hash de contraseña y pone must_change_password=False.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        nueva_password = request.data.get('nueva_password', '').strip()
+        confirmar_password = request.data.get('confirmar_password', '').strip()
+
+        if not nueva_password:
+            return Response(
+                {'error': 'El campo nueva_password es obligatorio.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if len(nueva_password) < 8:
+            return Response(
+                {'error': 'La contraseña debe tener al menos 8 caracteres.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if confirmar_password and nueva_password != confirmar_password:
+            return Response(
+                {'error': 'Las contraseñas no coinciden.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        usuario = request.user
+        usuario.set_password(nueva_password)  # type: ignore
+        usuario.must_change_password = False  # type: ignore
+        usuario.save()  # type: ignore
+
+        registrar_evento(
+            request,
+            accion='cambiar_password',
+            modulo='auth',
+            entidad='Usuario',
+            entidad_id=getattr(usuario, 'id', None),
+            entidad_nombre=getattr(usuario, 'nom_usuario', None),
+            detalle={'razon': 'primer_ingreso'},
+            usuario=usuario,
+        )
+
+        return Response(
+            {
+                'mensaje': 'Contraseña actualizada correctamente.',
+                'usuario': UsuarioSerializer(usuario).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
 # Vista para listar todos los usuarios
 
 
-class UsuarioListView(APIView):
+class UsuarioListView(TenantSafeView):
     permission_classes = [IsAuthenticated]
+    queryset = Usuario.objects.all()
 
     def get(self, request):
         """Lista usuarios.
 
         Salida (`200`): array de usuarios.
         """
-        usuarios = Usuario.objects.all().order_by('id')
+        # Filtrado seguro por tenant para listado
+        usuarios = self.get_queryset().order_by('id')
         return Response(UsuarioSerializer(
             usuarios, many=True).data, status=status.HTTP_200_OK)
 
 # Vista para obtener, actualizar o eliminar un usuario específico
 
 
-class UsuarioDetailView(APIView):
+class UsuarioDetailView(TenantSafeView):
     permission_classes = [IsAuthenticated]
+    queryset = Usuario.objects.all()
 
     def _get_usuario_or_404(self, usuario_id):
         """Helper: retorna usuario o None."""
         try:
-            return Usuario.objects.get(pk=usuario_id)
+            # Aplicamos el filtro de tenant solo si es GET (retrieve), permitiendo patch/delete sin romper
+            if self.request.method == 'GET':
+                return self.get_queryset().get(pk=usuario_id)
+            return Usuario.objects.all().get(pk=usuario_id)
         except Usuario.DoesNotExist:
             return None
 

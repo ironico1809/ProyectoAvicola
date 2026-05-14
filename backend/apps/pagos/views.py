@@ -7,6 +7,7 @@ Endpoints:
 """
 
 import json
+import os
 import random
 import string
 import stripe
@@ -90,8 +91,8 @@ class CrearSesionCheckoutView(APIView):
                     },
                 ],
                 mode='subscription',
-                success_url=str(settings.STRIPE_SUCCESS_URL) + "?session_id={CHECKOUT_SESSION_ID}", # type: ignore
-                cancel_url=str(settings.STRIPE_CANCEL_URL), # type: ignore
+                success_url=f"{os.getenv('FRONTEND_URL', 'http://localhost:5173').rstrip('/')}/pago-exitoso?session_id={{CHECKOUT_SESSION_ID}}",
+                cancel_url=f"{os.getenv('FRONTEND_URL', 'http://localhost:5173').rstrip('/')}/pricing",
                 customer_email=email,
                 metadata={
                     'plan_id': str(plan.id),

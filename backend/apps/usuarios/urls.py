@@ -19,6 +19,7 @@ from apps.usuarios.views import (
     UsuarioListView,
     UsuarioDetailView,
     UsuarioRolesView,
+    CambiarPasswordObligatorioView,
 )
 
 urlpatterns = [
@@ -42,6 +43,7 @@ urlpatterns = [
     path('registro/', RegistroUsuarioView.as_view(), name='registro_usuario'),
     path('me/', UsuarioMeView.as_view(), name='usuario_me'),
     path('logout/', LogoutView.as_view(), name='logout'),
+    path('cambiar-password-obligatorio/', CambiarPasswordObligatorioView.as_view(), name='cambiar_password_obligatorio'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('token/verify/', TokenVerifyView.as_view(), name='token_verify'),
 ]

@@ -1,17 +1,20 @@
 from rest_framework import viewsets
+from apps.core.mixins import TenantSafeView
 from .models import RegistroMortalidad
 from .serializers import RegistroMortalidadSerializer
 from apps.bitacora.models import BitacoraEvento
 
-class RegistroMortalidadViewSet(viewsets.ModelViewSet):
+class RegistroMortalidadViewSet(TenantSafeView, viewsets.ModelViewSet):
     serializer_class = RegistroMortalidadSerializer
+    queryset = RegistroMortalidad.objects.all().order_by('-fecha_hora', '-id_muerte')
 
     def get_queryset(self):
-        queryset = RegistroMortalidad.objects.all().order_by('-fecha_hora', '-id_muerte')
+        # Filtrado base seguro por tenant heredado de TenantSafeView
+        queryset = super().get_queryset()
         
-        lote_id = self.request.query_params.get('lote')
-        fecha_inicio = self.request.query_params.get('fecha_inicio')
-        fecha_fin = self.request.query_params.get('fecha_fin')
+        lote_id = self.request.query_params.get('lote')  # type: ignore
+        fecha_inicio = self.request.query_params.get('fecha_inicio')  # type: ignore
+        fecha_fin = self.request.query_params.get('fecha_fin')  # type: ignore
 
         if lote_id:
             queryset = queryset.filter(lote_id=lote_id)
@@ -23,7 +26,9 @@ class RegistroMortalidadViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        registro = serializer.save()
+        user = getattr(self.request, 'user', None)
+        empresa_id = getattr(user, 'empresa_id', None)
+        registro = serializer.save(empresa_id=empresa_id)
 
         # 1. CAPTURAR LA IP REAL DEL USUARIO
         x_forwarded_for = self.request.META.get('HTTP_X_FORWARDED_FOR')
@@ -34,12 +39,12 @@ class RegistroMortalidadViewSet(viewsets.ModelViewSet):
 
         usuario_actual = self.request.user if getattr(self.request.user, 'is_authenticated', False) else None
         
-        causa_texto = registro.causa if registro.causa else 'No especificada'
+        causa_texto = getattr(registro, 'causa', None) if getattr(registro, 'causa', None) else 'No especificada'
         
         # 2. AGREGAMOS LA IP A LA DESCRIPCIÓN (Ya que no hay columna IP en la BD)
         descripcion_evento = (
-            f"Se registraron {registro.cantidad} bajas para el "
-            f"Lote {registro.lote.id_lote}. Causa: {causa_texto}. [IP del registro: {ip_cliente}]"
+            f"Se registraron {getattr(registro, 'cantidad', 0)} bajas para el "
+            f"Lote {getattr(getattr(registro, 'lote', None), 'id_lote', '')}. Causa: {causa_texto}. [IP del registro: {ip_cliente}]"
         )
         
         # 3. GUARDAMOS EN LA BITÁCORA SIN ROMPER EL ESQUEMA SQL

@@ -11,73 +11,84 @@ Endpoints principales:
 Todas las rutas requieren JWT (IsAuthenticated) excepto que se cambie explícitamente.
 """
 
-from rest_framework import status
+from rest_framework import serializers, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import Coalesce
 
+from apps.core.mixins import TenantSafeView
 from apps.galpones.models import Galpon
 from apps.galpones.serializers import GalponSerializer
 from apps.bitacora.utils import registrar_evento
 
 
-class GalponListCreateView(APIView):
-    """Lista y crea galpones.
-
-    - GET: devuelve `200 OK` con lista de galpones.
-    - POST: valida payload y devuelve `201 Created` con el galpón creado.
-    """
+class GalponListCreateView(TenantSafeView):
+    """Lista y crea galpones con aislamiento multi-tenant y límites SaaS."""
     permission_classes = [IsAuthenticated]
+    queryset = Galpon.objects.all()
 
     def get(self, request):
-        """Devuelve todos los galpones ordenados por id."""
-        galpones = Galpon.objects.all().order_by('id')
+        """Devuelve los galpones de la empresa del usuario logueado."""
+        galpones = self.get_queryset().order_by('id')
         return Response(GalponSerializer(
             galpones, many=True).data, status=status.HTTP_200_OK)
 
-    def post(self, request):
-        """Crea un galpón.
+    def perform_create(self, serializer):
+        """Inyecta de forma segura el empresa_id del usuario actual."""
+        user = getattr(self.request, 'user', None)
+        empresa_id = getattr(user, 'empresa_id', None)
+        return serializer.save(empresa_id=empresa_id)
 
-        Entrada: JSON validado por `GalponSerializer`.
-        Salida: `201` con el galpón serializado o `400` con errores.
-        Además registra evento en bitácora.
-        """
+    def post(self, request):
+        """Crea un galpón aplicando validación de cuota de plan SaaS."""
+        user = getattr(request, 'user', None)
+        empresa = getattr(user, 'empresa', None) if user else None
+
+        # Validación de cuota SaaS
+        if empresa and getattr(empresa, 'plan', None):
+            max_galpones = empresa.plan.max_galpones
+            if max_galpones is not None:
+                actuales = Galpon.objects.filter(empresa_id=empresa.id).count()
+                if actuales >= max_galpones:
+                    raise serializers.ValidationError(
+                        "Has alcanzado el límite de galpones de tu Plan Básico. Mejora tu plan para añadir más."
+                    )
+
         serializer = GalponSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors,
                             status=status.HTTP_400_BAD_REQUEST)
 
-        galpon = serializer.save()
+        galpon = self.perform_create(serializer)
         registrar_evento(
             request,
             accion='crear',
             modulo='galpones',
             entidad='Galpon',
-            entidad_id=galpon.id,
-            entidad_nombre=galpon.nombre,
-            detalle={'nombre': galpon.nombre},
+            entidad_id=getattr(galpon, 'id', None),
+            entidad_nombre=getattr(galpon, 'nombre', None),
+            detalle={'nombre': getattr(galpon, 'nombre', None)},
             usuario=request.user,
         )
         return Response(GalponSerializer(galpon).data,
                         status=status.HTTP_201_CREATED)
 
 
-class GalponDetailView(APIView):
-    """Obtiene/actualiza/elimina un galpón específico por id."""
+class GalponDetailView(TenantSafeView):
+    """Obtiene/actualiza/elimina un galpón específico asegurando pertenencia al tenant."""
     permission_classes = [IsAuthenticated]
+    queryset = Galpon.objects.all()
 
     def _get_galpon_or_404(self, galpon_id):
-        """Helper para obtener un galpón o devolver None si no existe."""
+        """Helper para obtener un galpón filtrado por el tenant actual."""
         try:
-            return Galpon.objects.get(pk=galpon_id)
+            return self.get_queryset().get(pk=galpon_id)
         except Galpon.DoesNotExist:
             return None
 
     def get(self, request, galpon_id):
-        """Devuelve `200` con el galpón o `404` si no existe."""
         galpon = self._get_galpon_or_404(galpon_id)
         if not galpon:
             return Response({'detail': 'Galpón no encontrado.'},
@@ -86,11 +97,6 @@ class GalponDetailView(APIView):
                         status=status.HTTP_200_OK)
 
     def put(self, request, galpon_id):
-        """Reemplaza por completo el galpón (PUT).
-
-        Entrada: JSON completo.
-        Salida: `200` con galpón actualizado, `400` si inválido, `404` si no existe.
-        """
         galpon = self._get_galpon_or_404(galpon_id)
         if not galpon:
             return Response({'detail': 'Galpón no encontrado.'},
@@ -101,21 +107,22 @@ class GalponDetailView(APIView):
             return Response(serializer.errors,
                             status=status.HTTP_400_BAD_REQUEST)
 
-        galpon = serializer.save()
+        # Mantenemos inmutable el empresa_id original
+        empresa_id = getattr(galpon, 'empresa_id', None)
+        galpon = serializer.save(empresa_id=empresa_id)
         registrar_evento(
             request,
             accion='editar',
             modulo='galpones',
             entidad='Galpon',
-            entidad_id=galpon.id,
-            entidad_nombre=galpon.nombre,
+            entidad_id=getattr(galpon, 'id', None),
+            entidad_nombre=getattr(galpon, 'nombre', None),
             usuario=request.user,
         )
         return Response(GalponSerializer(galpon).data,
                         status=status.HTTP_200_OK)
 
     def patch(self, request, galpon_id):
-        """Actualiza parcialmente el galpón (PATCH)."""
         galpon = self._get_galpon_or_404(galpon_id)
         if not galpon:
             return Response({'detail': 'Galpón no encontrado.'},
@@ -126,24 +133,21 @@ class GalponDetailView(APIView):
             return Response(serializer.errors,
                             status=status.HTTP_400_BAD_REQUEST)
 
-        galpon = serializer.save()
+        empresa_id = getattr(galpon, 'empresa_id', None)
+        galpon = serializer.save(empresa_id=empresa_id)
         registrar_evento(
             request,
             accion='editar',
             modulo='galpones',
             entidad='Galpon',
-            entidad_id=galpon.id,
-            entidad_nombre=galpon.nombre,
+            entidad_id=getattr(galpon, 'id', None),
+            entidad_nombre=getattr(galpon, 'nombre', None),
             usuario=request.user,
         )
         return Response(GalponSerializer(galpon).data,
                         status=status.HTTP_200_OK)
 
     def delete(self, request, galpon_id):
-        """Elimina el galpón.
-
-        Salida: `204 No Content` si se elimina, `404` si no existe.
-        """
         galpon = self._get_galpon_or_404(galpon_id)
         if not galpon:
             return Response({'detail': 'Galpón no encontrado.'},
@@ -154,51 +158,37 @@ class GalponDetailView(APIView):
             accion='eliminar',
             modulo='galpones',
             entidad='Galpon',
-            entidad_id=galpon.id,
-            entidad_nombre=galpon.nombre,
-            detalle={'nombre': galpon.nombre},
+            entidad_id=getattr(galpon, 'id', None),
+            entidad_nombre=getattr(galpon, 'nombre', None),
+            detalle={'nombre': getattr(galpon, 'nombre', None)},
             usuario=request.user,
         )
         galpon.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class GalponEstadoListView(APIView):
-    """Resumen de estado por galpón para dashboard.
-
-    Endpoint:
-      - GET /galpones/estado/
-    """
-
+class GalponEstadoListView(TenantSafeView):
+    """Resumen de estado por galpón filtrado por tenant."""
     permission_classes = [IsAuthenticated]
+    queryset = Galpon.objects.all()
 
     def get(self, request):
-        """Devuelve un resumen agregado por galpón.
-
-        Salida (`200 OK`): array con objetos que incluyen:
-        - `galpon`: datos del galpón.
-        - `total_lotes`, `aves_actuales`, `porcentaje_ocupacion`.
-        - `lotes_por_estado`: conteos por estado.
-        """
         queryset = (
-            Galpon.objects.all()
+            self.get_queryset()
             .annotate(
                 total_lotes=Count('lotes', distinct=True),
                 aves_actuales=Coalesce(Sum('lotes__cantidad_actual'), 0),
                 lotes_crianza=Count(
                     'lotes',
-                    filter=Q(
-                        lotes__estado='Crianza'),
+                    filter=Q(lotes__estado='Crianza'),
                     distinct=True),
                 lotes_activo=Count(
                     'lotes',
-                    filter=Q(
-                        lotes__estado='activo'),
+                    filter=Q(lotes__estado='activo'),
                     distinct=True),
                 lotes_finalizado=Count(
                     'lotes',
-                    filter=Q(
-                        lotes__estado='finalizado'),
+                    filter=Q(lotes__estado='finalizado'),
                     distinct=True),
             )
             .order_by('id')
@@ -206,23 +196,22 @@ class GalponEstadoListView(APIView):
 
         data = []
         for g in queryset:
-            capacidad = g.capacidad or 0
-            aves_actuales = int(g.aves_actuales or 0)
+            capacidad = getattr(g, 'capacidad', 0) or 0
+            aves_actuales = int(getattr(g, 'aves_actuales', 0) or 0)
             porcentaje_ocupacion = None
             if capacidad > 0:
-                porcentaje_ocupacion = round(
-                    (aves_actuales / capacidad) * 100, 2)
+                porcentaje_ocupacion = round((aves_actuales / capacidad) * 100, 2)
 
             data.append(
                 {
                     'galpon': GalponSerializer(g).data,
-                    'total_lotes': int(g.total_lotes or 0),
+                    'total_lotes': int(getattr(g, 'total_lotes', 0) or 0),
                     'aves_actuales': aves_actuales,
                     'porcentaje_ocupacion': porcentaje_ocupacion,
                     'lotes_por_estado': {
-                        'Crianza': int(g.lotes_crianza or 0),
-                        'activo': int(g.lotes_activo or 0),
-                        'finalizado': int(g.lotes_finalizado or 0),
+                        'Crianza': int(getattr(g, 'lotes_crianza', 0) or 0),
+                        'activo': int(getattr(g, 'lotes_activo', 0) or 0),
+                        'finalizado': int(getattr(g, 'lotes_finalizado', 0) or 0),
                     },
                 }
             )

@@ -28,7 +28,6 @@ api.interceptors.request.use(
     const url = String(config.url || "");
     const isAuthEndpoint =
       url.startsWith("/usuarios/login/") ||
-      url.startsWith("/usuarios/registro/") ||
       url.startsWith("/usuarios/token/");
 
     if (token && token !== "null" && token !== "undefined" && !isAuthEndpoint) {
@@ -51,8 +50,8 @@ api.interceptors.response.use(
       localStorage.removeItem("access_token"); // Borra el token culpable
 
       // Opcional: Redirigir al usuario al login automáticamente
-      if (window.location.pathname !== "/") {
-        window.location.href = "/";
+      if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
+        window.location.href = '/login';
       }
     }
     return Promise.reject(error);

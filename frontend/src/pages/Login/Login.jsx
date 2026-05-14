@@ -23,7 +23,13 @@ function Login() {
       localStorage.setItem('access_token', res.data.access)
       localStorage.setItem('refresh_token', res.data.refresh)
       localStorage.setItem('usuario', JSON.stringify(res.data.usuario))
-      navigate('/dashboard')
+
+      // Redirigir según el estado del primer ingreso
+      if (res.data.usuario?.must_change_password) {
+        navigate('/cambio-password')
+      } else {
+        navigate('/dashboard')
+      }
     } catch (err) {
       setError(err.response?.data?.error || 'Error al conectar con el servidor')
     } finally {

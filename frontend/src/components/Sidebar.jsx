@@ -200,7 +200,12 @@ function Sidebar({ open, setOpen, showMobileTrigger = true }) {
         <div style={footerStyle}>
           <button
             style={{ ...logoutStyle, justifyContent: open ? "flex-start" : "center" }}
-            onClick={() => handleNavigate("/")}
+            onClick={() => {
+              localStorage.removeItem("access_token");
+              localStorage.removeItem("refresh_token");
+              localStorage.removeItem("usuario");
+              handleNavigate("/login");
+            }}
             type="button"
           >
             <span style={iconStyle}><LogOut size={20} /></span>
