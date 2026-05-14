@@ -171,7 +171,7 @@ function LandingPage() {
   useEffect(() => {
     api
       .get('/pagos/planes/')
-      .then((res) => setPlanes(res.data))
+      .then((res) => setPlanes(Array.isArray(res.data) ? res.data : []))
       .catch(() => setPlanes([]))
       .finally(() => setLoadingPlanes(false));
   }, []);
