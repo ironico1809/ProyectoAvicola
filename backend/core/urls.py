@@ -17,5 +17,7 @@ urlpatterns = [
     # ── SaaS ──────────────────────────────────────────────────────────────────
     path('empresas/', include('apps.empresas.urls')),
     path('pagos/', include('apps.pagos.urls')),
+    # ── Mantenimiento / Backup (SuperAdmin) ───────────────────────────────────
+    path('mantenimiento/', include('apps.mantenimiento.urls')),
 ]
 

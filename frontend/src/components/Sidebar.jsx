@@ -19,6 +19,7 @@ import {
   ChevronUp,
   Globe,
   CreditCard,
+  Database,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -32,6 +33,12 @@ const MENU_SUPERADMIN = [
     icon: <Globe size={20} />,
     label: "Panel Global",
     path: "/superadmin",
+  },
+  {
+    type: "single",
+    icon: <Database size={20} />,
+    label: "Mantenimiento Técnico",
+    path: "/mantenimiento",
   },
 ];
 

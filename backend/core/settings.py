@@ -79,6 +79,8 @@ INSTALLED_APPS = [
     'apps.insumos',
     'apps.sanitario',
     'apps.mortandad',
+    # ── Mantenimiento (SuperAdmin) ─────────────────────────────────────────────
+    'apps.mantenimiento',
     # ── Librerías terceros ────────────────────────────────────────────────────
     'rest_framework',
     'rest_framework_simplejwt',
@@ -103,6 +105,8 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # ── Modo Mantenimiento: bloquea no-SuperAdmin durante restauraciones ──────
+    'apps.mantenimiento.middleware.ModoMantenimientoMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -251,3 +255,9 @@ STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')
 STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
 STRIPE_SUCCESS_URL = os.getenv('STRIPE_SUCCESS_URL', 'http://localhost:5173/pago-exitoso')
 STRIPE_CANCEL_URL = os.getenv('STRIPE_CANCEL_URL', 'http://localhost:5173/pricing')
+
+# ──────────────────────────────────────────────────────────────────
+# Mantenimiento — directorio de respaldos
+# Los archivos .json.gz se guardan aquí. Nunca subir a git.
+# ──────────────────────────────────────────────────────────────────
+BACKUP_DIR = BASE_DIR / 'backups'

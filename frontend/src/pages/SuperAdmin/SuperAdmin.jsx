@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Globe, Building2, Users, DollarSign, TrendingUp, AlertCircle,
   CheckCircle2, Clock, XCircle, RefreshCw, LogOut, Plus, Server,
@@ -605,19 +605,33 @@ function TabAuditoria({ empresas }) {
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 const TABS = [
-  { id:"clientes",       label:"Clientes",       icon:<Building2 size={16}/> },
-  { id:"infraestructura",label:"Infraestructura", icon:<Server size={16}/> },
-  { id:"config-ia",      label:"Config IA",       icon:<Brain size={16}/> },
-  { id:"auditoria",      label:"Auditoría",       icon:<BookOpen size={16}/> },
+  { id:"clientes",       label:"Clientes",          icon:<Building2 size={16}/> },
+  { id:"infraestructura",label:"Infraestructura",    icon:<Server size={16}/> },
+  { id:"config-ia",      label:"Config IA",          icon:<Brain size={16}/> },
+  { id:"auditoria",      label:"Auditoría",          icon:<BookOpen size={16}/> },
+  // Pestaña externa — navega a /mantenimiento
+  { id:"mantenimiento",  label:"Mantenimiento",      icon:<Database size={16}/>, href:"/mantenimiento" },
 ];
 
 export default function SuperAdmin() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState("clientes");
+  const location = useLocation();
+  const tabActivo = location.pathname === "/mantenimiento" ? "mantenimiento" : "";
+  const [tab, setTab] = useState(tabActivo || "clientes");
   const [metricas, setMetricas] = useState(null);
   const [planes, setPlanes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" && window.innerWidth < 768
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   const cargarMetricas = useCallback(async () => {
     setLoading(true); setError("");
@@ -649,43 +663,74 @@ export default function SuperAdmin() {
   return (
     <div style={{ minHeight:"100dvh", background:C.bg, fontFamily:"'Poppins', sans-serif" }}>
 
-      {/* Header */}
-      <header style={{ background:`linear-gradient(135deg, ${C.brand} 0%, ${C.brandLight} 100%)`, padding:"0 32px", height:64, display:"flex", alignItems:"center", justifyContent:"space-between", boxShadow:"0 2px 12px rgba(0,0,0,0.15)", position:"sticky", top:0, zIndex:100 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+      {/* Header — responsive */}
+      <header style={{
+        background:`linear-gradient(135deg, ${C.brand} 0%, ${C.brandLight} 100%)`,
+        padding: isMobile ? "0 16px" : "0 32px",
+        height: 64,
+        display:"flex", alignItems:"center", justifyContent:"space-between",
+        boxShadow:"0 2px 12px rgba(0,0,0,0.15)",
+        position:"sticky", top:0, zIndex:100,
+      }}>
+        <div style={{ display:"flex", alignItems:"center", gap: isMobile ? 8 : 12 }}>
           <img src="/logo.png" alt="logo" style={{ width:36, height:36, borderRadius:"50%", border:`2px solid ${C.gold}` }} />
-          <span style={{ color:"#fef3c7", fontWeight:800, fontSize:18 }}>AviGranja</span>
-          <span style={{ color:"rgba(255,255,255,0.35)", margin:"0 8px" }}>|</span>
-          <Globe size={17} color={C.gold}/>
-          <span style={{ color:"#fef3c7", fontWeight:600, fontSize:15 }}>Panel SuperAdmin</span>
+          <span style={{ color:"#fef3c7", fontWeight:800, fontSize: isMobile ? 15 : 18 }}>AviGranja</span>
+          {!isMobile && (
+            <>
+              <span style={{ color:"rgba(255,255,255,0.35)", margin:"0 8px" }}>|</span>
+              <Globe size={17} color={C.gold}/>
+              <span style={{ color:"#fef3c7", fontWeight:600, fontSize:15 }}>Panel SuperAdmin</span>
+            </>
+          )}
         </div>
-        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+        <div style={{ display:"flex", alignItems:"center", gap: isMobile ? 6 : 10 }}>
           <button onClick={cargarMetricas} style={btnSecStyle} title="Actualizar">
-            <RefreshCw size={15}/> <span>Actualizar</span>
+            <RefreshCw size={15}/>
+            {!isMobile && <span>Actualizar</span>}
           </button>
           <button onClick={cerrarSesion} style={btnSecStyle}>
-            <LogOut size={15}/> <span>Salir</span>
+            <LogOut size={15}/>
+            {!isMobile && <span>Salir</span>}
           </button>
         </div>
       </header>
 
-      {/* Tabs */}
-      <div style={{ background:C.white, borderBottom:`1px solid ${C.gray200}`, padding:"0 32px", display:"flex", gap:4 }}>
+      {/* Tabs — scroll horizontal en móvil */}
+      <div style={{
+        background:C.white,
+        borderBottom:`1px solid ${C.gray200}`,
+        padding: isMobile ? "0 8px" : "0 32px",
+        display:"flex", gap:0,
+        overflowX:"auto",
+        scrollbarWidth:"none",
+        WebkitOverflowScrolling:"touch",
+      }}>
         {TABS.map(t=>(
-          <button key={t.id} onClick={()=>setTab(t.id)} style={{
-            display:"flex", alignItems:"center", gap:7,
-            padding:"14px 18px", border:"none", background:"none",
-            fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit",
-            color: tab===t.id ? C.brand : C.gray500,
-            borderBottom: tab===t.id ? `2px solid ${C.brand}` : "2px solid transparent",
-            transition:"all .15s",
-          }}>
-            {t.icon} {t.label}
+          <button
+            key={t.id}
+            onClick={() => {
+              if (t.href) { navigate(t.href); }
+              else { setTab(t.id); }
+            }}
+            style={{
+              display:"flex", alignItems:"center", gap:6,
+              padding: isMobile ? "12px 10px" : "14px 18px",
+              border:"none", background:"none",
+              fontSize: isMobile ? 11 : 13,
+              fontWeight:600, cursor:"pointer", fontFamily:"inherit",
+              color: tab===t.id ? C.brand : C.gray500,
+              borderBottom: tab===t.id ? `2px solid ${C.brand}` : "2px solid transparent",
+              transition:"all .15s",
+              whiteSpace:"nowrap",
+            }}
+          >
+            {t.icon} {isMobile ? t.label.split(" ")[0] : t.label}
           </button>
         ))}
       </div>
 
       {/* Contenido */}
-      <main style={{ maxWidth:1280, margin:"0 auto", padding:"28px 24px" }}>
+      <main style={{ maxWidth:1280, margin:"0 auto", padding: isMobile ? "16px 12px" : "28px 24px" }}>
 
         {loading && (
           <div style={centeredStyle}>

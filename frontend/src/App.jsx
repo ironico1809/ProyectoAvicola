@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import LandingPage from "./pages/LandingPage/LandingPage";
 import Login from "./pages/Login/Login";
@@ -27,8 +28,87 @@ import ChangePasswordPage from "./pages/ChangePasswordPage/ChangePasswordPage";
 import SuccessPage from "./pages/SuccessPage/SuccessPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SuperAdmin from "./pages/SuperAdmin/SuperAdmin";
+import MantenimientoPage from "./pages/MantenimientoPage/MantenimientoPage";
+import MaintenanceScreen from "./components/MaintenanceScreen";
+
+// ── Intervalo de polling al endpoint público de estado (ms) ──────────────────
+const POLLING_INTERVAL_MS = 10_000; // 10 segundos
+const API_BASE = import.meta.env.VITE_API_URL
+  ? String(import.meta.env.VITE_API_URL).replace(/\/+$/, "")
+  : "http://localhost:8000";
+
+/**
+ * Determina si el usuario actual es SuperAdmin consultando localStorage.
+ * El SuperAdmin NUNCA ve la pantalla de bloqueo.
+ */
+function usuarioEsSuperAdmin() {
+  try {
+    const raw = localStorage.getItem("usuario");
+    if (!raw) return false;
+    const user = JSON.parse(raw);
+    return (
+      user?.tipo_usuario === "Superusuario" ||
+      user?.is_superuser === true
+    );
+  } catch {
+    return false;
+  }
+}
 
 function App() {
+  const [enMantenimiento, setEnMantenimiento] = useState(false);
+  const [estadoMnt, setEstadoMnt] = useState({ hasta: null, segundos_restantes: 300 });
+
+  useEffect(() => {
+    let mounted = true;
+
+    const verificarEstado = async () => {
+      // SuperAdmin nunca ve la pantalla de bloqueo
+      if (usuarioEsSuperAdmin()) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/mantenimiento/estado/`);
+        if (!res.ok) return;
+        const data = await res.json();
+
+        if (!mounted) return;
+
+        if (data.en_mantenimiento) {
+          setEnMantenimiento(true);
+          setEstadoMnt({
+            hasta: data.hasta,
+            segundos_restantes: data.segundos_restantes ?? 300,
+          });
+        } else {
+          setEnMantenimiento(false);
+          setEstadoMnt({ hasta: null, segundos_restantes: 300 });
+        }
+      } catch {
+        // Error de red durante mantenimiento — ignorar silenciosamente
+      }
+    };
+
+    // Verificación inmediata al cargar
+    verificarEstado();
+
+    // Polling cada 10 segundos
+    const interval = setInterval(verificarEstado, POLLING_INTERVAL_MS);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  // ── Pantalla de bloqueo global ─────────────────────────────────────────────
+  if (enMantenimiento && !usuarioEsSuperAdmin()) {
+    return (
+      <MaintenanceScreen
+        hasta={estadoMnt.hasta}
+        segundosInit={estadoMnt.segundos_restantes}
+      />
+    );
+  }
+
   return (
     <BrowserRouter>
       <Routes>
@@ -64,6 +144,7 @@ function App() {
 
         {/* ── Zona SuperAdmin ──────────────────────────────── */}
         <Route path="/superadmin" element={<ProtectedRoute><SuperAdmin /></ProtectedRoute>} />
+        <Route path="/mantenimiento" element={<ProtectedRoute><MantenimientoPage /></ProtectedRoute>} />
       </Routes>
       <TemperatureAlert />
     </BrowserRouter>
@@ -71,4 +152,3 @@ function App() {
 }
 
 export default App;
-

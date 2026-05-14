@@ -1,0 +1,168 @@
+/* ── MaintenanceScreen.css ─────────────────────────────────────────────────
+   Pantalla de bloqueo global durante el Modo Mantenimiento de AviGranja.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.mnt-screen-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: linear-gradient(135deg, #78350f 0%, #451a03 60%, #1c0a00 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  font-family: 'Inter', 'Poppins', system-ui, sans-serif;
+  animation: mnt-screen-in 0.5s ease;
+}
+
+@keyframes mnt-screen-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Logo */
+.mnt-screen-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 48px;
+}
+
+.mnt-screen-logo img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid #fbbf24;
+}
+
+.mnt-screen-logo-text {
+  font-size: 24px;
+  font-weight: 800;
+  color: #fef3c7;
+  letter-spacing: -0.5px;
+}
+
+/* Spinner grande */
+.mnt-screen-spinner-wrap {
+  position: relative;
+  width: 90px;
+  height: 90px;
+  margin-bottom: 36px;
+}
+
+.mnt-screen-spinner {
+  width: 90px;
+  height: 90px;
+  border: 5px solid rgba(251, 191, 36, 0.15);
+  border-top-color: #fbbf24;
+  border-radius: 50%;
+  animation: mnt-spin-screen 1s linear infinite;
+}
+
+@keyframes mnt-spin-screen {
+  to { transform: rotate(360deg); }
+}
+
+.mnt-screen-icon {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fbbf24;
+}
+
+/* Texto principal */
+.mnt-screen-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #fef3c7;
+  text-align: center;
+  margin: 0 0 14px;
+  max-width: 480px;
+  line-height: 1.3;
+}
+
+.mnt-screen-desc {
+  font-size: 15px;
+  color: rgba(254, 243, 199, 0.75);
+  text-align: center;
+  max-width: 420px;
+  line-height: 1.7;
+  margin: 0 0 36px;
+}
+
+/* Contador regresivo */
+.mnt-screen-countdown-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  border-radius: 20px;
+  padding: 20px 36px;
+  backdrop-filter: blur(8px);
+  margin-bottom: 32px;
+}
+
+.mnt-screen-countdown-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(254, 243, 199, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.mnt-screen-countdown-value {
+  font-size: 42px;
+  font-weight: 800;
+  color: #fbbf24;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.mnt-screen-countdown-sub {
+  font-size: 13px;
+  color: rgba(254, 243, 199, 0.5);
+}
+
+/* Barra de progreso */
+.mnt-screen-progress-wrap {
+  width: 300px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-bottom: 32px;
+}
+
+.mnt-screen-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  border-radius: 99px;
+  transition: width 1s linear;
+}
+
+/* Footer info */
+.mnt-screen-footer {
+  font-size: 12px;
+  color: rgba(254, 243, 199, 0.35);
+  text-align: center;
+}
+
+/* Puntos animados de "Cargando..." */
+.mnt-screen-dots::after {
+  content: '';
+  display: inline-block;
+  animation: mnt-dots 1.5s steps(4, end) infinite;
+}
+
+@keyframes mnt-dots {
+  0%   { content: ''; }
+  25%  { content: '.'; }
+  50%  { content: '..'; }
+  75%  { content: '...'; }
+  100% { content: ''; }
+}
