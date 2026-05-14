@@ -36,6 +36,7 @@ class TemperaturaGalpon(models.Model):
     # Fuente del dato.
     # SIMULADO = generado por el sistema.
     # MANUAL = ingresado por un usuario.
+    
     fuente = models.CharField(
         max_length=20,
         default='SIMULADO'

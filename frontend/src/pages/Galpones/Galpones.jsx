@@ -14,11 +14,118 @@ import Modal from "../../components/Modal";
 import InputField from "../../components/InputField";
 import Button from "../../components/Button";
 import ComboBox from "../../components/ComboBox";
+import MapPicker from "../../components/MapPicker";
 import api from "../../api/axios";
 import useIsMobile from "../../hooks/useIsMobile";
 
 import "./Galpones.css";
 
+// Fuera del componente para que la referencia sea estable entre renders
+const ESTADO_OPTIONS = [
+  { value: "activo", label: "Activo" },
+  { value: "inactivo", label: "Inactivo" },
+];
+
+const FORM_INICIAL = {
+  nombre: "",
+  capacidad: "",
+  descripcion: "",
+  estado: "activo",
+  latitud: null,
+  longitud: null,
+  ubicacion_nombre: "",
+};
+
+// ─── Formulario como componente propio ───────────────────────────────────────
+// Esto evita el problema de closures stale que ocurría cuando formFields era
+// una variable JSX calculada en el cuerpo del componente padre.
+function GalponForm({ form, setForm, onSubmit, saving, formError, esEdicion }) {
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  return (
+    <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+      <InputField
+        name="nombre"
+        placeholder="Nombre del galpón"
+        onChange={handleChange}
+        value={form.nombre}
+      />
+      <InputField
+        name="capacidad"
+        type="number"
+        placeholder="Capacidad (aves)"
+        onChange={handleChange}
+        value={form.capacidad}
+      />
+      <InputField
+        name="descripcion"
+        placeholder="Descripción (opcional)"
+        onChange={handleChange}
+        value={form.descripcion}
+      />
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+        <label style={{ fontSize: "13px", fontWeight: "600", color: "#4b5563", marginLeft: "4px" }}>
+          Estado
+        </label>
+        <div style={{ display: "flex", gap: "10px" }}>
+          {ESTADO_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setForm((prev) => ({ ...prev, estado: opt.value }))}
+              style={{
+                flex: 1,
+                padding: "11px",
+                borderRadius: "12px",
+                border: form.estado === opt.value ? "2px solid #2563eb" : "1.5px solid #e5e7eb",
+                background: form.estado === opt.value
+                  ? (opt.value === "activo" ? "#dcfce7" : "#fee2e2")
+                  : "#f9fafb",
+                color: form.estado === opt.value
+                  ? (opt.value === "activo" ? "#16a34a" : "#dc2626")
+                  : "#6b7280",
+                fontWeight: form.estado === opt.value ? "700" : "500",
+                fontSize: "14px",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <label style={{ fontSize: "13px", fontWeight: "600", color: "#374151", display: "block", marginBottom: "6px" }}>
+          Ubicación del galpón (opcional)
+        </label>
+        <MapPicker
+          lat={form.latitud}
+          lon={form.longitud}
+          ubicacion={form.ubicacion_nombre}
+          onChange={({ lat, lon, ubicacion }) =>
+            setForm((prev) => ({ ...prev, latitud: lat, longitud: lon, ubicacion_nombre: ubicacion }))
+          }
+        />
+      </div>
+
+      {formError && <p className="galp-dangerText">⚠️ {formError}</p>}
+      <Button
+        text={esEdicion ? "Guardar Cambios" : "Crear Galpón"}
+        loadingText="Guardando..."
+        loading={saving}
+        icon={<Plus size={18} />}
+      />
+    </form>
+  );
+}
+
+// ─── Componente principal ─────────────────────────────────────────────────────
 function Galpones() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const isMobile = useIsMobile();
@@ -30,14 +137,20 @@ function Galpones() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showVerModal, setShowVerModal] = useState(false);
   const [galponSeleccionado, setGalponSeleccionado] = useState(null);
-  const [form, setForm] = useState({
-    nombre: "",
-    capacidad: "",
-    descripcion: "",
-    estado: "activo",
-  });
+  const [form, setForm] = useState({ ...FORM_INICIAL });
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
+
+  const extraerError = (err) => {
+    const data = err?.response?.data;
+    if (!data) return "Error de conexión. Intente nuevamente.";
+    if (typeof data === "string") return data;
+    if (data.detail) return data.detail;
+    const primerCampo = Object.keys(data)[0];
+    const valor = data[primerCampo];
+    const mensaje = Array.isArray(valor) ? valor[0] : valor;
+    return `${primerCampo}: ${mensaje}`;
+  };
 
   useEffect(() => {
     fetchGalpones();
@@ -55,29 +168,35 @@ function Galpones() {
     }
   };
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    setFormError("");
-  };
-
   const resetForm = () => {
-    setForm({ nombre: "", capacidad: "", descripcion: "", estado: "activo" });
+    setForm({ ...FORM_INICIAL });
     setFormError("");
   };
 
   const handleCrear = async (e) => {
     e.preventDefault();
+    setFormError("");
+
+    const capacidadNum = parseInt(form.capacidad, 10);
+    if (!form.nombre.trim()) { setFormError("El nombre del galpón es obligatorio."); return; }
+    if (!form.capacidad || isNaN(capacidadNum) || capacidadNum <= 0) { setFormError("La capacidad debe ser un número mayor a 0."); return; }
+
     setSaving(true);
     try {
       await api.post("/galpones/", {
-        ...form,
-        capacidad: Number(form.capacidad),
+        nombre: form.nombre.trim(),
+        capacidad: capacidadNum,
+        descripcion: form.descripcion || null,
+        estado: form.estado,
+        latitud: form.latitud ?? null,
+        longitud: form.longitud ?? null,
+        ubicacion_nombre: form.ubicacion_nombre || null,
       });
       setShowModal(false);
       resetForm();
       fetchGalpones();
     } catch (err) {
-      setFormError(err.response?.data?.detail || "Error al crear el galpón");
+      setFormError(extraerError(err));
     } finally {
       setSaving(false);
     }
@@ -87,25 +206,40 @@ function Galpones() {
     setGalponSeleccionado(g);
     setForm({
       nombre: g.nombre,
-      capacidad: g.capacidad,
+      capacidad: String(g.capacidad),
       descripcion: g.descripcion || "",
       estado: g.estado,
+      latitud: g.latitud ? parseFloat(g.latitud) : null,
+      longitud: g.longitud ? parseFloat(g.longitud) : null,
+      ubicacion_nombre: g.ubicacion_nombre || "",
     });
+    setFormError("");
     setShowEditModal(true);
   };
 
   const handleEditar = async (e) => {
     e.preventDefault();
+    setFormError("");
+
+    const capacidadNum = parseInt(form.capacidad, 10);
+    if (!form.nombre.trim()) { setFormError("El nombre del galpón es obligatorio."); return; }
+    if (!form.capacidad || isNaN(capacidadNum) || capacidadNum <= 0) { setFormError("La capacidad debe ser un número mayor a 0."); return; }
+
     setSaving(true);
     try {
       await api.put(`/galpones/${galponSeleccionado.id}/`, {
-        ...form,
-        capacidad: Number(form.capacidad),
+        nombre: form.nombre.trim(),
+        capacidad: capacidadNum,
+        descripcion: form.descripcion || null,
+        estado: form.estado,
+        latitud: form.latitud ?? null,
+        longitud: form.longitud ?? null,
+        ubicacion_nombre: form.ubicacion_nombre || null,
       });
       setShowEditModal(false);
       fetchGalpones();
     } catch (err) {
-      setFormError(err.response?.data?.detail || "Error al editar el galpón");
+      setFormError(extraerError(err));
     } finally {
       setSaving(false);
     }
@@ -137,52 +271,6 @@ function Galpones() {
     fontWeight: "600",
   });
 
-  const formFields = (
-    <form
-      onSubmit={showEditModal ? handleEditar : handleCrear}
-      style={{ display: "flex", flexDirection: "column", gap: "14px" }}
-    >
-      <InputField
-        name="nombre"
-        placeholder="Nombre del galpón"
-        onChange={handleChange}
-        value={form.nombre}
-      />
-      <InputField
-        name="capacidad"
-        type="number"
-        placeholder="Capacidad (aves)"
-        onChange={handleChange}
-        value={form.capacidad}
-      />
-      <InputField
-        name="descripcion"
-        placeholder="Descripción (opcional)"
-        onChange={handleChange}
-        value={form.descripcion}
-      />
-      
-      <ComboBox
-        label="Estado"
-        value={form.estado}
-        onChange={(val) => setForm({ ...form, estado: val })}
-        options={[
-          { value: "activo", label: "Activo" },
-          { value: "inactivo", label: "Inactivo" },
-        ]}
-        placeholder="Seleccionar estado..."
-      />
-
-      {formError && <p className="galp-dangerText">⚠️ {formError}</p>}
-      <Button
-        text={showEditModal ? "Guardar Cambios" : "Crear Galpón"}
-        loadingText="Guardando..."
-        loading={saving}
-        icon={<Plus size={18} />}
-      />
-    </form>
-  );
-
   return (
     <div className="galp-layout">
       <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} showMobileTrigger={false} />
@@ -194,18 +282,20 @@ function Galpones() {
           padding: isMobile ? "16px" : "32px",
           paddingTop: isMobile ? "80px" : "32px",
           transition: "margin-left 0.3s ease",
-          flex: 1
+          flex: 1,
         }}
       >
-        <Topbar titulo="Gestión de Galpones" subtitulo="Administrar los galpones de la granja" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <Topbar
+          titulo="Gestión de Galpones"
+          subtitulo="Administrar los galpones de la granja"
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+        />
 
-        <div className="galp-header" style={{ marginBottom: '20px' }}>
+        <div className="galp-header" style={{ marginBottom: "20px" }}>
           <div style={{ flex: 1 }} />
           <button
-            onClick={() => {
-              resetForm();
-              setShowModal(true);
-            }}
+            onClick={() => { resetForm(); setShowModal(true); }}
             className="galp-addBtn"
           >
             <Plus size={18} /> Nuevo Galpón
@@ -235,45 +325,20 @@ function Galpones() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="galp-muted"
-                      style={{ padding: "24px" }}
-                    >
-                      Cargando...
-                    </td>
-                  </tr>
+                  <tr><td colSpan={5} className="galp-muted" style={{ padding: "24px" }}>Cargando...</td></tr>
                 ) : galponesFiltrados.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="galp-muted"
-                      style={{ padding: "24px" }}
-                    >
-                      No hay galpones registrados.
-                    </td>
-                  </tr>
+                  <tr><td colSpan={5} className="galp-muted" style={{ padding: "24px" }}>No hay galpones registrados.</td></tr>
                 ) : (
                   galponesFiltrados.map((g) => (
                     <tr key={g.id}>
-                      <td>
-                        <strong>{g.nombre}</strong>
-                      </td>
-                      <td className="galp-muted">
-                        {g.descripcion || "Sin descripción"}
-                      </td>
+                      <td><strong>{g.nombre}</strong></td>
+                      <td className="galp-muted">{g.descripcion || "Sin descripción"}</td>
                       <td>{g.capacidad} aves</td>
-                      <td>
-                        <span style={estadoBadge(g.estado)}>{g.estado}</span>
-                      </td>
+                      <td><span style={estadoBadge(g.estado)}>{g.estado}</span></td>
                       <td>
                         <div className="btn-action-group">
                           <button
-                            onClick={() => {
-                              setGalponSeleccionado(g);
-                              setShowVerModal(true);
-                            }}
+                            onClick={() => { setGalponSeleccionado(g); setShowVerModal(true); }}
                             className="btn-action btn-action--view"
                             title="Ver"
                           >
@@ -287,10 +352,7 @@ function Galpones() {
                             <Edit size={16} />
                           </button>
                           <button
-                            onClick={() => {
-                              setGalponSeleccionado(g);
-                              setShowDeleteModal(true);
-                            }}
+                            onClick={() => { setGalponSeleccionado(g); setShowDeleteModal(true); }}
                             className="btn-action btn-action--delete"
                             title="Eliminar"
                           >
@@ -310,76 +372,75 @@ function Galpones() {
               Mostrando {galponesFiltrados.length} galpones
             </span>
             <div className="galp-pagination">
-              <button className="galp-pageBtn" type="button">
-                <ChevronLeft size={16} /> Anterior
-              </button>
-              <button
-                className="galp-pageBtn galp-pageBtn--active"
-                type="button"
-              >
-                1
-              </button>
-              <button className="galp-pageBtn" type="button">
-                Siguiente <ChevronRight size={16} />
-              </button>
+              <button className="galp-pageBtn" type="button"><ChevronLeft size={16} /> Anterior</button>
+              <button className="galp-pageBtn galp-pageBtn--active" type="button">1</button>
+              <button className="galp-pageBtn" type="button">Siguiente <ChevronRight size={16} /></button>
             </div>
           </div>
         </div>
       </main>
 
+      {/* Modal Crear */}
       {showModal && (
-        <Modal titulo="Nuevo Galpón" onClose={() => setShowModal(false)}>
-          {formFields}
-        </Modal>
-      )}
-      {showEditModal && (
-        <Modal titulo="Editar Galpón" onClose={() => setShowEditModal(false)}>
-          {formFields}
+        <Modal titulo="Nuevo Galpón" onClose={() => { setShowModal(false); resetForm(); }}>
+          <GalponForm
+            form={form}
+            setForm={setForm}
+            onSubmit={handleCrear}
+            saving={saving}
+            formError={formError}
+            esEdicion={false}
+          />
         </Modal>
       )}
 
+      {/* Modal Editar */}
+      {showEditModal && (
+        <Modal titulo="Editar Galpón" onClose={() => { setShowEditModal(false); resetForm(); }}>
+          <GalponForm
+            form={form}
+            setForm={setForm}
+            onSubmit={handleEditar}
+            saving={saving}
+            formError={formError}
+            esEdicion={true}
+          />
+        </Modal>
+      )}
+
+      {/* Modal Eliminar */}
       {showDeleteModal && (
-        <Modal
-          titulo="Eliminar Galpón"
-          onClose={() => setShowDeleteModal(false)}
-        >
+        <Modal titulo="Eliminar Galpón" onClose={() => setShowDeleteModal(false)}>
           <p style={{ color: "#4b5563", marginBottom: "20px" }}>
             ¿Eliminar <strong>{galponSeleccionado?.nombre}</strong>?
           </p>
           <div className="galp-deleteActions">
-            <button
-              onClick={() => setShowDeleteModal(false)}
-              className="galp-cancelBtn"
-              type="button"
-            >
+            <button onClick={() => setShowDeleteModal(false)} className="galp-cancelBtn" type="button">
               Cancelar
             </button>
-            <button
-              onClick={handleEliminar}
-              className="galp-deleteBtn"
-              disabled={saving}
-              type="button"
-            >
+            <button onClick={handleEliminar} className="galp-deleteBtn" disabled={saving} type="button">
               {saving ? "Eliminando..." : "Sí, eliminar"}
             </button>
           </div>
         </Modal>
       )}
 
+      {/* Modal Ver */}
       {showVerModal && galponSeleccionado && (
         <Modal titulo="Detalle Galpón" onClose={() => setShowVerModal(false)}>
           <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
             {[
               { label: "Nombre", value: galponSeleccionado.nombre },
-              {
-                label: "Capacidad",
-                value: `${galponSeleccionado.capacidad} aves`,
-              },
-              {
-                label: "Descripción",
-                value: galponSeleccionado.descripcion || "Sin descripción",
-              },
+              { label: "Capacidad", value: `${galponSeleccionado.capacidad} aves` },
+              { label: "Descripción", value: galponSeleccionado.descripcion || "Sin descripción" },
               { label: "Estado", value: galponSeleccionado.estado },
+              { label: "Ubicación", value: galponSeleccionado.ubicacion_nombre || "No registrada" },
+              {
+                label: "Coordenadas",
+                value: galponSeleccionado.latitud && galponSeleccionado.longitud
+                  ? `${parseFloat(galponSeleccionado.latitud).toFixed(6)}, ${parseFloat(galponSeleccionado.longitud).toFixed(6)}`
+                  : "No registradas",
+              },
             ].map((item, i) => (
               <div key={i} className="galp-detailRow">
                 <span className="galp-detailLabel">{item.label}</span>
