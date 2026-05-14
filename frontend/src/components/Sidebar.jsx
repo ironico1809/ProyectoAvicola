@@ -17,11 +17,25 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronUp,
+  Globe,
+  CreditCard,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useUsuario } from "../hooks/useUsuario";
 
-const menuGroups = [
+// ─── Menús por rol ────────────────────────────────────────────────────────────
+
+const MENU_SUPERADMIN = [
+  {
+    type: "single",
+    icon: <Globe size={20} />,
+    label: "Panel Global",
+    path: "/superadmin",
+  },
+];
+
+const MENU_ADMIN_OPERADOR = [
   {
     type: "single",
     icon: <LayoutDashboard size={20} />,
@@ -60,10 +74,12 @@ const menuGroups = [
       { icon: <History size={18} />, label: "Movimientos", path: "/inventario/movimientos" },
     ],
   },
+  // Solo Admin ve Seguridad y Admin
   {
     type: "group",
     label: "Seguridad y Admin",
     icon: <ShieldCheck size={20} />,
+    soloAdmin: true,   // flag para filtrar
     items: [
       { icon: <Users size={18} />, label: "Usuarios", path: "/usuarios" },
       { icon: <ShieldCheck size={18} />, label: "Roles", path: "/roles" },
@@ -79,11 +95,22 @@ const menuGroups = [
   },
 ];
 
+// ─── Componente ───────────────────────────────────────────────────────────────
+
 function Sidebar({ open, setOpen, showMobileTrigger = true }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobile, setIsMobile] = useState(false);
   const [openGroups, setOpenGroups] = useState({});
+  const { esSuperAdmin, esAdmin } = useUsuario();
+
+  // Seleccionar menú según rol
+  const menuGroups = esSuperAdmin
+    ? MENU_SUPERADMIN
+    : MENU_ADMIN_OPERADOR.filter((g) => {
+        if (g.soloAdmin && !esAdmin) return false;
+        return true;
+      });
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -104,7 +131,7 @@ function Sidebar({ open, setOpen, showMobileTrigger = true }) {
       setOpenGroups({ [label]: true });
       return;
     }
-    setOpenGroups(prev => ({ ...prev, [label]: !prev[label] }));
+    setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
   };
 
   const handleNavigate = (path) => {
@@ -126,12 +153,22 @@ function Sidebar({ open, setOpen, showMobileTrigger = true }) {
         </button>
       )}
 
-      <aside style={{ ...sidebarStyle, width: sidebarWidth, transform: isMobile && !open ? "translateX(-100%)" : "translateX(0)" }}>
+      <aside
+        style={{
+          ...sidebarStyle,
+          width: sidebarWidth,
+          transform: isMobile && !open ? "translateX(-100%)" : "translateX(0)",
+        }}
+      >
         <div style={logoStyle}>
           {open && <img src="/logo.png" alt="logo" style={imgStyle} />}
           {open && <span style={logoTextStyle}>AviGranja</span>}
           <button onClick={() => setOpen(!open)} style={toggleStyle} type="button">
-            {open ? <ChevronLeft size={18} color="#fef3c7" /> : <img src="/logo.png" style={{ width: 24, height: 24 }} alt="" />}
+            {open ? (
+              <ChevronLeft size={18} color="#fef3c7" />
+            ) : (
+              <img src="/logo.png" style={{ width: 24, height: 24 }} alt="" />
+            )}
           </button>
         </div>
 
@@ -143,7 +180,11 @@ function Sidebar({ open, setOpen, showMobileTrigger = true }) {
                 <button
                   key={i}
                   onClick={() => handleNavigate(group.path)}
-                  style={{ ...navItemStyle, justifyContent: open ? "flex-start" : "center", ...(isActive ? activeStyle : {}) }}
+                  style={{
+                    ...navItemStyle,
+                    justifyContent: open ? "flex-start" : "center",
+                    ...(isActive ? activeStyle : {}),
+                  }}
                   title={group.label}
                 >
                   <span style={iconStyle}>{group.icon}</span>
@@ -153,16 +194,21 @@ function Sidebar({ open, setOpen, showMobileTrigger = true }) {
             }
 
             const isGroupOpen = openGroups[group.label];
-            const hasActiveChild = group.items.some(item => location.pathname === item.path);
+            const hasActiveChild = group.items.some(
+              (item) => location.pathname === item.path
+            );
 
             return (
               <div key={i} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 <button
                   onClick={() => toggleGroup(group.label)}
-                  style={{ 
-                    ...navItemStyle, 
+                  style={{
+                    ...navItemStyle,
                     justifyContent: open ? "flex-start" : "center",
-                    background: hasActiveChild && !isGroupOpen ? "rgba(255,255,255,0.1)" : "transparent"
+                    background:
+                      hasActiveChild && !isGroupOpen
+                        ? "rgba(255,255,255,0.1)"
+                        : "transparent",
                   }}
                   title={group.label}
                 >
@@ -183,7 +229,10 @@ function Sidebar({ open, setOpen, showMobileTrigger = true }) {
                         <button
                           key={idx}
                           onClick={() => handleNavigate(item.path)}
-                          style={{ ...subItemStyle, ...(isActive ? subActiveStyle : {}) }}
+                          style={{
+                            ...subItemStyle,
+                            ...(isActive ? subActiveStyle : {}),
+                          }}
                         >
                           <span style={iconStyle}>{item.icon}</span>
                           <span style={{ fontSize: "13px" }}>{item.label}</span>
@@ -199,7 +248,10 @@ function Sidebar({ open, setOpen, showMobileTrigger = true }) {
 
         <div style={footerStyle}>
           <button
-            style={{ ...logoutStyle, justifyContent: open ? "flex-start" : "center" }}
+            style={{
+              ...logoutStyle,
+              justifyContent: open ? "flex-start" : "center",
+            }}
             onClick={() => {
               localStorage.removeItem("access_token");
               localStorage.removeItem("refresh_token");
@@ -208,7 +260,9 @@ function Sidebar({ open, setOpen, showMobileTrigger = true }) {
             }}
             type="button"
           >
-            <span style={iconStyle}><LogOut size={20} /></span>
+            <span style={iconStyle}>
+              <LogOut size={20} />
+            </span>
             {open && <span style={labelStyle}>Cerrar Sesión</span>}
           </button>
         </div>
@@ -216,6 +270,8 @@ function Sidebar({ open, setOpen, showMobileTrigger = true }) {
     </>
   );
 }
+
+// ─── Estilos ──────────────────────────────────────────────────────────────────
 
 const sidebarStyle = {
   background: "linear-gradient(180deg, #78350f 0%, #92400e 100%)",
@@ -230,7 +286,13 @@ const sidebarStyle = {
   overflow: "hidden",
 };
 
-const backdropStyle = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", zIndex: 90 };
+const backdropStyle = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(0,0,0,0.5)",
+  backdropFilter: "blur(4px)",
+  zIndex: 90,
+};
 
 const mobileOpenBtnStyle = {
   position: "fixed",
@@ -254,13 +316,36 @@ const logoStyle = {
   minHeight: "70px",
 };
 
-const imgStyle = { width: "34px", height: "34px", borderRadius: "50%", border: "2px solid #fbbf24" };
+const imgStyle = {
+  width: "34px",
+  height: "34px",
+  borderRadius: "50%",
+  border: "2px solid #fbbf24",
+};
 
-const logoTextStyle = { fontSize: "17px", fontWeight: "800", color: "#fef3c7", flex: 1 };
+const logoTextStyle = {
+  fontSize: "17px",
+  fontWeight: "800",
+  color: "#fef3c7",
+  flex: 1,
+};
 
-const toggleStyle = { background: "rgba(255,255,255,0.1)", border: "none", borderRadius: "8px", padding: "6px", cursor: "pointer" };
+const toggleStyle = {
+  background: "rgba(255,255,255,0.1)",
+  border: "none",
+  borderRadius: "8px",
+  padding: "6px",
+  cursor: "pointer",
+};
 
-const navStyle = { display: "flex", flexDirection: "column", padding: "12px 8px", gap: "4px", flex: 1, overflowY: "auto" };
+const navStyle = {
+  display: "flex",
+  flexDirection: "column",
+  padding: "12px 8px",
+  gap: "4px",
+  flex: 1,
+  overflowY: "auto",
+};
 
 const navItemStyle = {
   display: "flex",
@@ -305,7 +390,10 @@ const subActiveStyle = {
   fontWeight: "600",
 };
 
-const footerStyle = { padding: "12px 8px", borderTop: "1px solid rgba(255,255,255,0.1)" };
+const footerStyle = {
+  padding: "12px 8px",
+  borderTop: "1px solid rgba(255,255,255,0.1)",
+};
 
 const logoutStyle = { ...navItemStyle, color: "rgba(255,255,255,0.6)" };
 

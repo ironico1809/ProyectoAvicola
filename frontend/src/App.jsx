@@ -26,6 +26,7 @@ import Mortandad from "./pages/Mortandad/Mortandad";
 import ChangePasswordPage from "./pages/ChangePasswordPage/ChangePasswordPage";
 import SuccessPage from "./pages/SuccessPage/SuccessPage";
 import ProtectedRoute from "./components/ProtectedRoute";
+import SuperAdmin from "./pages/SuperAdmin/SuperAdmin";
 
 function App() {
   return (
@@ -60,6 +61,9 @@ function App() {
         <Route path="/permisos" element={<ProtectedRoute><Permisos /></ProtectedRoute>} />
         <Route path="/roles" element={<ProtectedRoute><Roles /></ProtectedRoute>} />
         <Route path="/temperatura" element={<ProtectedRoute><Temperatura /></ProtectedRoute>} />
+
+        {/* ── Zona SuperAdmin ──────────────────────────────── */}
+        <Route path="/superadmin" element={<ProtectedRoute><SuperAdmin /></ProtectedRoute>} />
       </Routes>
       <TemperatureAlert />
     </BrowserRouter>

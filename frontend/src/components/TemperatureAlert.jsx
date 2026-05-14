@@ -3,9 +3,11 @@ import { AlertTriangle, X } from "lucide-react";
 import api from "../api/axios";
 import "./TemperatureAlert.css";
 import { useLocation } from "react-router-dom";
+import { useUsuario } from "../hooks/useUsuario";
 
 function TemperatureAlert() {
   const location = useLocation();
+  const { esSuperAdmin } = useUsuario();
 
   const POLL_MS = 15000;
   const SNOOZE_MS = 5 * 60 * 1000;
@@ -16,6 +18,7 @@ function TemperatureAlert() {
 
   const ocultarAlertaEnRuta =
     !estaAutenticado ||
+    esSuperAdmin ||
     location.pathname === "/" ||
     location.pathname === "/login" ||
     location.pathname === "/register" ||

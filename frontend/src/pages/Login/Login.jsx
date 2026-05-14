@@ -24,9 +24,11 @@ function Login() {
       localStorage.setItem('refresh_token', res.data.refresh)
       localStorage.setItem('usuario', JSON.stringify(res.data.usuario))
 
-      // Redirigir según el estado del primer ingreso
+      // Redirigir según el estado del primer ingreso y el rol
       if (res.data.usuario?.must_change_password) {
         navigate('/cambio-password')
+      } else if (res.data.usuario?.tipo_usuario === 'Superusuario') {
+        navigate('/superadmin')
       } else {
         navigate('/dashboard')
       }
