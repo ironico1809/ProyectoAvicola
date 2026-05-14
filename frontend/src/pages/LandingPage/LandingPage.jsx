@@ -1,31 +1,31 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import api from '../../api/axios';
-import './LandingPage.css';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import api from "../../api/axios";
+import "./LandingPage.css";
 
 /* ────────────────────────────────────────────────
    Datos estáticos de características
 ──────────────────────────────────────────────── */
 const FEATURES = [
   {
-    icon: '📊',
-    title: 'Monitoreo 24/7',
-    desc: 'Visualiza en tiempo real el estado de tus galpones, temperatura y alertas críticas desde cualquier dispositivo.',
+    icon: "📊",
+    title: "Monitoreo 24/7",
+    desc: "Visualiza en tiempo real el estado de tus galpones, temperatura y alertas críticas desde cualquier dispositivo.",
   },
   {
-    icon: '📋',
-    title: 'Reportes Inteligentes',
-    desc: 'Genera reportes de productividad, mortalidad y consumo con un clic. Exporta a Excel para análisis avanzados.',
+    icon: "📋",
+    title: "Reportes Inteligentes",
+    desc: "Genera reportes de productividad, mortalidad y consumo con un clic. Exporta a Excel para análisis avanzados.",
   },
   {
-    icon: '💰',
-    title: 'Control de Gastos',
-    desc: 'Gestiona insumos, proveedores y movimientos de almacén. Conoce el costo real por lote en todo momento.',
+    icon: "💰",
+    title: "Control de Gastos",
+    desc: "Gestiona insumos, proveedores y movimientos de almacén. Conoce el costo real por lote en todo momento.",
   },
   {
-    icon: '🔒',
-    title: 'Multi-Empresa Seguro',
-    desc: 'Arquitectura multi-tenant que garantiza que los datos de tu granja sean completamente privados y aislados.',
+    icon: "🔒",
+    title: "Multi-Empresa Seguro",
+    desc: "Arquitectura multi-tenant que garantiza que los datos de tu granja sean completamente privados y aislados.",
   },
 ];
 
@@ -35,22 +35,25 @@ const FEATURES = [
 function OnboardingModal({ plan, onClose }) {
   // Inicialización de la llave pública de Stripe desde las variables de entorno
   const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
-  const [form, setForm] = useState({ nombre_empresa: '', email: '' });
+  const [form, setForm] = useState({ nombre_empresa: "", email: "" });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (e) =>
+    setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!stripePublicKey) {
-      setError('Falta configurar VITE_STRIPE_PUBLIC_KEY en el archivo .env del frontend.');
+      setError(
+        "Falta configurar VITE_STRIPE_PUBLIC_KEY en el archivo .env del frontend.",
+      );
       return;
     }
     setLoading(true);
-    setError('');
+    setError("");
     try {
-      const res = await api.post('/pagos/crear-sesion/', {
+      const res = await api.post("/pagos/crear-sesion/", {
         plan_id: plan.id,
         email: form.email,
         nombre_empresa: form.nombre_empresa,
@@ -58,12 +61,12 @@ function OnboardingModal({ plan, onClose }) {
       if (res.data?.url) {
         window.location.href = res.data.url;
       } else {
-        setError('No se pudo obtener el enlace de pago. Intenta nuevamente.');
+        setError("No se pudo obtener el enlace de pago. Intenta nuevamente.");
       }
     } catch (err) {
       setError(
         err.response?.data?.detail ||
-          'Error al conectar con el servidor. Intenta más tarde.'
+          "Error al conectar con el servidor. Intenta más tarde.",
       );
     } finally {
       setLoading(false);
@@ -76,15 +79,27 @@ function OnboardingModal({ plan, onClose }) {
   };
 
   return (
-    <div className="lp-modal-overlay" onClick={handleOverlayClick} role="dialog" aria-modal="true">
+    <div
+      className="lp-modal-overlay"
+      onClick={handleOverlayClick}
+      role="dialog"
+      aria-modal="true"
+    >
       <div className="lp-modal">
-        <button className="lp-modal-close" onClick={onClose} aria-label="Cerrar">✕</button>
+        <button
+          className="lp-modal-close"
+          onClick={onClose}
+          aria-label="Cerrar"
+        >
+          ✕
+        </button>
 
         <div className="lp-modal-header">
           <span className="lp-modal-plan-badge">{plan.nombre}</span>
           <h3 className="lp-modal-title">¡Un paso para comenzar!</h3>
           <p className="lp-modal-subtitle">
-            Completa tu información y te redirigiremos al pago seguro con Stripe.
+            Completa tu información y te redirigiremos al pago seguro con
+            Stripe.
           </p>
         </div>
 
@@ -136,7 +151,7 @@ function OnboardingModal({ plan, onClose }) {
 
           <button
             type="submit"
-            className={`lp-modal-btn${loading ? ' lp-modal-btn--loading' : ''}`}
+            className={`lp-modal-btn${loading ? " lp-modal-btn--loading" : ""}`}
             disabled={loading}
           >
             {loading ? (
@@ -149,7 +164,8 @@ function OnboardingModal({ plan, onClose }) {
           </button>
 
           <p className="lp-modal-security">
-            🛡 Pago 100% seguro procesado por Stripe. No guardamos datos de tarjeta.
+            🛡 Pago 100% seguro procesado por Stripe. No guardamos datos de
+            tarjeta.
           </p>
         </form>
       </div>
@@ -170,7 +186,7 @@ function LandingPage() {
   // Fetch de planes desde el backend
   useEffect(() => {
     api
-      .get('/pagos/planes/')
+      .get("/pagos/planes/")
       .then((res) => setPlanes(Array.isArray(res.data) ? res.data : []))
       .catch(() => setPlanes([]))
       .finally(() => setLoadingPlanes(false));
@@ -179,12 +195,12 @@ function LandingPage() {
   // Efecto de scroll para el navbar
   useEffect(() => {
     const onScroll = () => setNavScrolled(window.scrollY > 50);
-    window.addEventListener('scroll', onScroll);
-    return () => window.removeEventListener('scroll', onScroll);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   const scrollTo = (id) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   };
 
   // Detectar el plan más popular (mayor precio = premium, o marcar manualmente)
@@ -192,25 +208,47 @@ function LandingPage() {
 
   return (
     <div className="lp-root">
-
       {/* ── NAVBAR ── */}
-      <nav className={`lp-nav${navScrolled ? ' lp-nav--scrolled' : ''}`}>
+      <nav className={`lp-nav${navScrolled ? " lp-nav--scrolled" : ""}`}>
         <div className="lp-nav-container">
           <div className="lp-nav-brand">
             <img src="/logo.png" alt="AviGranja Logo" className="lp-nav-logo" />
-            <span className="lp-nav-brand-name">AviGranja <span className="lp-nav-pro">Pro</span></span>
+            <span className="lp-nav-brand-name">
+              AviGranja <span className="lp-nav-pro">Pro</span>
+            </span>
           </div>
 
           <ul className="lp-nav-links">
-            <li><button onClick={() => scrollTo('inicio')} className="lp-nav-link">Inicio</button></li>
-            <li><button onClick={() => scrollTo('caracteristicas')} className="lp-nav-link">Características</button></li>
-            <li><button onClick={() => scrollTo('planes')} className="lp-nav-link">Planes</button></li>
+            <li>
+              <button
+                onClick={() => scrollTo("inicio")}
+                className="lp-nav-link"
+              >
+                Inicio
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => scrollTo("caracteristicas")}
+                className="lp-nav-link"
+              >
+                Características
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => scrollTo("planes")}
+                className="lp-nav-link"
+              >
+                Planes
+              </button>
+            </li>
           </ul>
 
           <button
             id="nav-login-btn"
             className="lp-nav-cta"
-            onClick={() => navigate('/login')}
+            onClick={() => navigate("/login")}
           >
             Iniciar Sesión →
           </button>
@@ -225,24 +263,28 @@ function LandingPage() {
         <div className="lp-hero-content">
           <span className="lp-hero-badge">🐔 Software Avícola Profesional</span>
           <h1 className="lp-hero-title">
-            Controla tu Granja.<br />
-            <span className="lp-hero-title-accent">Maximiza tu Producción.</span>
+            Controla tu Granja.
+            <br />
+            <span className="lp-hero-title-accent">
+              Maximiza tu Producción.
+            </span>
           </h1>
           <p className="lp-hero-subtitle">
-            La plataforma SaaS diseñada para productores avícolas que quieren tomar
-            decisiones inteligentes basadas en datos reales, desde cualquier lugar.
+            La plataforma SaaS diseñada para productores avícolas que quieren
+            tomar decisiones inteligentes basadas en datos reales, desde
+            cualquier lugar.
           </p>
           <div className="lp-hero-actions">
             <button
               id="hero-ver-planes-btn"
               className="lp-btn-primary"
-              onClick={() => scrollTo('planes')}
+              onClick={() => scrollTo("planes")}
             >
               Ver Planes y Precios
             </button>
             <button
               className="lp-btn-ghost"
-              onClick={() => scrollTo('caracteristicas')}
+              onClick={() => scrollTo("caracteristicas")}
             >
               Conocer más ↓
             </button>
@@ -308,7 +350,9 @@ function LandingPage() {
               <span>Cargando planes…</span>
             </div>
           ) : planes.length === 0 ? (
-            <p className="lp-pricing-empty">No hay planes disponibles por el momento.</p>
+            <p className="lp-pricing-empty">
+              No hay planes disponibles por el momento.
+            </p>
           ) : (
             <div className="lp-pricing-grid">
               {planes.map((plan) => {
@@ -316,7 +360,7 @@ function LandingPage() {
                 return (
                   <div
                     key={plan.id}
-                    className={`lp-plan-card${isPopular ? ' lp-plan-card--popular' : ''}`}
+                    className={`lp-plan-card${isPopular ? " lp-plan-card--popular" : ""}`}
                   >
                     {isPopular && (
                       <div className="lp-plan-badge">⭐ Más Popular</div>
@@ -352,7 +396,7 @@ function LandingPage() {
 
                     <button
                       id={`plan-contratar-${plan.id}`}
-                      className={`lp-plan-btn${isPopular ? ' lp-plan-btn--popular' : ''}`}
+                      className={`lp-plan-btn${isPopular ? " lp-plan-btn--popular" : ""}`}
                       onClick={() => setPlanSeleccionado(plan)}
                     >
                       Contratar Plan →
@@ -377,7 +421,7 @@ function LandingPage() {
           </p>
           <button
             className="lp-footer-login"
-            onClick={() => navigate('/login')}
+            onClick={() => navigate("/login")}
           >
             Iniciar Sesión
           </button>
