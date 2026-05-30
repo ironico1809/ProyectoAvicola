@@ -32,6 +32,21 @@ def _simular_temp_para_timestamp(ts: datetime) -> float:
     return round(base, 2)
 
 
+def _simular_clima_externo(ts: datetime) -> tuple[float, float]:
+    """Simula clima externo (temp/humedad) para entrenar el sensor virtual.
+
+    No es clima real histórico; es un proxy suficiente para demo.
+    """
+
+    temp = _simular_temp_para_timestamp(ts) + random.uniform(-2.0, 2.0)
+    humedad = 60.0 + random.uniform(-15.0, 15.0)
+    if humedad < 10:
+        humedad = 10.0
+    if humedad > 95:
+        humedad = 95.0
+    return round(temp, 2), round(humedad, 2)
+
+
 class Command(BaseCommand):
     help = (
         "Genera lecturas históricas simuladas en TemperaturaGalpon para pruebas/dev. "
@@ -40,7 +55,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--days', type=int, default=90, help='Cantidad de días hacia atrás (ej. 90 o 365).')
-        parser.add_argument('--interval-minutes', type=int, default=60, help='Frecuencia de muestreo (minutos).')
+        parser.add_argument('--interval-minutes', type=int, default=30, help='Frecuencia de muestreo (minutos).')
         parser.add_argument('--empresa-id', type=int, default=None, help='Filtra galpones por empresa.')
         parser.add_argument('--galpon-id', type=int, default=None, help='Genera para un galpón específico.')
         parser.add_argument('--clear', action='store_true', help='Borra lecturas existentes del rango antes de insertar.')
@@ -97,12 +112,16 @@ class Command(BaseCommand):
 
             rows: list[TemperaturaGalpon] = []
             for ts in timestamps:
-                temp = _simular_temp_para_timestamp(ts)
+                temp_ext, hum_ext = _simular_clima_externo(ts)
+                # Temperatura interna simulada: external + pequeña inercia/bias
+                temp = round(float(temp_ext + random.uniform(-1.0, 1.0)), 2)
                 estado = calcular_estado_temperatura(temp)
                 rows.append(
                     TemperaturaGalpon(
                         galpon=galpon,
                         temperatura=temp,
+                        temperatura_externa=temp_ext,
+                        humedad_externa=hum_ext,
                         estado=estado,
                         fuente='SIMULADO',
                         empresa_id=galpon.empresa_id,

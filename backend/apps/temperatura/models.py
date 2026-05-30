@@ -27,6 +27,24 @@ class TemperaturaGalpon(models.Model):
         decimal_places=2
     )
 
+    # Variables auxiliares (opcionales) para el “sensor virtual inteligente”.
+    # Permiten entrenar un modelo con features sin depender de sensores físicos.
+    temperatura_externa = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text='Temperatura externa (p.ej. OpenWeather) usada como feature.'
+    )
+
+    humedad_externa = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text='Humedad externa (p.ej. OpenWeather) usada como feature.'
+    )
+
     # Estado calculado automáticamente:
     # FRIO, NORMAL o CALOR.
     estado = models.CharField(
@@ -139,3 +157,51 @@ class PrediccionTemperatura(models.Model):
     def __str__(self) -> str:
         galpon_nombre: str = str(self.galpon.nombre) if self.galpon else 'Sin galpón' # type: ignore
         return f"Predicción {galpon_nombre} ({self.horizonte_horas}h) - {self.temperatura_predicha}°C"
+
+
+class ModeloSensorVirtualTemperatura(models.Model):
+    """Modelo entrenado para estimar temperatura interna (sensor virtual ML).
+
+    Para demo/universidad: entrenamos una regresión lineal multivariable con
+    features (hora + clima externo + valor previo). Guardamos coeficientes en BD.
+    """
+
+    id = models.BigAutoField(primary_key=True)
+
+    # Si se define galpón, el modelo es específico. Si es null, aplica a nivel empresa.
+    galpon = models.ForeignKey(
+        'galpones.Galpon',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='modelos_sensor_virtual',
+        db_column='galpon_id',
+    )
+
+    fecha_hora = models.DateTimeField(auto_now_add=True)
+
+    feature_names = models.JSONField(default=list)
+    coeficientes = models.JSONField(default=list)
+
+    r2 = models.FloatField(default=0.0)
+    n_muestras = models.PositiveIntegerField(default=0)
+    ventana_horas = models.PositiveIntegerField(default=2160)
+
+    # ── SaaS: tenant ──────────────────────────────────────────────────────────
+    empresa = models.ForeignKey(
+        'empresas.Empresa',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        default=1,
+        db_column='empresa_id',
+        related_name='modelos_sensor_virtual',
+    )
+
+    class Meta:
+        db_table = 'modelo_sensor_virtual_temperatura'
+        ordering = ['-fecha_hora', '-id']
+
+    def __str__(self) -> str:
+        scope = f"Galpón {self.galpon_id}" if self.galpon_id else "Empresa"
+        return f"Modelo Sensor Virtual ({scope}) r2={self.r2:.2f} n={self.n_muestras}"

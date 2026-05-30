@@ -13,6 +13,8 @@ from apps.temperatura.views import (
     PrediccionTemperaturaUltimaView,
     PrediccionTemperaturaUltimasView,
     PrediccionTemperaturaGenerarView,
+    SensorVirtualEntrenarView,
+    SensorVirtualActualView,
 )
 
 urlpatterns = [
@@ -47,4 +49,8 @@ urlpatterns = [
     path('prediccion/ultima/', PrediccionTemperaturaUltimaView.as_view(), name='temperatura_prediccion_ultima'),
     path('prediccion/ultimas/', PrediccionTemperaturaUltimasView.as_view(), name='temperatura_prediccion_ultimas'),
     path('prediccion/generar/', PrediccionTemperaturaGenerarView.as_view(), name='temperatura_prediccion_generar'),
+
+    # Sensor virtual inteligente (ML)
+    path('sensor-virtual/entrenar/', SensorVirtualEntrenarView.as_view(), name='sensor_virtual_entrenar'),
+    path('sensor-virtual/actual/', SensorVirtualActualView.as_view(), name='sensor_virtual_actual'),
 ]

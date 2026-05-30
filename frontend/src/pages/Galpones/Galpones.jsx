@@ -319,21 +319,31 @@ function Galpones() {
                   <th>Nombre</th>
                   <th>Descripción</th>
                   <th>Capacidad</th>
+                  <th>Ubicación</th>
                   <th>Estado</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={5} className="galp-muted" style={{ padding: "24px" }}>Cargando...</td></tr>
+                  <tr><td colSpan={6} className="galp-muted" style={{ padding: "24px" }}>Cargando...</td></tr>
                 ) : galponesFiltrados.length === 0 ? (
-                  <tr><td colSpan={5} className="galp-muted" style={{ padding: "24px" }}>No hay galpones registrados.</td></tr>
+                  <tr><td colSpan={6} className="galp-muted" style={{ padding: "24px" }}>No hay galpones registrados.</td></tr>
                 ) : (
                   galponesFiltrados.map((g) => (
                     <tr key={g.id}>
                       <td><strong>{g.nombre}</strong></td>
                       <td className="galp-muted">{g.descripcion || "Sin descripción"}</td>
                       <td>{g.capacidad} aves</td>
+                      <td>
+                        {g.ubicacion_nombre ? (
+                          <span title={`Lat: ${g.latitud}, Lon: ${g.longitud}`} style={{ color: "#3b82f6", fontSize: "13px" }}>
+                            📍 {g.ubicacion_nombre}
+                          </span>
+                        ) : (
+                          <span className="galp-muted" style={{ fontSize: "13px" }}>No registrada</span>
+                        )}
+                      </td>
                       <td><span style={estadoBadge(g.estado)}>{g.estado}</span></td>
                       <td>
                         <div className="btn-action-group">

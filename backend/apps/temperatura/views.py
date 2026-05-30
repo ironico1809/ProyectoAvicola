@@ -14,6 +14,11 @@ from apps.galpones.models import Galpon
 from apps.core.mixins import TenantSafeView
 from apps.temperatura.models import TemperaturaGalpon, PrediccionTemperatura
 from apps.temperatura.prediccion_service import predecir_temperatura_galpon
+from apps.temperatura.sensor_virtual_service import (
+    entrenar_sensor_virtual,
+    guardar_modelo_entrenado,
+    predecir_sensor_virtual,
+)
 from apps.temperatura.serializers import (
     TemperaturaGalponSerializer,
     PrediccionTemperaturaSerializer,
@@ -188,9 +193,9 @@ class TemperaturaTiempoRealView(APIView):
         # Guardamos como máximo 1 registro simulado por galpón cada N segundos
         # (configurable por env var).
         try:
-            persist_every_seconds = int(os.getenv("TEMPERATURA_PERSIST_EVERY_SECONDS", "300"))
+            persist_every_seconds = int(os.getenv("TEMPERATURA_PERSIST_EVERY_SECONDS", "1800"))
         except ValueError:
-            persist_every_seconds = 300
+            persist_every_seconds = 1800
 
         now = timezone.now()
 
@@ -199,6 +204,7 @@ class TemperaturaTiempoRealView(APIView):
         for galpon in galpones:
             clima = weather_service.get_current_data(galpon.id)
             temperatura = clima["temp"]
+            humedad = clima.get("humidity", 60.0)
             estado = calcular_estado_temperatura(temperatura)
 
             # ¿Debemos persistir?
@@ -228,6 +234,8 @@ class TemperaturaTiempoRealView(APIView):
                 registro = TemperaturaGalpon.objects.create(
                     galpon=galpon,
                     temperatura=temperatura,
+                    temperatura_externa=temperatura,
+                    humedad_externa=humedad,
                     estado=estado,
                     fuente='SIMULADO',
                     empresa_id=empresa_id,
@@ -899,4 +907,182 @@ class PrediccionTemperaturaGenerarView(TenantSafeView):
         return Response(
             PrediccionTemperaturaSerializer(pred).data,
             status=status.HTTP_201_CREATED
+        )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Sensor virtual inteligente (ML) — estimar temperatura interna sin sensores
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class SensorVirtualEntrenarView(TenantSafeView):
+    """Entrena un modelo para estimar temperatura interna.
+
+    Endpoint:
+    POST /temperatura/sensor-virtual/entrenar/
+
+    Body opcional:
+    { "galpon_id": 1, "ventana_horas": 2160 }
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        galpon_id_raw = request.data.get('galpon_id', None)
+        ventana_horas_raw = request.data.get('ventana_horas', 2160)
+
+        galpon_id = None
+        if galpon_id_raw not in (None, ''):
+            try:
+                galpon_id = int(galpon_id_raw)
+            except (ValueError, TypeError):
+                return Response({'error': 'galpon_id debe ser entero.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            ventana_horas = int(ventana_horas_raw)
+        except (ValueError, TypeError):
+            return Response({'error': 'ventana_horas debe ser entero.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        empresa_id = self.get_tenant_id()
+
+        # Validar acceso a galpón si se especifica
+        if galpon_id is not None:
+            try:
+                self.filter_by_tenant(Galpon.objects.all()).get(pk=galpon_id)
+            except Galpon.DoesNotExist:
+                return Response({'error': 'Galpón no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        resultado = entrenar_sensor_virtual(
+            empresa_id=empresa_id,
+            galpon_id=galpon_id,
+            ventana_horas=ventana_horas,
+        )
+
+        if not resultado:
+            return Response(
+                {
+                    'error': 'No hay suficientes datos para entrenar. Asegúrate de tener lecturas con temperatura_externa/humedad_externa.',
+                    'tip': 'Usa `python manage.py seed_temperaturas --days 90 --interval-minutes 60 --clear` y luego reintenta.',
+                },
+                status=status.HTTP_409_CONFLICT
+            )
+
+        modelo = guardar_modelo_entrenado(
+            empresa_id=empresa_id,
+            galpon_id=galpon_id,
+            ventana_horas=ventana_horas,
+            resultado=resultado,
+        )
+
+        registrar_evento(
+            request,
+            accion='crear',
+            modulo='temperatura',
+            entidad='ModeloSensorVirtualTemperatura',
+            entidad_id=modelo.id,
+            entidad_nombre='Modelo Sensor Virtual',
+            detalle={
+                'galpon_id': galpon_id,
+                'ventana_horas': ventana_horas,
+                'r2': modelo.r2,
+                'n_muestras': modelo.n_muestras,
+                'features': modelo.feature_names,
+            },
+            usuario=request.user,
+        )
+
+        return Response(
+            {
+                'status': 'Modelo entrenado',
+                'modelo_id': modelo.id,
+                'galpon_id': galpon_id,
+                'ventana_horas': modelo.ventana_horas,
+                'r2': modelo.r2,
+                'n_muestras': modelo.n_muestras,
+                'features': modelo.feature_names,
+            },
+            status=status.HTTP_201_CREATED
+        )
+
+
+class SensorVirtualActualView(TenantSafeView):
+    """Devuelve temperatura interna estimada por el modelo entrenado.
+
+    Endpoint:
+    GET /temperatura/sensor-virtual/actual/?galpon_id=1
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        galpon_id_raw = request.query_params.get('galpon_id')
+        if not galpon_id_raw:
+            return Response({'error': 'Se requiere galpon_id.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            galpon_id = int(galpon_id_raw)
+        except ValueError:
+            return Response({'error': 'galpon_id debe ser entero.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            galpon = self.filter_by_tenant(Galpon.objects.all()).get(pk=galpon_id)
+        except Galpon.DoesNotExist:
+            return Response({'error': 'Galpón no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        empresa_id = self.get_tenant_id()
+
+        # Clima externo actual (proxy)
+        clima = weather_service.get_current_data(galpon.id)
+        temp_ext = float(clima.get('temp', 28.0))
+        hum_ext = float(clima.get('humidity', 60.0))
+
+        # Última temp interna registrada (fallback)
+        ultimo = (
+            self.filter_by_tenant(TemperaturaGalpon.objects.filter(galpon=galpon))
+            .order_by('-fecha_hora', '-id')
+            .first()
+        )
+        temp_prev = float(ultimo.temperatura) if ultimo else temp_ext
+
+        pred = predecir_sensor_virtual(
+            empresa_id=empresa_id,
+            galpon_id=galpon.id,
+            temp_externa=temp_ext,
+            humedad_externa=hum_ext,
+            temp_prev=temp_prev,
+        )
+
+        if not pred:
+            return Response(
+                {
+                    'error': 'No existe un modelo entrenado o no es compatible.',
+                    'tip': 'Entrena con POST /temperatura/sensor-virtual/entrenar/ y asegúrate de tener datos seed con clima externo.',
+                },
+                status=status.HTTP_409_CONFLICT
+            )
+
+        temp_est = float(pred['temperatura_estimada'])
+        estado = calcular_estado_temperatura(temp_est)
+
+        return Response(
+            {
+                'galpon_id': galpon.id,
+                'galpon_nombre': galpon.nombre,
+                'temp_externa': temp_ext,
+                'humedad_externa': hum_ext,
+                'temp_prev': temp_prev,
+                'temperatura_estimada': temp_est,
+                'estado': estado,
+                'alerta': estado in ('FRIO', 'CALOR'),
+                'mensaje': obtener_mensaje_estado(estado),
+                'modelo': {
+                    'modelo_id': pred['modelo_id'],
+                    'r2': pred['r2'],
+                    'n_muestras': pred['n_muestras'],
+                    'ventana_horas': pred['ventana_horas'],
+                    'features': pred['feature_names'],
+                },
+                'source': clima.get('source', 'unknown'),
+            },
+            status=status.HTTP_200_OK
         )

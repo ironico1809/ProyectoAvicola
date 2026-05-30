@@ -1,6 +1,10 @@
 from django.contrib import admin
 
-from apps.temperatura.models import TemperaturaGalpon, PrediccionTemperatura
+from apps.temperatura.models import (
+    TemperaturaGalpon,
+    PrediccionTemperatura,
+    ModeloSensorVirtualTemperatura,
+)
 
 
 @admin.register(TemperaturaGalpon)
@@ -9,6 +13,8 @@ class TemperaturaGalponAdmin(admin.ModelAdmin):
         'id',
         'galpon',
         'temperatura',
+        'temperatura_externa',
+        'humedad_externa',
         'estado',
         'fuente',
         'fecha_hora',
@@ -56,6 +62,29 @@ class PrediccionTemperaturaAdmin(admin.ModelAdmin):
         'galpon__nombre',
         'estado_predicho',
         'mensaje',
+    ]
+
+    ordering = [
+        '-fecha_hora',
+        '-id',
+    ]
+
+
+@admin.register(ModeloSensorVirtualTemperatura)
+class ModeloSensorVirtualTemperaturaAdmin(admin.ModelAdmin):
+    list_display = [
+        'id',
+        'empresa',
+        'galpon',
+        'r2',
+        'n_muestras',
+        'ventana_horas',
+        'fecha_hora',
+    ]
+
+    list_filter = [
+        'empresa',
+        'galpon',
     ]
 
     ordering = [

@@ -110,6 +110,13 @@ def predecir_temperatura_galpon(
         future_time = last_time + timedelta(hours=h)
         x_future = last_x + h
         y_future = slope * x_future + intercept
+        
+        # Evitar extrapolaciones absurdas (clamping)
+        if y_future > 60.0:
+            y_future = 60.0
+        elif y_future < 0.0:
+            y_future = 0.0
+            
         temp_final = y_future
         puntos.append({
             'fecha_hora': future_time.isoformat(),
