@@ -10,6 +10,9 @@ from apps.temperatura.views import (
     SimulacionIniciarView,
     ClimaActualView,
     ClimaManualOverrideView,
+    PrediccionTemperaturaUltimaView,
+    PrediccionTemperaturaUltimasView,
+    PrediccionTemperaturaGenerarView,
 )
 
 urlpatterns = [
@@ -39,4 +42,9 @@ urlpatterns = [
 
     # Forzar valor manual en el WeatherManager (para pruebas de alerta)
     path('clima/manual/', ClimaManualOverrideView.as_view(), name='temperatura_clima_manual'),
+
+    # CU27: predicción de temperatura (IA)
+    path('prediccion/ultima/', PrediccionTemperaturaUltimaView.as_view(), name='temperatura_prediccion_ultima'),
+    path('prediccion/ultimas/', PrediccionTemperaturaUltimasView.as_view(), name='temperatura_prediccion_ultimas'),
+    path('prediccion/generar/', PrediccionTemperaturaGenerarView.as_view(), name='temperatura_prediccion_generar'),
 ]

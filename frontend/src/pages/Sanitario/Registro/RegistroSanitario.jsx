@@ -38,14 +38,23 @@ function RegistroSanitario() {
       const uStr = localStorage.getItem("usuario");
       if (uStr) {
         const u = JSON.parse(uStr);
-        setForm((prev) => ({ ...prev, responsable: u.nom_usuario || u.email || "" }));
+        setForm((prev) => ({
+          ...prev,
+          responsable: u.nom_usuario || u.email || "",
+        }));
       }
-    } catch(e) {}
+    } catch {
+      // Si el localStorage está corrupto/no es JSON válido, seguimos sin bloquear.
+    }
     fetchData();
+
+    // Polling: refresca datos sin interrumpir al usuario
+    const id = setInterval(() => fetchData({ silent: true }), 15000);
+    return () => clearInterval(id);
   }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const [lotesRes, insRes, appsRes, usuariosRes] = await Promise.all([
         api.get("/lotes/"),
@@ -66,7 +75,7 @@ function RegistroSanitario() {
     } catch (e) {
       console.error("Error cargando datos sanitarios", e);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -96,7 +105,7 @@ function RegistroSanitario() {
       });
       fetchData();
     } catch (e) {
-      alert("Error al registrar aplicación sanitaria");
+      console.error("Error al registrar aplicación sanitaria", e);
     }
   };
 
@@ -106,30 +115,43 @@ function RegistroSanitario() {
   );
 
   const responsablesUnicos = useMemo(() => {
-    return Array.from(new Set((aplicaciones || []).map(a => a.responsable).filter(Boolean)));
+    return Array.from(
+      new Set((aplicaciones || []).map((a) => a.responsable).filter(Boolean)),
+    );
   }, [aplicaciones]);
 
   const unidadesUnicas = useMemo(() => {
-    return Array.from(new Set((aplicaciones || []).map(a => a.unidad_dosis).filter(Boolean)));
+    return Array.from(
+      new Set((aplicaciones || []).map((a) => a.unidad_dosis).filter(Boolean)),
+    );
   }, [aplicaciones]);
 
   return (
     <div className="inv-layout">
-      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} showMobileTrigger={false} />
+      <Sidebar
+        open={sidebarOpen}
+        setOpen={setSidebarOpen}
+        showMobileTrigger={false}
+      />
 
       <main
         className="inv-main"
-        style={{ 
+        style={{
           marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px",
           padding: isMobile ? "16px" : "32px",
           paddingTop: isMobile ? "80px" : "32px",
           transition: "margin-left 0.3s ease",
-          flex: 1
+          flex: 1,
         }}
       >
-        <Topbar titulo="Registro de Aplicaciones Sanitarias" subtitulo="Vacunas, medicamentos y tratamientos por lote" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <Topbar
+          titulo="Registro de Aplicaciones Sanitarias"
+          subtitulo="Vacunas, medicamentos y tratamientos por lote"
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+        />
 
-        <div className="inv-header" style={{ marginBottom: '20px' }}>
+        <div className="inv-header" style={{ marginBottom: "20px" }}>
           <div style={{ flex: 1 }} />
           <div className="inv-header-actions">
             <button
@@ -203,22 +225,28 @@ function RegistroSanitario() {
               label="Lote de Aves"
               value={form.lote}
               onChange={(val) => setForm({ ...form, lote: val })}
-              options={lotes.map(l => ({
+              options={lotes.map((l) => ({
                 value: l.id_lote,
-                label: `Lote ${l.id_lote} - ${l.raza} (${l.estado})`
+                label: `Lote ${l.id_lote} - ${l.raza} (${l.estado})`,
               }))}
               placeholder="Seleccionar lote..."
               required
             />
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "12px",
+              }}
+            >
               <ComboBox
                 label="Insumo Utilizado"
                 value={form.insumo}
                 onChange={(val) => setForm({ ...form, insumo: val })}
-                options={insumos.map(i => ({
+                options={insumos.map((i) => ({
                   value: i.id_insumo,
-                  label: i.nombre
+                  label: i.nombre,
                 }))}
                 placeholder="Ninguno / Genérico"
               />
@@ -259,7 +287,7 @@ function RegistroSanitario() {
               onChange={(e) => setForm({ ...form, dosis: e.target.value })}
               required
             />
-            
+
             <ComboBox
               label="Unidad (ej: ml, gr, dosis)"
               value={form.unidad_dosis}
@@ -271,8 +299,10 @@ function RegistroSanitario() {
                 { value: "mg", label: "mg" },
                 { value: "dosis", label: "dosis" },
                 { value: "gotas", label: "gotas" },
-                ...unidadesUnicas.map(u => ({ value: u, label: u }))
-              ].filter((v, i, a) => a.findIndex(t => t.value === v.value) === i)}
+                ...unidadesUnicas.map((u) => ({ value: u, label: u })),
+              ].filter(
+                (v, i, a) => a.findIndex((t) => t.value === v.value) === i,
+              )}
               placeholder="Escribe o selecciona..."
               required
             />
@@ -283,9 +313,14 @@ function RegistroSanitario() {
               onChange={(val) => setForm({ ...form, responsable: val })}
               allowCustom={true}
               options={[
-                ...usuarios.map(u => ({ value: u.nom_usuario, label: u.nom_usuario })),
-                ...responsablesUnicos.map(r => ({ value: r, label: r }))
-              ].filter((v, i, a) => a.findIndex(t => t.value === v.value) === i)}
+                ...usuarios.map((u) => ({
+                  value: u.nom_usuario,
+                  label: u.nom_usuario,
+                })),
+                ...responsablesUnicos.map((r) => ({ value: r, label: r })),
+              ].filter(
+                (v, i, a) => a.findIndex((t) => t.value === v.value) === i,
+              )}
               placeholder="Nombre del encargado"
             />
 

@@ -1,278 +1,23 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Temperatura — UI moderna premium (CU08 / CU09)
+   ═══════════════════════════════════════════════════════════════════ */
+
 .temperatura-page {
   padding: 0;
   box-sizing: border-box;
-}
-
-.temperatura-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.temperatura-header h1 {
-  margin: 0;
-  font-size: 26px;
-  color: #1f2937;
-}
-
-.temperatura-header p {
-  margin-top: 6px;
-  color: #6b7280;
-}
-
-.btn-actualizar {
-  background: #2563eb;
-  color: white;
-  border: none;
-  padding: 12px 18px;
-  border-radius: 10px;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.btn-actualizar:hover {
-  background: #1d4ed8;
-}
-
-.alerta-error {
-  background: #fee2e2;
-  color: #991b1b;
-  padding: 12px;
-  border-radius: 10px;
-  margin-bottom: 16px;
-}
-
-.alerta-ok {
-  background: #dcfce7;
-  color: #166534;
-  padding: 12px;
-  border-radius: 10px;
-  margin-bottom: 16px;
-}
-
-.cargando {
-  padding: 24px;
-  background: white;
-  border-radius: 14px;
-  color: #6b7280;
-}
-
-.temperatura-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 20px;
-  margin-bottom: 28px;
-}
-
-.temperatura-card {
-  background: white;
-  padding: 22px;
-  border-radius: 18px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
-  border-left: 8px solid #9ca3af;
-}
-
-.temperatura-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.temperatura-card-header h2 {
-  margin: 0;
-  color: #111827;
-  font-size: 20px;
-}
-
-.temperatura-card-header span {
-  background: #f3f4f6;
-  color: #374151;
-  padding: 5px 9px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.temperatura-valor {
-  font-size: 42px;
-  font-weight: bold;
-  margin: 18px 0;
-  color: #111827;
-}
-
-.temperatura-estado {
-  color: #374151;
-  margin-bottom: 10px;
-}
-
-.temperatura-mensaje {
-  color: #4b5563;
-  min-height: 40px;
-}
-
-.temperatura-card small {
-  color: #6b7280;
-}
-
-.estado-normal {
-  border-left-color: #22c55e;
-}
-
-.estado-frio {
-  border-left-color: #3b82f6;
-}
-
-.estado-calor {
-  border-left-color: #ef4444;
-}
-
-.estado-sin-datos {
-  border-left-color: #9ca3af;
-}
-
-.temperatura-secciones {
-  display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 20px;
-  align-items: start;
-}
-
-.temperatura-formulario,
-.temperatura-historial {
-  background: white;
-  padding: 22px;
-  border-radius: 18px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
-}
-
-.temperatura-formulario h2,
-.temperatura-historial h2 {
-  margin-top: 0;
-  color: #111827;
-}
-
-.temperatura-formulario p {
-  color: #6b7280;
-}
-
-.temperatura-formulario form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0;
 }
 
-.temperatura-formulario label {
-  font-weight: 600;
-  color: #374151;
-}
-
-.temperatura-formulario select,
-.temperatura-formulario input {
-  padding: 11px;
-  border: 1px solid #d1d5db;
-  border-radius: 10px;
-  outline: none;
-}
-
-.temperatura-formulario select:focus,
-.temperatura-formulario input:focus {
-  border-color: #2563eb;
-}
-
-.temperatura-formulario button {
-  margin-top: 8px;
-  padding: 12px;
-  background: #16a34a;
-  color: white;
-  border: none;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.temperatura-formulario button:hover {
-  background: #15803d;
-}
-
-.temperatura-historial {
-  overflow-x: auto;
-}
-
-.temperatura-historial table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.temperatura-historial th,
-.temperatura-historial td {
-  padding: 12px;
-  border-bottom: 1px solid #e5e7eb;
-  text-align: left;
-}
-
-.temperatura-historial th {
-  color: #374151;
-  font-size: 14px;
-}
-
-.temperatura-historial td {
-  color: #4b5563;
-}
-
-.badge {
-  padding: 5px 9px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.badge.estado-normal {
-  background: #dcfce7;
-  color: #166534;
-  border-left: none;
-}
-
-.badge.estado-frio {
-  background: #dbeafe;
-  color: #1e40af;
-  border-left: none;
-}
-
-.badge.estado-calor {
-  background: #fee2e2;
-  color: #991b1b;
-  border-left: none;
-}
-
-@media (max-width: 900px) {
-  .temperatura-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  .temperatura-secciones {
-    grid-template-columns: 1fr;
-  }
-}
-
-
-
-.temperatura-formulario {
-  min-width: 0;
-}
-
-.temperatura-historial {
-  min-width: 0;
-}
-
-.temperatura-card {
-  min-width: 0;
-}
-
+/* ── Header ───────────────────────────────────────────────────────── */
 .temperatura-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
 }
 
 .temperatura-header > div {
@@ -280,13 +25,420 @@
 }
 
 .temperatura-header h1 {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
   word-break: normal;
 }
 
+.temperatura-header p {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+/* ── Update button ─────────────────────────────────────────────────── */
+.btn-actualizar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  border: none;
+  padding: 11px 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+  white-space: nowrap;
+}
+
+.btn-actualizar:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(245, 158, 11, 0.4);
+}
+
+/* ── Alerts / messages ─────────────────────────────────────────────── */
+.alerta-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  padding: 13px 16px;
+  border-radius: 14px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 500;
+  animation: slideIn 0.3s ease;
+}
+
+.alerta-ok {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  padding: 13px 16px;
+  border-radius: 14px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 500;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.cargando {
+  padding: 24px;
+  background: white;
+  border-radius: 20px;
+  color: #94a3b8;
+  font-size: 14px;
+  text-align: center;
+  border: 1px solid #f1f5f9;
+}
+
+/* ── Cards grid ───────────────────────────────────────────────────── */
+.temperatura-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+/* ── Temperature card ─────────────────────────────────────────────── */
+.temperatura-card {
+  background: white;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f1f5f9;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  min-width: 0;
+}
+
+.temperatura-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.1);
+}
+
+/* Color stripe at top */
+.temperatura-card::before {
+  content: "";
+  display: block;
+  height: 5px;
+  width: 100%;
+}
+
+.estado-normal::before { background: linear-gradient(90deg, #10b981, #059669); }
+.estado-frio::before   { background: linear-gradient(90deg, #3b82f6, #2563eb); }
+.estado-calor::before  { background: linear-gradient(90deg, #ef4444, #dc2626); }
+.estado-sin-datos::before { background: linear-gradient(90deg, #94a3b8, #64748b); }
+
+.temperatura-card-body {
+  padding: 22px;
+}
+
+.temperatura-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.temperatura-card-header h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* Estado badge within card header */
+.temperatura-card-header .estado-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.temperatura-card.estado-normal .estado-badge {
+  background: rgba(16,185,129,0.12);
+  color: #059669;
+}
+
+.temperatura-card.estado-frio .estado-badge {
+  background: rgba(59,130,246,0.12);
+  color: #2563eb;
+}
+
+.temperatura-card.estado-calor .estado-badge {
+  background: rgba(239,68,68,0.12);
+  color: #dc2626;
+}
+
+.temperatura-card.estado-sin-datos .estado-badge {
+  background: rgba(148,163,184,0.12);
+  color: #64748b;
+}
+
+.temperatura-valor {
+  font-size: 48px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+  letter-spacing: -2px;
+  margin-bottom: 4px;
+}
+
+.temperatura-valor span {
+  font-size: 22px;
+  font-weight: 600;
+  color: #64748b;
+  letter-spacing: 0;
+}
+
+.temperatura-estado {
+  color: #64748b;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.temperatura-estado strong {
+  color: #1e293b;
+}
+
+.temperatura-mensaje {
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.5;
+  min-height: 36px;
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin: 10px 0;
+  border: 1px solid #e2e8f0;
+}
+
+.temperatura-card small {
+  color: #94a3b8;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+/* ── Two-column layout: form + historial ──────────────────────────── */
+.temperatura-secciones {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+/* ── Panel base ───────────────────────────────────────────────────── */
+.temperatura-formulario,
+.temperatura-historial {
+  background: white;
+  padding: 24px;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f1f5f9;
+  min-width: 0;
+}
+
+.temperatura-formulario h2,
+.temperatura-historial h2 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.temperatura-formulario > p {
+  margin: 0 0 20px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Form layout */
+.temperatura-formulario form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.temperatura-formulario label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.temperatura-formulario select,
+.temperatura-formulario input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  outline: none;
+  font-size: 14px;
+  font-family: inherit;
+  color: #334155;
+  background: white;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.temperatura-formulario select:focus,
+.temperatura-formulario input:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.temperatura-formulario button {
+  width: 100%;
+  margin-top: 4px;
+  padding: 12px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.temperatura-formulario button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+}
+
+.temperatura-formulario small {
+  display: block;
+  color: #94a3b8;
+  font-size: 12px;
+  margin-top: -8px;
+}
+
+/* ── Historial ─────────────────────────────────────────────────────── */
+.temperatura-historial {
+  overflow-x: auto;
+}
+
+.temperatura-historial h2 {
+  margin-bottom: 16px;
+}
+
+.temperatura-historial table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.temperatura-historial th {
+  padding: 10px 14px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1.5px solid #f1f5f9;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.temperatura-historial td {
+  padding: 13px 14px;
+  font-size: 13px;
+  color: #1e293b;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.temperatura-historial tr:last-child td {
+  border-bottom: none;
+}
+
+.temperatura-historial tr:hover td {
+  background: #f8fafc;
+}
+
+/* ── Status badges in historial ───────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.badge.estado-normal {
+  background: rgba(16,185,129,0.1);
+  color: #059669;
+  border-left: none;
+}
+
+.badge.estado-frio {
+  background: rgba(59,130,246,0.1);
+  color: #2563eb;
+  border-left: none;
+}
+
+.badge.estado-calor {
+  background: rgba(239,68,68,0.1);
+  color: #dc2626;
+  border-left: none;
+}
+
+.badge.estado-sin-datos {
+  background: rgba(148,163,184,0.1);
+  color: #64748b;
+  border-left: none;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────── */
 @media (max-width: 900px) {
+  .temperatura-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .temperatura-secciones {
+    grid-template-columns: 1fr;
+  }
+
   .temperatura-page {
-    margin-left: 0;
     width: 100%;
-    padding: 18px;
   }
 }

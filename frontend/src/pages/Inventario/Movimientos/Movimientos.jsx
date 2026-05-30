@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDownCircle,
   ArrowUpCircle,
@@ -43,12 +43,13 @@ function Movimientos() {
     motivo: "",
   });
 
-  useEffect(() => {
-    fetchCatalogos();
-    fetchMovimientos();
-  }, []);
+  const filtersRef = useRef(filters);
 
-  const fetchCatalogos = async () => {
+  useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
+
+  const fetchCatalogos = useCallback(async () => {
     try {
       const [insRes, provRes] = await Promise.all([
         api.get("/insumos/catalogo/"),
@@ -59,33 +60,48 @@ function Movimientos() {
     } catch (e) {
       console.error("Error cargando catálogos", e);
     }
-  };
+  }, []);
 
-  const fetchMovimientos = async (nextFilters = filters) => {
-    setLoading(true);
-    try {
-      const params = {};
-      if (nextFilters.insumo) params.insumo = nextFilters.insumo;
-      if (nextFilters.tipo_movimiento)
-        params.tipo_movimiento = nextFilters.tipo_movimiento;
-      if (nextFilters.fecha_inicio)
-        params.fecha_inicio = nextFilters.fecha_inicio;
-      if (nextFilters.fecha_fin) params.fecha_fin = nextFilters.fecha_fin;
-      if (nextFilters.motivo) params.motivo = nextFilters.motivo;
+  const fetchMovimientos = useCallback(
+    async (nextFilters = filtersRef.current, { silent = false } = {}) => {
+      if (!silent) setLoading(true);
+      try {
+        const params = {};
+        if (nextFilters.insumo) params.insumo = nextFilters.insumo;
+        if (nextFilters.tipo_movimiento)
+          params.tipo_movimiento = nextFilters.tipo_movimiento;
+        if (nextFilters.fecha_inicio)
+          params.fecha_inicio = nextFilters.fecha_inicio;
+        if (nextFilters.fecha_fin) params.fecha_fin = nextFilters.fecha_fin;
+        if (nextFilters.motivo) params.motivo = nextFilters.motivo;
 
-      const res = await api.get("/insumos/movimientos/", { params });
-      setMovimientos(res.data);
-    } catch (e) {
-      console.error("Error cargando movimientos", e);
-    } finally {
-      setLoading(false);
-    }
-  };
+        const res = await api.get("/insumos/movimientos/", { params });
+        setMovimientos(res.data);
+      } catch (e) {
+        console.error("Error cargando movimientos", e);
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    fetchCatalogos();
+    fetchMovimientos();
+
+    // Polling para reintentar/actualizar sin molestar al usuario
+    const id = setInterval(() => {
+      fetchMovimientos(filtersRef.current, { silent: true });
+    }, 15000);
+
+    return () => clearInterval(id);
+  }, [fetchCatalogos, fetchMovimientos]);
 
   const handleCreateMov = async (e) => {
     e.preventDefault();
     if (!formMov.insumo) {
-      alert("Selecciona un insumo.");
+      console.warn("Selecciona un insumo.");
       return;
     }
     try {
@@ -100,7 +116,7 @@ function Movimientos() {
       setShowModalMov(false);
       fetchMovimientos();
     } catch (e) {
-      alert("Error al registrar movimiento");
+      console.error("Error al registrar movimiento", e);
     }
   };
 
@@ -112,21 +128,30 @@ function Movimientos() {
 
   return (
     <div className="inv-layout">
-      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} showMobileTrigger={false} />
+      <Sidebar
+        open={sidebarOpen}
+        setOpen={setSidebarOpen}
+        showMobileTrigger={false}
+      />
 
       <main
         className="inv-main"
-        style={{ 
+        style={{
           marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px",
           padding: isMobile ? "16px" : "32px",
           paddingTop: isMobile ? "80px" : "32px",
           transition: "margin-left 0.3s ease",
-          flex: 1
+          flex: 1,
         }}
       >
-        <Topbar titulo="Movimientos de Almacén" subtitulo="Entradas y salidas con trazabilidad" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <Topbar
+          titulo="Movimientos de Almacén"
+          subtitulo="Entradas y salidas con trazabilidad"
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+        />
 
-        <div className="inv-header" style={{ marginBottom: '20px' }}>
+        <div className="inv-header" style={{ marginBottom: "20px" }}>
           <div style={{ flex: 1 }} />
           <div className="inv-header-actions">
             <button
@@ -163,7 +188,7 @@ function Movimientos() {
               gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
               gap: 12,
               padding: 12,
-              alignItems: "end"
+              alignItems: "end",
             }}
           >
             <ComboBox
@@ -180,7 +205,9 @@ function Movimientos() {
             <ComboBox
               label="Tipo"
               value={filters.tipo_movimiento}
-              onChange={(val) => setFilters({ ...filters, tipo_movimiento: val })}
+              onChange={(val) =>
+                setFilters({ ...filters, tipo_movimiento: val })
+              }
               options={[
                 { value: "Entrada", label: "Entrada" },
                 { value: "Salida", label: "Salida" },

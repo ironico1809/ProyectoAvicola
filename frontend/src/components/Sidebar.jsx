@@ -68,6 +68,7 @@ const MENU_ADMIN_OPERADOR = [
     items: [
       { icon: <Wheat size={18} />, label: "Alimentación", path: "/alimentacion" },
       { icon: <Thermometer size={18} />, label: "Temperatura", path: "/temperatura" },
+      { icon: <BarChart3 size={18} />, label: "Predicción IA", path: "/prediccion" },
       { icon: <ClipboardList size={18} />, label: "Estado", path: "/estado" },
     ],
   },

@@ -78,3 +78,64 @@ class TemperaturaGalpon(models.Model):
         # str() garantiza que el retorno sea siempre str aunque nombre sea None.
         galpon_nombre: str = str(self.galpon.nombre) if self.galpon else 'Sin galpón' # type: ignore
         return f"{galpon_nombre} - {self.temperatura}°C - {self.estado}" 
+
+
+class PrediccionTemperatura(models.Model):
+    """Predicción de temperatura a corto plazo por galpón (CU27).
+
+    Guarda el resultado de un cálculo de predicción (normalmente ejecutado por
+    un scheduler) para que el frontend pueda consultarlo desde el dashboard.
+
+    Nota: el sistema actual no persiste una tabla separada de alertas climáticas;
+    la condición de alerta se representa con `umbral_superado` y `estado_predicho`.
+    """
+
+    id = models.BigAutoField(primary_key=True)
+
+    galpon = models.ForeignKey(
+        'galpones.Galpon',
+        on_delete=models.CASCADE,
+        related_name='predicciones_temperatura',
+        db_column='galpon_id',
+    )
+
+    # Momento en el que se generó la predicción.
+    fecha_hora = models.DateTimeField(auto_now_add=True)
+
+    # Horizonte de predicción (en horas) y ventana histórica usada.
+    horizonte_horas = models.PositiveSmallIntegerField(default=3)
+    ventana_horas = models.PositiveSmallIntegerField(default=24)
+
+    # Temperatura predicha al final del horizonte (t + horizonte_horas).
+    temperatura_predicha = models.DecimalField(max_digits=5, decimal_places=2)
+
+    # Estado de la temperatura predicha (FRIO/NORMAL/CALOR).
+    estado_predicho = models.CharField(max_length=20)
+
+    # Métrica simple de “confianza” (0..1) calculada a partir del ajuste.
+    confianza = models.FloatField(default=0.0)
+
+    # Serie de puntos predichos (lista de {fecha_hora, temperatura}).
+    puntos = models.JSONField(default=list, blank=True)
+
+    umbral_superado = models.BooleanField(default=False)
+    mensaje = models.TextField(blank=True, null=True)
+
+    # ── SaaS: tenant ──────────────────────────────────────────────────────────
+    empresa = models.ForeignKey(
+        'empresas.Empresa',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        default=1,
+        db_column='empresa_id',
+        related_name='predicciones_temperatura',
+    )
+
+    class Meta:
+        db_table = 'prediccion_temperatura'
+        ordering = ['-fecha_hora', '-id']
+
+    def __str__(self) -> str:
+        galpon_nombre: str = str(self.galpon.nombre) if self.galpon else 'Sin galpón' # type: ignore
+        return f"Predicción {galpon_nombre} ({self.horizonte_horas}h) - {self.temperatura_predicha}°C"

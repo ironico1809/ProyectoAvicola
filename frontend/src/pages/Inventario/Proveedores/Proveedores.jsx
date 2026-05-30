@@ -31,21 +31,23 @@ function Proveedores() {
   });
   const [qbe, setQbe] = useState({ nombre: "", telefono: "", contacto: "" });
 
-  useEffect(() => {
-    fetchProveedores();
-  }, []);
-
-  const fetchProveedores = async () => {
-    setLoading(true);
+  const fetchProveedores = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const res = await api.get("/insumos/proveedores/");
       setProveedores(res.data);
     } catch (e) {
       console.error("Error cargando proveedores", e);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchProveedores();
+    const id = setInterval(() => fetchProveedores({ silent: true }), 15000);
+    return () => clearInterval(id);
+  }, []);
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -56,7 +58,7 @@ function Proveedores() {
       resetForm();
       fetchProveedores();
     } catch (e) {
-      alert("Error al registrar proveedor");
+      console.error("Error al registrar proveedor", e);
     } finally {
       setSaving(false);
     }
@@ -77,12 +79,15 @@ function Proveedores() {
     e.preventDefault();
     setSaving(true);
     try {
-      await api.patch(`/insumos/proveedores/${proveedorSeleccionado.id}/`, form);
+      await api.patch(
+        `/insumos/proveedores/${proveedorSeleccionado.id}/`,
+        form,
+      );
       setShowEditModal(false);
       resetForm();
       fetchProveedores();
     } catch (e) {
-      alert("Error al actualizar proveedor");
+      console.error("Error al actualizar proveedor", e);
     } finally {
       setSaving(false);
     }
@@ -96,7 +101,7 @@ function Proveedores() {
       setProveedorSeleccionado(null);
       fetchProveedores();
     } catch (e) {
-      alert("Error al eliminar proveedor");
+      console.error("Error al eliminar proveedor", e);
     } finally {
       setSaving(false);
     }
@@ -122,15 +127,22 @@ function Proveedores() {
   }, [proveedores, qbe]);
 
   const contactosUnicos = useMemo(() => {
-    return Array.from(new Set(proveedores.map(p => p.contacto).filter(Boolean)));
+    return Array.from(
+      new Set(proveedores.map((p) => p.contacto).filter(Boolean)),
+    );
   }, [proveedores]);
 
   const direccionesUnicas = useMemo(() => {
-    return Array.from(new Set(proveedores.map(p => p.direccion).filter(Boolean)));
+    return Array.from(
+      new Set(proveedores.map((p) => p.direccion).filter(Boolean)),
+    );
   }, [proveedores]);
 
   const formFields = (
-    <form className="inv-form" onSubmit={showEditModal ? handleUpdate : handleCreate}>
+    <form
+      className="inv-form"
+      onSubmit={showEditModal ? handleUpdate : handleCreate}
+    >
       <InputField
         label="Razón Social / Nombre"
         placeholder="Ej: Avícola del Sol S.A."
@@ -138,7 +150,7 @@ function Proveedores() {
         onChange={(e) => setForm({ ...form, nombre: e.target.value })}
         required
       />
-      
+
       <ComboBox
         label="Persona de Contacto"
         value={form.contacto}
@@ -148,8 +160,8 @@ function Proveedores() {
           { value: "Ventas", label: "Ventas" },
           { value: "Atención al Cliente", label: "Atención al Cliente" },
           { value: "Soporte Técnico", label: "Soporte Técnico" },
-          ...contactosUnicos.map(c => ({ value: c, label: c }))
-        ].filter((v, i, a) => a.findIndex(t => t.value === v.value) === i)}
+          ...contactosUnicos.map((c) => ({ value: c, label: c })),
+        ].filter((v, i, a) => a.findIndex((t) => t.value === v.value) === i)}
         placeholder="Nombre de quién atiende"
       />
 
@@ -159,41 +171,57 @@ function Proveedores() {
         value={form.telefono}
         onChange={(e) => setForm({ ...form, telefono: e.target.value })}
       />
-      
+
       <ComboBox
         label="Dirección / Ubicación"
         value={form.direccion}
         onChange={(val) => setForm({ ...form, direccion: val })}
         allowCustom={true}
         options={[
-          { value: "Calle Principal, Centro", label: "Calle Principal, Centro" },
+          {
+            value: "Calle Principal, Centro",
+            label: "Calle Principal, Centro",
+          },
           { value: "Parque Industrial", label: "Parque Industrial" },
           { value: "Zona Sur", label: "Zona Sur" },
-          ...direccionesUnicas.map(d => ({ value: d, label: d }))
-        ].filter((v, i, a) => a.findIndex(t => t.value === v.value) === i)}
+          ...direccionesUnicas.map((d) => ({ value: d, label: d })),
+        ].filter((v, i, a) => a.findIndex((t) => t.value === v.value) === i)}
         placeholder="Dirección física o referencia"
       />
-      <Button text={showEditModal ? "Actualizar Proveedor" : "Guardar Proveedor"} loading={saving} icon={showEditModal ? <Save size={18} /> : <Plus size={18} />} />
+      <Button
+        text={showEditModal ? "Actualizar Proveedor" : "Guardar Proveedor"}
+        loading={saving}
+        icon={showEditModal ? <Save size={18} /> : <Plus size={18} />}
+      />
     </form>
   );
 
   return (
     <div className="inv-layout">
-      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} showMobileTrigger={false} />
+      <Sidebar
+        open={sidebarOpen}
+        setOpen={setSidebarOpen}
+        showMobileTrigger={false}
+      />
 
       <main
         className="inv-main"
-        style={{ 
+        style={{
           marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px",
           padding: isMobile ? "16px" : "32px",
           paddingTop: isMobile ? "80px" : "32px",
           transition: "margin-left 0.3s ease",
-          flex: 1
+          flex: 1,
         }}
       >
-        <Topbar titulo="Directorio de Proveedores" subtitulo="Contactos y datos de compra" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <Topbar
+          titulo="Directorio de Proveedores"
+          subtitulo="Contactos y datos de compra"
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+        />
 
-        <div className="inv-header" style={{ marginBottom: '20px' }}>
+        <div className="inv-header" style={{ marginBottom: "20px" }}>
           <div style={{ flex: 1 }} />
           <div className="inv-header-actions">
             <button
@@ -327,20 +355,32 @@ function Proveedores() {
       )}
 
       {showEditModal && (
-        <Modal titulo="Editar Proveedor" onClose={() => setShowEditModal(false)}>
+        <Modal
+          titulo="Editar Proveedor"
+          onClose={() => setShowEditModal(false)}
+        >
           {formFields}
         </Modal>
       )}
 
       {showDeleteModal && (
-        <Modal titulo="Eliminar Proveedor" onClose={() => setShowDeleteModal(false)}>
+        <Modal
+          titulo="Eliminar Proveedor"
+          onClose={() => setShowDeleteModal(false)}
+        >
           <div style={{ padding: "10px 0 20px" }}>
             <p style={{ color: "#4b5563", fontSize: 14 }}>
-              ¿Estás seguro de eliminar al proveedor <strong>{proveedorSeleccionado?.nombre}</strong>?
+              ¿Estás seguro de eliminar al proveedor{" "}
+              <strong>{proveedorSeleccionado?.nombre}</strong>?
             </p>
           </div>
           <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-            <button className="inv-btn-ghost" onClick={() => setShowDeleteModal(false)}>Cancelar</button>
+            <button
+              className="inv-btn-ghost"
+              onClick={() => setShowDeleteModal(false)}
+            >
+              Cancelar
+            </button>
             <button
               className="inv-btn-danger"
               onClick={handleDelete}

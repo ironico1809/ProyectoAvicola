@@ -151,7 +151,7 @@ function Temperatura() {
   };
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#f8fafc" }}>
+    <div style={{ display: "flex", minHeight: "100vh", background: "#f1f5f9" }}>
       <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} showMobileTrigger={false} />
 
       <main
@@ -180,8 +180,6 @@ function Temperatura() {
             <button
               className="btn-actualizar"
               onClick={async () => {
-                // Limpia cualquier override manual del WeatherManager
-                // para que el siguiente poll use la base real de OpenWeather
                 try {
                   const ids = galpones.map((g) => g.id);
                   await Promise.all(
@@ -193,7 +191,6 @@ function Temperatura() {
                     )
                   );
                 } catch {
-                  // Si falla no bloqueamos la actualización
                 }
                 cargarTemperaturasTiempoReal();
                 cargarHistorial();
@@ -216,19 +213,24 @@ function Temperatura() {
                     key={item.id_galpon}
                     className={`temperatura-card ${obtenerClaseEstado(item.estado)}`}
                   >
-                    <div className="temperatura-card-header">
-                      <h2>{item.galpon_nombre}</h2>
+                    <div className="temperatura-card-body">
+                      <div className="temperatura-card-header">
+                        <h2>{item.galpon_nombre}</h2>
+                        <span className="estado-badge">{item.estado}</span>
+                      </div>
+
+                      <div className="temperatura-valor">
+                        {item.temperatura}<span>°C</span>
+                      </div>
+
+                      <div className="temperatura-estado">
+                        Estado: <strong>{item.estado}</strong>
+                      </div>
+
+                      <p className="temperatura-mensaje">{item.mensaje}</p>
+
+                      <small>Última actualización: {formatearFecha(item.fecha_hora)}</small>
                     </div>
-
-                    <div className="temperatura-valor">{item.temperatura}°C</div>
-
-                    <div className="temperatura-estado">
-                      Estado: <strong>{item.estado}</strong>
-                    </div>
-
-                    <p className="temperatura-mensaje">{item.mensaje}</p>
-
-                    <small>Última actualización: {formatearFecha(item.fecha_hora)}</small>
                   </div>
                 ))}
 
@@ -248,35 +250,37 @@ function Temperatura() {
                   </p>
 
                   <form onSubmit={registrarTemperaturaManual}>
-                    <label>Galpón</label>
-                    <select
-                      name="id_galpon"
-                      value={formManual.id_galpon}
-                      onChange={handleChangeManual}
-                    >
-                      <option value="">Seleccione un galpón</option>
-                      {galpones.map((g) => (
-                        <option key={g.id} value={g.id}>
-                          {g.nombre}
-                          {g.ubicacion_nombre ? ` — ${g.ubicacion_nombre}` : ""}
-                        </option>
-                      ))}
-                    </select>
+                    <div>
+                      <label>Galpón</label>
+                      <select
+                        name="id_galpon"
+                        value={formManual.id_galpon}
+                        onChange={handleChangeManual}
+                      >
+                        <option value="">Seleccione un galpón</option>
+                        {galpones.map((g) => (
+                          <option key={g.id} value={g.id}>
+                            {g.nombre}
+                            {g.ubicacion_nombre ? ` — ${g.ubicacion_nombre}` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                    <label>Temperatura °C</label>
-                    <input
-                      type="number"
-                      name="temperatura"
-                      value={formManual.temperatura}
-                      onChange={handleChangeManual}
-                      placeholder="Ejemplo: 28.5"
-                      step="0.01"
-                      min="0"
-                      max="60"
-                    />
-                    <small style={{ color: "#6b7280", marginTop: "-6px" }}>
-                      Rango válido: 0°C – 60°C
-                    </small>
+                    <div>
+                      <label>Temperatura °C</label>
+                      <input
+                        type="number"
+                        name="temperatura"
+                        value={formManual.temperatura}
+                        onChange={handleChangeManual}
+                        placeholder="Ejemplo: 28.5"
+                        step="0.01"
+                        min="0"
+                        max="60"
+                      />
+                      <small>Rango válido: 0°C – 60°C</small>
+                    </div>
 
                     <button type="submit">Guardar temperatura</button>
                   </form>
@@ -299,7 +303,7 @@ function Temperatura() {
                       {historial.map((item) => (
                         <tr key={item.id}>
                           <td>{item.galpon_nombre}</td>
-                          <td>{item.temperatura}°C</td>
+                          <td><strong>{item.temperatura}°C</strong></td>
                           <td>
                             <span className={`badge ${obtenerClaseEstado(item.estado)}`}>
                               {item.estado}
@@ -311,7 +315,9 @@ function Temperatura() {
                       ))}
                       {historial.length === 0 && (
                         <tr>
-                          <td colSpan="5">No hay registros de temperatura todavía.</td>
+                          <td colSpan="5" style={{ textAlign: "center", color: "#94a3b8" }}>
+                            No hay registros de temperatura todavía.
+                          </td>
                         </tr>
                       )}
                     </tbody>

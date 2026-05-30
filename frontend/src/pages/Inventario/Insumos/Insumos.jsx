@@ -1,5 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { Package, Plus, AlertTriangle, Search, Edit, Trash2, Save } from "lucide-react";
+import {
+  Package,
+  Plus,
+  AlertTriangle,
+  Search,
+  Edit,
+  Trash2,
+  Save,
+} from "lucide-react";
 import Sidebar from "../../../components/Sidebar";
 import Topbar from "../../../components/Topbar";
 import Modal from "../../../components/Modal";
@@ -39,21 +47,23 @@ function Insumos() {
     stock_minimo: "",
   });
 
-  useEffect(() => {
-    fetchInsumos();
-  }, []);
-
-  const fetchInsumos = async () => {
-    setLoading(true);
+  const fetchInsumos = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const res = await api.get("/insumos/catalogo/");
       setInsumos(res.data);
     } catch (e) {
       console.error("Error cargando insumos", e);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchInsumos();
+    const id = setInterval(() => fetchInsumos({ silent: true }), 15000);
+    return () => clearInterval(id);
+  }, []);
 
   const handleCreateInsumo = async (e) => {
     e.preventDefault();
@@ -68,7 +78,7 @@ function Insumos() {
       resetForm();
       fetchInsumos();
     } catch (e) {
-      alert("Error al crear insumo");
+      console.error("Error al crear insumo", e);
     } finally {
       setSaving(false);
     }
@@ -99,7 +109,7 @@ function Insumos() {
       resetForm();
       fetchInsumos();
     } catch (e) {
-      alert("Error al actualizar insumo");
+      console.error("Error al actualizar insumo", e);
     } finally {
       setSaving(false);
     }
@@ -113,7 +123,7 @@ function Insumos() {
       setInsumoSeleccionado(null);
       fetchInsumos();
     } catch (e) {
-      alert("Error al eliminar insumo");
+      console.error("Error al eliminar insumo", e);
     } finally {
       setSaving(false);
     }
@@ -154,11 +164,16 @@ function Insumos() {
   );
 
   const unidadesUnicas = useMemo(() => {
-    return Array.from(new Set(insumos.map(i => i.unidad_medida).filter(Boolean)));
+    return Array.from(
+      new Set(insumos.map((i) => i.unidad_medida).filter(Boolean)),
+    );
   }, [insumos]);
 
   const formFields = (
-    <form className="inv-form" onSubmit={showEditModal ? handleUpdateInsumo : handleCreateInsumo}>
+    <form
+      className="inv-form"
+      onSubmit={showEditModal ? handleUpdateInsumo : handleCreateInsumo}
+    >
       <InputField
         label="Nombre del Insumo"
         placeholder="Ej: Maíz Amarillo, Vacuna Newcastle..."
@@ -175,9 +190,12 @@ function Insumos() {
         onChange={(val) => setFormInsumo({ ...formInsumo, tipo: val })}
         options={[
           { value: "Alimento", label: "Alimento (Balanceado, Maíz, etc)" },
-          { value: "Medicamento", label: "Medicamento (Antibióticos, Vitaminas)" },
+          {
+            value: "Medicamento",
+            label: "Medicamento (Antibióticos, Vitaminas)",
+          },
           { value: "Vacuna", label: "Vacuna" },
-          { value: "Suministro", label: "Suministro (Viruta, Gas, etc)" }
+          { value: "Suministro", label: "Suministro (Viruta, Gas, etc)" },
         ]}
         placeholder="Selecciona categoría..."
         required
@@ -187,7 +205,9 @@ function Insumos() {
         <ComboBox
           label="Unidad de Medida"
           value={formInsumo.unidad_medida}
-          onChange={(val) => setFormInsumo({ ...formInsumo, unidad_medida: val })}
+          onChange={(val) =>
+            setFormInsumo({ ...formInsumo, unidad_medida: val })
+          }
           allowCustom={true}
           options={[
             { value: "Kg", label: "Kg" },
@@ -195,8 +215,8 @@ function Insumos() {
             { value: "Unidades", label: "Unidades" },
             { value: "Sacos", label: "Sacos" },
             { value: "Cajas", label: "Cajas" },
-            ...unidadesUnicas.map(u => ({ value: u, label: u }))
-          ].filter((v, i, a) => a.findIndex(t => t.value === v.value) === i)}
+            ...unidadesUnicas.map((u) => ({ value: u, label: u })),
+          ].filter((v, i, a) => a.findIndex((t) => t.value === v.value) === i)}
           placeholder="Ej: Kg, Lt, Unid..."
           required
         />
@@ -223,31 +243,55 @@ function Insumos() {
         }
         required
       />
-      <p style={{ fontSize: "11px", color: "#6b7280", marginTop: "-8px", marginLeft: "4px" }}>
-        <AlertTriangle size={10} style={{display:'inline', marginRight:4}} /> Recibirás una alerta cuando el stock sea igual o menor a este valor.
+      <p
+        style={{
+          fontSize: "11px",
+          color: "#6b7280",
+          marginTop: "-8px",
+          marginLeft: "4px",
+        }}
+      >
+        <AlertTriangle
+          size={10}
+          style={{ display: "inline", marginRight: 4 }}
+        />{" "}
+        Recibirás una alerta cuando el stock sea igual o menor a este valor.
       </p>
 
-      <Button text={showEditModal ? "Guardar Cambios" : "Crear Insumo"} loading={saving} icon={showEditModal ? <Save size={18} /> : <Plus size={18} />} />
+      <Button
+        text={showEditModal ? "Guardar Cambios" : "Crear Insumo"}
+        loading={saving}
+        icon={showEditModal ? <Save size={18} /> : <Plus size={18} />}
+      />
     </form>
   );
 
   return (
     <div className="inv-layout">
-      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} showMobileTrigger={false} />
+      <Sidebar
+        open={sidebarOpen}
+        setOpen={setSidebarOpen}
+        showMobileTrigger={false}
+      />
 
       <main
         className="inv-main"
-        style={{ 
+        style={{
           marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px",
           padding: isMobile ? "16px" : "32px",
           paddingTop: isMobile ? "80px" : "32px",
           transition: "margin-left 0.3s ease",
-          flex: 1
+          flex: 1,
         }}
       >
-        <Topbar titulo="Catálogo de Insumos" subtitulo="Gestión maestro de productos e insumos" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <Topbar
+          titulo="Catálogo de Insumos"
+          subtitulo="Gestión maestro de productos e insumos"
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+        />
 
-        <div className="inv-header" style={{ marginBottom: '20px' }}>
+        <div className="inv-header" style={{ marginBottom: "20px" }}>
           <div style={{ flex: 1 }} />
           <div className="inv-header-actions">
             <button
@@ -379,7 +423,7 @@ function Insumos() {
                       >
                         {i.stock_actual} {i.unidad_medida}
                       </td>
-                      <td style={{ color: '#94a3b8' }}>{i.stock_minimo}</td>
+                      <td style={{ color: "#94a3b8" }}>{i.stock_minimo}</td>
                       <td>
                         <div className="btn-action-group">
                           <button
@@ -423,17 +467,34 @@ function Insumos() {
       )}
 
       {showDeleteModal && (
-        <Modal titulo="Eliminar Insumo" onClose={() => setShowDeleteModal(false)}>
+        <Modal
+          titulo="Eliminar Insumo"
+          onClose={() => setShowDeleteModal(false)}
+        >
           <div style={{ padding: "10px 0 20px" }}>
             <p style={{ color: "#4b5563", fontSize: 14 }}>
-              ¿Estás seguro de eliminar el insumo <strong>{insumoSeleccionado?.nombre}</strong>?
+              ¿Estás seguro de eliminar el insumo{" "}
+              <strong>{insumoSeleccionado?.nombre}</strong>?
             </p>
-            <p style={{ color: "#ef4444", fontSize: 12, marginTop: 8, fontWeight: 600 }}>
-              Esta acción no se puede deshacer y puede afectar registros de alimentación o movimientos existentes.
+            <p
+              style={{
+                color: "#ef4444",
+                fontSize: 12,
+                marginTop: 8,
+                fontWeight: 600,
+              }}
+            >
+              Esta acción no se puede deshacer y puede afectar registros de
+              alimentación o movimientos existentes.
             </p>
           </div>
           <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-            <button className="inv-btn-ghost" onClick={() => setShowDeleteModal(false)}>Cancelar</button>
+            <button
+              className="inv-btn-ghost"
+              onClick={() => setShowDeleteModal(false)}
+            >
+              Cancelar
+            </button>
             <button
               className="inv-btn-danger"
               onClick={handleDeleteInsumo}

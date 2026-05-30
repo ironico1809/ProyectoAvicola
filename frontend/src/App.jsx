@@ -22,6 +22,7 @@ import Movimientos from "./pages/Inventario/Movimientos/Movimientos";
 import RegistroSanitario from "./pages/Sanitario/Registro/RegistroSanitario";
 import HistorialClinico from "./pages/Sanitario/Historial/HistorialClinico";
 import Temperatura from "./pages/Temperatura/Temperatura";
+import PrediccionTemperatura from "./pages/PrediccionTemperatura/PrediccionTemperatura";
 import TemperatureAlert from "./components/TemperatureAlert";
 import Mortandad from "./pages/Mortandad/Mortandad";
 import ChangePasswordPage from "./pages/ChangePasswordPage/ChangePasswordPage";
@@ -141,6 +142,7 @@ function App() {
         <Route path="/permisos" element={<ProtectedRoute><Permisos /></ProtectedRoute>} />
         <Route path="/roles" element={<ProtectedRoute><Roles /></ProtectedRoute>} />
         <Route path="/temperatura" element={<ProtectedRoute><Temperatura /></ProtectedRoute>} />
+        <Route path="/prediccion" element={<ProtectedRoute><PrediccionTemperatura /></ProtectedRoute>} />
 
         {/* ── Zona SuperAdmin ──────────────────────────────── */}
         <Route path="/superadmin" element={<ProtectedRoute><SuperAdmin /></ProtectedRoute>} />

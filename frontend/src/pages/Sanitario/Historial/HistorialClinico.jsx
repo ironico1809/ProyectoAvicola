@@ -46,21 +46,30 @@ function HistorialClinico() {
 
   return (
     <div className="inv-layout">
-      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} showMobileTrigger={false} />
+      <Sidebar
+        open={sidebarOpen}
+        setOpen={setSidebarOpen}
+        showMobileTrigger={false}
+      />
 
       <main
         className="inv-main"
-        style={{ 
+        style={{
           marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px",
           padding: isMobile ? "16px" : "32px",
           paddingTop: isMobile ? "80px" : "32px",
           transition: "margin-left 0.3s ease",
-          flex: 1
+          flex: 1,
         }}
       >
-        <Topbar titulo="Historial Clínico por Lote" subtitulo="Consulta de tratamientos aplicados" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <Topbar
+          titulo="Historial Clínico por Lote"
+          subtitulo="Consulta de tratamientos aplicados"
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+        />
 
-        <div className="inv-header" style={{ marginBottom: '20px' }}>
+        <div className="inv-header" style={{ marginBottom: "20px" }}>
           {/* Header content moved to Topbar, but keeping space if needed */}
         </div>
 
@@ -150,21 +159,29 @@ function HistorialClinico() {
                       </td>
                       <td>{h.tipo_tratamiento}</td>
                       <td>{h.insumo_nombre || "-"}</td>
-                      <td>{h.dosis} {h.unit_dosis || h.unidad_dosis}</td>
+                      <td>
+                        {h.dosis} {h.unit_dosis || h.unidad_dosis}
+                      </td>
                       <td>{h.responsable || "-"}</td>
                       <td>
                         <div className="btn-action-group">
                           <button
                             className="btn-action btn-action--edit"
                             title="Editar"
-                            onClick={() => alert('Próximamente: Edición de historial')}
+                            onClick={() =>
+                              console.info("Próximamente: Edición de historial")
+                            }
                           >
                             <Edit size={16} />
                           </button>
                           <button
                             className="btn-action btn-action--delete"
                             title="Eliminar"
-                            onClick={() => alert('Próximamente: Eliminación de historial')}
+                            onClick={() =>
+                              console.info(
+                                "Próximamente: Eliminación de historial",
+                              )
+                            }
                           >
                             <Trash2 size={16} />
                           </button>

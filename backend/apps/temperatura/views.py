@@ -11,8 +11,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.galpones.models import Galpon
-from apps.temperatura.models import TemperaturaGalpon
-from apps.temperatura.serializers import TemperaturaGalponSerializer
+from apps.core.mixins import TenantSafeView
+from apps.temperatura.models import TemperaturaGalpon, PrediccionTemperatura
+from apps.temperatura.prediccion_service import predecir_temperatura_galpon
+from apps.temperatura.serializers import (
+    TemperaturaGalponSerializer,
+    PrediccionTemperaturaSerializer,
+)
 from apps.bitacora.utils import registrar_evento
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -177,6 +182,18 @@ class TemperaturaTiempoRealView(APIView):
     def get(self, request):
         galpones = Galpon.objects.filter(estado='activo').order_by('id')
 
+        # Evitar que el polling del frontend llene la BD:
+        # - Este endpoint se consulta en “tiempo real” (cada pocos segundos).
+        # - NO debemos persistir un registro en cada GET.
+        # Guardamos como máximo 1 registro simulado por galpón cada N segundos
+        # (configurable por env var).
+        try:
+            persist_every_seconds = int(os.getenv("TEMPERATURA_PERSIST_EVERY_SECONDS", "300"))
+        except ValueError:
+            persist_every_seconds = 300
+
+        now = timezone.now()
+
         data = []
 
         for galpon in galpones:
@@ -184,21 +201,47 @@ class TemperaturaTiempoRealView(APIView):
             temperatura = clima["temp"]
             estado = calcular_estado_temperatura(temperatura)
 
-            registro = TemperaturaGalpon.objects.create(
-                galpon=galpon,
-                temperatura=temperatura,
-                estado=estado,
-                fuente='SIMULADO'
+            # ¿Debemos persistir?
+            # - Si no hay registro previo simulado
+            # - o si pasó el intervalo
+            # - o si cambió el estado (FRIO/NORMAL/CALOR)
+            ultimo = (
+                TemperaturaGalpon.objects
+                .filter(galpon=galpon, fuente='SIMULADO')
+                .order_by('-fecha_hora', '-id')
+                .first()
             )
 
+            should_persist = False
+            if not ultimo:
+                should_persist = True
+            else:
+                age_seconds = (now - ultimo.fecha_hora).total_seconds()
+                if age_seconds >= persist_every_seconds:
+                    should_persist = True
+                elif str(ultimo.estado) != str(estado):
+                    should_persist = True
+
+            registro = None
+            if should_persist:
+                empresa_id = getattr(getattr(request, 'user', None), 'empresa_id', None)
+                registro = TemperaturaGalpon.objects.create(
+                    galpon=galpon,
+                    temperatura=temperatura,
+                    estado=estado,
+                    fuente='SIMULADO',
+                    empresa_id=empresa_id,
+                )
+
             data.append({
-                'id': registro.id,
+                'id': registro.id if registro else (ultimo.id if ultimo else None),
                 'id_galpon': galpon.id,
                 'galpon_nombre': galpon.nombre,
-                'temperatura': registro.temperatura,
-                'estado': registro.estado,
-                'fuente': registro.fuente,
-                'fecha_hora': registro.fecha_hora,
+                'temperatura': temperatura,
+                'estado': estado,
+                'fuente': 'SIMULADO',
+                # “tiempo real” de la lectura (aunque no siempre se persista)
+                'fecha_hora': now,
                 'alerta': estado in ['FRIO', 'CALOR'],
                 'mensaje': obtener_mensaje_estado(estado),
                 'source': clima.get('source', 'simulated_fallback'),
@@ -300,7 +343,23 @@ class TemperaturaHistorialView(APIView):
                 )
             queryset = queryset.filter(fecha_hora__date__lte=fecha_fin)
 
-        queryset = queryset.order_by('-fecha_hora', '-id')[:100]
+        # Por defecto devolvemos más registros (útil para rangos 3 meses / 1 año).
+        # Para evitar respuestas gigantes, se limita con un máximo.
+        limit_raw = request.query_params.get('limit', '2000')
+        try:
+            limit = int(limit_raw)
+        except ValueError:
+            return Response(
+                {'limit': 'limit debe ser un entero.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if limit < 1:
+            limit = 1
+        if limit > 10000:
+            limit = 10000
+
+        queryset = queryset.order_by('-fecha_hora', '-id')[:limit]
 
         return Response(
             TemperaturaGalponSerializer(queryset, many=True).data,
@@ -646,3 +705,198 @@ class ClimaManualOverrideView(APIView):
             'alerta': estado in ('FRIO', 'CALOR'),
             'mensaje': obtener_mensaje_estado(estado),
         }, status=status.HTTP_200_OK)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CU27: Predicción de variación de temperatura (IA)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class PrediccionTemperaturaUltimaView(TenantSafeView):
+    """Devuelve la última predicción generada para un galpón.
+
+    Endpoint:
+    GET /temperatura/prediccion/ultima/?galpon_id=1
+    """
+
+    permission_classes = [IsAuthenticated]
+    queryset = PrediccionTemperatura.objects.select_related('galpon').all()
+
+    def get(self, request):
+        galpon_id_raw = request.query_params.get('galpon_id')
+
+        if not galpon_id_raw:
+            return Response(
+                {'error': 'Se requiere el parámetro galpon_id.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            galpon_id = int(galpon_id_raw)
+        except ValueError:
+            return Response(
+                {'error': 'galpon_id debe ser un número entero.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        pred = (
+            self.get_queryset()
+            .filter(galpon_id=galpon_id)
+            .order_by('-fecha_hora', '-id')
+            .first()
+        )
+
+        if not pred:
+            return Response(
+                {'error': 'Sin predicción registrada para este galpón.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        return Response(
+            PrediccionTemperaturaSerializer(pred).data,
+            status=status.HTTP_200_OK
+        )
+
+
+class PrediccionTemperaturaUltimasView(TenantSafeView):
+    """Devuelve la última predicción para cada galpón activo.
+
+    Endpoint:
+    GET /temperatura/prediccion/ultimas/
+    """
+
+    permission_classes = [IsAuthenticated]
+    queryset = PrediccionTemperatura.objects.select_related('galpon').all()
+
+    def get(self, request):
+        galpones = self.filter_by_tenant(Galpon.objects.filter(estado='activo').order_by('id'))
+
+        data = []
+        for galpon in galpones:
+            pred = (
+                self.get_queryset()
+                .filter(galpon=galpon)
+                .order_by('-fecha_hora', '-id')
+                .first()
+            )
+            if pred:
+                data.append(PrediccionTemperaturaSerializer(pred).data)
+
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class PrediccionTemperaturaGenerarView(TenantSafeView):
+    """Genera y persiste una predicción para un galpón (manual/operativa).
+
+    Endpoint:
+    POST /temperatura/prediccion/generar/
+
+    Body:
+    { "galpon_id": 1, "horizonte_horas": 3, "ventana_horas": 24 }
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        galpon_id_raw = request.data.get('galpon_id')
+        if not galpon_id_raw:
+            return Response(
+                {'error': 'Se requiere galpon_id.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            galpon_id = int(galpon_id_raw)
+        except (ValueError, TypeError):
+            return Response(
+                {'error': 'galpon_id debe ser un entero.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            galpon = self.filter_by_tenant(Galpon.objects.all()).get(pk=galpon_id)
+        except Galpon.DoesNotExist:
+            return Response(
+                {'error': 'Galpón no encontrado.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        horizonte_horas_raw = request.data.get('horizonte_horas', 3)
+        # Por defecto usamos 90 días para tener suficiente histórico.
+        # Para 1 año: ventana_horas=8760
+        ventana_horas_raw = request.data.get('ventana_horas', 2160)
+
+        try:
+            horizonte_horas = int(horizonte_horas_raw)
+            ventana_horas = int(ventana_horas_raw)
+        except (ValueError, TypeError):
+            return Response(
+                {'error': 'horizonte_horas y ventana_horas deben ser enteros.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        resultado = predecir_temperatura_galpon(
+            galpon_id=galpon.id,
+            horizonte_horas=horizonte_horas,
+            ventana_horas=ventana_horas,
+            empresa_id=galpon.empresa_id,
+        )
+
+        if not resultado:
+            return Response(
+                {'error': 'No hay suficientes datos para generar una predicción.'},
+                status=status.HTTP_409_CONFLICT
+            )
+
+        estado_predicho = calcular_estado_temperatura(resultado.temperatura_predicha)
+        umbral_superado = estado_predicho in ('FRIO', 'CALOR')
+
+        if umbral_superado:
+            mensaje = (
+                f"Alerta Predictiva: Se espera {('Frío' if estado_predicho == 'FRIO' else 'Calor')} "
+                f"Extremo ({resultado.temperatura_predicha}°C) en {galpon.nombre} en {horizonte_horas}h."
+            )
+        else:
+            mensaje = (
+                f"Predicción: temperatura dentro de rango esperado "
+                f"({resultado.temperatura_predicha}°C) en {galpon.nombre} en {horizonte_horas}h."
+            )
+
+        pred = PrediccionTemperatura.objects.create(
+            galpon=galpon,
+            empresa_id=galpon.empresa_id,
+            horizonte_horas=horizonte_horas,
+            ventana_horas=ventana_horas,
+            temperatura_predicha=resultado.temperatura_predicha,
+            estado_predicho=estado_predicho,
+            confianza=resultado.confianza,
+            puntos=resultado.puntos,
+            umbral_superado=umbral_superado,
+            mensaje=mensaje,
+        )
+
+        # Bitácora (auditoría)
+        registrar_evento(
+            request,
+            accion='crear',
+            modulo='temperatura',
+            entidad='PrediccionTemperatura',
+            entidad_id=pred.id,
+            entidad_nombre=f"Predicción {galpon.nombre}",
+            detalle={
+                'galpon_id': galpon.id,
+                'galpon': galpon.nombre,
+                'horizonte_horas': horizonte_horas,
+                'ventana_horas': ventana_horas,
+                'temperatura_predicha': str(resultado.temperatura_predicha),
+                'estado_predicho': estado_predicho,
+                'confianza': resultado.confianza,
+                'umbral_superado': umbral_superado,
+            },
+            usuario=request.user,
+        )
+
+        return Response(
+            PrediccionTemperaturaSerializer(pred).data,
+            status=status.HTTP_201_CREATED
+        )

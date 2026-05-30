@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from apps.temperatura.models import TemperaturaGalpon
+from apps.temperatura.models import TemperaturaGalpon, PrediccionTemperatura
 from apps.galpones.models import Galpon
 
 
@@ -71,3 +71,35 @@ class TemperaturaGalponSerializer(serializers.ModelSerializer):
                 'La temperatura no puede ser mayor a 60°C. Verifique el valor ingresado.'
             )
         return value
+
+
+class PrediccionTemperaturaSerializer(serializers.ModelSerializer):
+    """Serializer para CU27: predicción de temperatura por galpón."""
+
+    id_galpon = serializers.PrimaryKeyRelatedField(
+        source='galpon',
+        queryset=Galpon.objects.all()
+    )
+
+    galpon_nombre = serializers.CharField(
+        source='galpon.nombre',
+        read_only=True
+    )
+
+    class Meta:
+        model = PrediccionTemperatura
+        fields = [
+            'id',
+            'id_galpon',
+            'galpon_nombre',
+            'fecha_hora',
+            'horizonte_horas',
+            'ventana_horas',
+            'temperatura_predicha',
+            'estado_predicho',
+            'confianza',
+            'puntos',
+            'umbral_superado',
+            'mensaje',
+        ]
+        read_only_fields = fields

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bird, Skull, Package, Thermometer, Zap, AlertCircle } from "lucide-react";
+import { Bird, Skull, Package, Thermometer, Zap, AlertCircle, Brain, TrendingUp } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import Topbar from "../../components/Topbar";
 import StatCard from "../../components/StatCard";
@@ -15,8 +15,11 @@ function Dashboard() {
     totalAves: 0,
     lotesActivos: 0,
     alertasInventario: 0,
-    galponesActivos: 0
+    galponesActivos: 0,
+    predicciones: 0,
+    alertasPredictivas: 0,
   });
+  const [predicciones, setPredicciones] = useState([]);
 
   useEffect(() => {
     fetchStats();
@@ -25,10 +28,11 @@ function Dashboard() {
   const fetchStats = async () => {
     setLoading(true);
     try {
-      const [lotRes, galRes, insRes] = await Promise.all([
+      const [lotRes, galRes, insRes, predRes] = await Promise.all([
         api.get("/lotes/"),
         api.get("/galpones/"),
         api.get("/insumos/catalogo/"),
+        api.get("/temperatura/prediccion/ultimas/"),
       ]);
 
       const lotes = Array.isArray(lotRes.data) ? lotRes.data : [];
@@ -38,11 +42,17 @@ function Dashboard() {
       const insumos = Array.isArray(insRes.data) ? insRes.data : [];
       const alertas = insumos.filter(i => Number(i.stock_actual) <= Number(i.stock_minimo)).length;
 
+      const preds = Array.isArray(predRes.data) ? predRes.data : [];
+      const alertasPred = preds.filter(p => p.umbral_superado).length;
+
+      setPredicciones(preds);
       setStats({
         totalAves: aves,
         lotesActivos: activos.length,
         alertasInventario: alertas,
-        galponesActivos: (galRes.data || []).filter(g => g.estado === 'activo').length
+        galponesActivos: (galRes.data || []).filter(g => g.estado === 'activo').length,
+        predicciones: preds.length,
+        alertasPredictivas: alertasPred,
       });
     } catch (e) {
       console.error("Error al cargar estadísticas", e);
@@ -83,6 +93,14 @@ function Dashboard() {
       trendType: "trend-up",
       icon: <Bird size={24} color="#16a34a" />,
       iconBg: "#dcfce7",
+    },
+    {
+      label: "Predicciones IA",
+      value: loading ? "—" : stats.predicciones,
+      trend: stats.alertasPredictivas > 0 ? `${stats.alertasPredictivas} alertas` : "Sin novedades",
+      trendType: stats.alertasPredictivas > 0 ? "trend-down" : "trend-up",
+      icon: <Brain size={24} color="#7c3aed" />,
+      iconBg: "#f3e8ff",
     },
   ];
 
@@ -173,6 +191,22 @@ function Dashboard() {
               desc={`Actualmente gestionando ${stats.lotesActivos} lotes en producción.`} 
               icon={<Bird size={18} color="#3b82f6" />}
             />
+
+            {stats.alertasPredictivas > 0 ? (
+              <AlertItem 
+                type="danger" 
+                title="Alerta Predictiva de Temperatura" 
+                desc={`${stats.alertasPredictivas} predicción(es) superan el umbral crítico. Revise la sección Predicción IA.`} 
+                icon={<Brain size={18} color="#dc2626" />}
+              />
+            ) : stats.predicciones > 0 ? (
+              <AlertItem 
+                type="info" 
+                title="Predicción IA Activa" 
+                desc={`${stats.predicciones} predicción(es) generadas. Sin alertas críticas.`} 
+                icon={<TrendingUp size={18} color="#7c3aed" />}
+              />
+            ) : null}
           </div>
         </div>
       </main>
