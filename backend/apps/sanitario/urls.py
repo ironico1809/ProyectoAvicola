@@ -1,6 +1,6 @@
 from django.urls import path
 
-from apps.sanitario.views import AplicacionesSanitariasView, HistorialClinicoLotesView
+from apps.sanitario.views import AplicacionesSanitariasView, HistorialClinicoLotesView, AplicacionSanitariaDetailView
 
 urlpatterns = [
     path(
@@ -11,4 +11,8 @@ urlpatterns = [
         'historial/',
         HistorialClinicoLotesView.as_view(),
         name='historial_clinico_lotes'),
+    path(
+        'aplicaciones/<int:pk>/',
+        AplicacionSanitariaDetailView.as_view(),
+        name='aplicacion_sanitaria_detail'),
 ]
