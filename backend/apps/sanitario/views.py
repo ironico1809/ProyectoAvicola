@@ -45,6 +45,25 @@ class AplicacionesSanitariasView(APIView):
             return Response(serializer.errors,
                             status=status.HTTP_400_BAD_REQUEST)
 
+        # 1. Validar estado del Lote
+        lote = serializer.validated_data.get('lote')
+        if lote and lote.estado.lower() == 'finalizado':
+            return Response(
+                {'lote': ['No se pueden registrar tratamientos en un lote finalizado.']},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 2. Validar stock del Insumo
+        insumo = serializer.validated_data.get('insumo')
+        dosis = serializer.validated_data.get('dosis')
+        
+        if insumo and dosis is not None:
+            if insumo.stock_actual < dosis:
+                return Response(
+                    {'dosis': [f'Stock insuficiente del insumo. Disponible: {insumo.stock_actual} {insumo.unidad_medida}.']},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
         with transaction.atomic():
             control = serializer.save()
 

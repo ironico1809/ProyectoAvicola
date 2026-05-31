@@ -225,9 +225,11 @@ function RegistroSanitario() {
               label="Lote de Aves"
               value={form.lote}
               onChange={(val) => setForm({ ...form, lote: val })}
-              options={lotes.map((l) => ({
-                value: l.id_lote,
-                label: `Lote ${l.id_lote} - ${l.raza} (${l.estado})`,
+              options={lotes
+                .filter((l) => l.estado !== "Finalizado")
+                .map((l) => ({
+                  value: l.id_lote,
+                  label: `Lote ${l.id_lote} - ${l.raza_tipo || "Sin raza"} (${l.estado})`,
               }))}
               placeholder="Seleccionar lote..."
               required
