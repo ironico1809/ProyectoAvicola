@@ -18,7 +18,7 @@ import Inventario from "./pages/Inventario/Inventario";
 import Insumos from "./pages/Inventario/Insumos/Insumos";
 import Proveedores from "./pages/Inventario/Proveedores/Proveedores";
 import Movimientos from "./pages/Inventario/Movimientos/Movimientos";
-
+import RegistroEnfermedad from "./pages/Sanitario/Enfermedades/RegistroEnfermedad";
 import RegistroSanitario from "./pages/Sanitario/Registro/RegistroSanitario";
 import HistorialClinico from "./pages/Sanitario/Historial/HistorialClinico";
 import Temperatura from "./pages/Temperatura/Temperatura";
@@ -134,6 +134,7 @@ function App() {
 
         <Route path="/sanitario/registro" element={<ProtectedRoute><RegistroSanitario /></ProtectedRoute>} />
         <Route path="/sanitario/historial" element={<ProtectedRoute><HistorialClinico /></ProtectedRoute>} />
+        <Route path="/sanitario/enfermedades" element={<ProtectedRoute><RegistroEnfermedad /></ProtectedRoute>} />
         <Route path="/reportes" element={<ProtectedRoute><Reportes /></ProtectedRoute>} />
         <Route path="/mortandad" element={<ProtectedRoute><Mortandad /></ProtectedRoute>} />
         <Route path="/estado" element={<ProtectedRoute><Estado /></ProtectedRoute>} />

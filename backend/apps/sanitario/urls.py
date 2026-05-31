@@ -1,14 +1,34 @@
 from django.urls import path
 
-from apps.sanitario.views import AplicacionesSanitariasView, HistorialClinicoLotesView
+from apps.sanitario.views import (
+    AplicacionesSanitariasView,
+    HistorialClinicoLotesView,
+    RegistroEnfermedadesView,
+    DetalleEnfermedadView,
+)
 
 urlpatterns = [
+    # ── Existentes (sin cambios) ──────────────────────────────────────────
     path(
         'aplicaciones/',
         AplicacionesSanitariasView.as_view(),
-        name='aplicaciones_sanitarias'),
+        name='aplicaciones_sanitarias',
+    ),
     path(
         'historial/',
         HistorialClinicoLotesView.as_view(),
-        name='historial_clinico_lotes'),
+        name='historial_clinico_lotes',
+    ),
+
+    # ── CU15 / HU3-01-03 ─────────────────────────────────────────────────
+    path(
+        'enfermedades/',
+        RegistroEnfermedadesView.as_view(),
+        name='registro_enfermedades',
+    ),
+    path(
+        'enfermedades/<int:pk>/',
+        DetalleEnfermedadView.as_view(),
+        name='detalle_enfermedad',
+    ),
 ]
