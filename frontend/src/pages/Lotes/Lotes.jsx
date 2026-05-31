@@ -626,7 +626,7 @@ function Lotes() {
           ...mainContentStyle,
           marginLeft: isNarrow ? "0px" : sidebarOpen ? "240px" : "70px",
           padding: isNarrow ? "16px" : "32px",
-          paddingTop: isNarrow ? "80px" : "32px",
+          paddingTop: isNarrow ? "16px" : "32px",
         }}
       >
         <Topbar titulo="Gestión de Lotes" subtitulo="Registra lotes y visualiza el estado por galpón" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />

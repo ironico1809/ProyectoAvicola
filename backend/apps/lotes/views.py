@@ -11,7 +11,7 @@ Endpoints:
 Todas las rutas requieren autenticación (IsAuthenticated).
 """
 
-from rest_framework import status
+from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -19,8 +19,8 @@ from django.db.models import Count, Sum
 from django.db.models.functions import Coalesce
 
 from apps.core.mixins import TenantSafeView
-from apps.lotes.models import Lote
-from apps.lotes.serializers import LoteSerializer
+from apps.lotes.models import Lote, ControlCalidad
+from apps.lotes.serializers import LoteSerializer, ControlCalidadSerializer
 from apps.bitacora.utils import registrar_evento
 
 
@@ -201,3 +201,28 @@ class LotesResumenEstadoView(TenantSafeView):
         )
 
         return Response(list(rows), status=status.HTTP_200_OK)
+
+
+class ControlCalidadViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ControlCalidadSerializer
+    queryset = ControlCalidad.objects.all()
+
+    def get_queryset(self):
+        user = self.request.user
+        if getattr(user, 'is_superuser', False) or getattr(user, 'tipo_usuario', '') == 'Superusuario':
+            return self.queryset.order_by('-fecha_registro')
+
+        tenant_id = getattr(user, 'empresa_id', None)
+        if tenant_id is None:
+            return ControlCalidad.objects.none()
+        return self.queryset.filter(empresa_id=tenant_id).order_by('-fecha_registro')
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        empresa_obj = getattr(user, 'empresa', None)
+        serializer.save(
+            empresa_id=empresa_obj,
+            usuario_id=user
+        )
+

@@ -1,8 +1,15 @@
-"""Rutas (URLs) de la app `lotes`."""
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 
-from django.urls import path
+from apps.lotes.views import (
+    LoteDetailView,
+    LoteListCreateView,
+    LotesResumenEstadoView,
+    ControlCalidadViewSet
+)
 
-from apps.lotes.views import LoteDetailView, LoteListCreateView, LotesResumenEstadoView
+router = DefaultRouter()
+router.register(r'control-calidad', ControlCalidadViewSet, basename='control-calidad')
 
 urlpatterns = [
     # CRUD
@@ -13,4 +20,7 @@ urlpatterns = [
         LotesResumenEstadoView.as_view(),
         name='lotes_resumen_estados'),
     path('<int:id_lote>/', LoteDetailView.as_view(), name='lotes_detail'),
+    # Router urls
+    path('', include(router.urls)),
 ]
+
