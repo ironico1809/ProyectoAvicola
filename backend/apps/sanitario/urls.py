@@ -5,6 +5,7 @@ from apps.sanitario.views import (
     HistorialClinicoLotesView,
     RegistroEnfermedadesView,
     DetalleEnfermedadView,
+    AplicacionSanitariaDetailView,
 )
 
 urlpatterns = [
@@ -31,4 +32,8 @@ urlpatterns = [
         DetalleEnfermedadView.as_view(),
         name='detalle_enfermedad',
     ),
+    path(
+        'aplicaciones/<int:pk>/',
+        AplicacionSanitariaDetailView.as_view(),
+        name='aplicacion_sanitaria_detail'),
 ]
