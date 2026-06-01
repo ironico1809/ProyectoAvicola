@@ -47,8 +47,7 @@ class LoteSerializer(serializers.ModelSerializer):
 
 class ControlCalidadSerializer(serializers.ModelSerializer):
     id_lote = serializers.PrimaryKeyRelatedField(
-        queryset=Lote.objects.all(),
-        source='id_lote'
+        queryset=Lote.objects.all()
     )
     usuario_id = serializers.PrimaryKeyRelatedField(read_only=True)
     empresa_id = serializers.PrimaryKeyRelatedField(read_only=True)
