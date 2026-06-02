@@ -267,7 +267,7 @@ function Dashboard() {
               alertasSanitarias.slice(0, 4).map((alerta) => (
                 <AlertItem
                   key={alerta.id}
-                  type={alerta.nivel === "Critico" || alerta.nivel === "Crítico" ? "danger" : "warning"}
+                  type={alerta.nivel === "Critico" || alerta.nivel === "Crítico" ? "danger" : "warn"}
                   title={textoTipo(alerta)}
                   desc={resumenAlerta(alerta)}
                   icon={<ShieldAlert size={18} color="#dc2626" />}

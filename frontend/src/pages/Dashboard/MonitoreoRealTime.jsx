@@ -28,7 +28,6 @@ import {
   Package,
   RefreshCw,
   Clock,
-  Droplets,
 } from "lucide-react";
 import api from "../../api/axios";
 
@@ -241,6 +240,8 @@ function MonitoreoRealTime() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
+  // Alertas sanitarias pendientes reales (de AlertaSanitaria)
+  const [alertasSanitariasPendientes, setAlertasSanitariasPendientes] = useState(0);
 
   // Filtros
   const [galpones, setGalpones] = useState([]);
@@ -266,8 +267,23 @@ function MonitoreoRealTime() {
       if (selectedGalpon) params.galpon_id = selectedGalpon;
       if (selectedLote) params.lote_id = selectedLote;
 
-      const res = await api.get("/reportes/monitoreo/", { params });
-      setData(res.data);
+      // Llamadas en paralelo: datos de monitoreo + alertas sanitarias pendientes reales
+      const [monRes, sanRes] = await Promise.allSettled([
+        api.get("/reportes/monitoreo/", { params }),
+        api.get("/sanitario/alertas/", { params: { estado: "Pendiente" } }),
+      ]);
+
+      if (monRes.status === "fulfilled") {
+        setData(monRes.value.data);
+      } else {
+        setError("No se pudo cargar el panel de monitoreo.");
+      }
+
+      if (sanRes.status === "fulfilled") {
+        const alertas = Array.isArray(sanRes.value.data) ? sanRes.value.data : [];
+        setAlertasSanitariasPendientes(alertas.length);
+      }
+
       setLastUpdate(new Date());
     } catch (e) {
       console.error("Error al cargar monitoreo:", e);
@@ -287,20 +303,22 @@ function MonitoreoRealTime() {
   // Preparar datos del gráfico de clima
   const climaChartData = (() => {
     if (!data?.clima_24h?.length) return [];
-    // Agrupar por hora para no saturar el gráfico
-    const byHour = {};
+    // Agrupar en bloques de 15 min para no saturar el gráfico
+    const bySlot = {};
     for (const punto of data.clima_24h) {
-      const hora = new Date(punto.fecha_hora);
-      const key = `${hora.getHours().toString().padStart(2, "0")}:${Math.floor(hora.getMinutes() / 15) * 15}`.padEnd(5, "0");
-      if (!byHour[key]) {
-        byHour[key] = { hora: key, temps: [], humeds: [] };
+      const d = new Date(punto.fecha_hora);
+      const hh = d.getHours().toString().padStart(2, "0");
+      const mm = (Math.floor(d.getMinutes() / 15) * 15).toString().padStart(2, "0");
+      const key = `${hh}:${mm}`;
+      if (!bySlot[key]) {
+        bySlot[key] = { hora: key, temps: [], humeds: [] };
       }
-      byHour[key].temps.push(punto.temperatura);
+      bySlot[key].temps.push(punto.temperatura);
       if (punto.humedad !== null && punto.humedad !== undefined) {
-        byHour[key].humeds.push(punto.humedad);
+        bySlot[key].humeds.push(punto.humedad);
       }
     }
-    return Object.values(byHour)
+    return Object.values(bySlot)
       .sort((a, b) => a.hora.localeCompare(b.hora))
       .map((g) => ({
         hora: g.hora,
@@ -310,9 +328,7 @@ function MonitoreoRealTime() {
         humedad:
           g.humeds.length > 0
             ? parseFloat(
-                (
-                  g.humeds.reduce((s, v) => s + v, 0) / g.humeds.length
-                ).toFixed(1)
+                (g.humeds.reduce((s, v) => s + v, 0) / g.humeds.length).toFixed(1)
               )
             : null,
       }));
@@ -510,16 +526,16 @@ function MonitoreoRealTime() {
         />
         <KpiCard
           icon={<AlertTriangle size={22} color="#d97706" />}
-          label="Alertas Pendientes"
-          value={loading ? "—" : (data?.alertas_count ?? 0)}
-          sub="Climáticas + Sanitarias"
+          label="Alertas Sanitarias Pendientes"
+          value={loading ? "—" : alertasSanitariasPendientes}
+          sub="Estado: Pendiente en BD"
           color={
-            !loading && (data?.alertas_count ?? 0) > 0
+            !loading && alertasSanitariasPendientes > 0
               ? COLOR.warn
               : "#1c1c1c"
           }
           bgColor={
-            !loading && (data?.alertas_count ?? 0) > 0
+            !loading && alertasSanitariasPendientes > 0
               ? "#fef3c7"
               : "#f0fdf4"
           }
