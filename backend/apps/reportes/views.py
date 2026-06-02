@@ -14,10 +14,12 @@ from rest_framework.views import APIView
 
 from apps.alimentacion.models import Alimentacion
 from apps.bitacora.models import BitacoraEvento
+from apps.galpones.models import Galpon
 from apps.insumos.models import ControlSanitario, Insumo, MovimientoAlmacen
 from apps.lotes.models import Lote
 from apps.mortandad.models import RegistroMortalidad
 from apps.temperatura.models import TemperaturaGalpon
+from apps.core.mixins import TenantSafeView
 from apps.usuarios.models import Usuario
 from apps.reportes.serializers import ReporteGenerarSerializer
 
@@ -1147,4 +1149,232 @@ class DashboardResumenView(APIView):
             'entradas_mes': entradas_mes,
             'salidas_mes': salidas_mes,
             'consumo_7d': consumo_7d,
+        })
+
+
+# ── Dashboard Monitoreo Real-Time (CU21) ──────────────────────────────────────
+class DashboardMonitoreoView(TenantSafeView):
+    """
+    CU21 - Dashboard de Monitoreo Real-Time.
+
+    Endpoint:
+    GET /reportes/monitoreo/
+
+    Parámetros opcionales:
+    - galpon_id: filtra toda la información por galpón específico
+    - lote_id:   filtra mortandad y tasa de mortalidad por lote específico
+
+    Devuelve:
+    - clima_24h:          serie de temperatura y humedad de las últimas 24h
+    - alertas_climaticas: alertas activas de temperatura (FRIO/CALOR)
+    - mortandad_diaria:   total de bajas del día de hoy
+    - tasa_mortalidad:    tasa de mortalidad por lote (cantidad_inicial vs cantidad_actual)
+    - alertas_pendientes: últimas 5 alertas (climáticas + sanitarias)
+    - alertas_count:      total de alertas activas
+    - stock_alimentos:    insumos tipo Alimento con stock_actual vs stock_minimo
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from datetime import timedelta
+
+        hoy = timezone.localdate()
+        hace_24h = timezone.now() - timedelta(hours=24)
+
+        galpon_id_raw = request.query_params.get('galpon_id')
+        lote_id_raw = request.query_params.get('lote_id')
+
+        galpon_id = None
+        lote_id = None
+
+        if galpon_id_raw:
+            try:
+                galpon_id = int(galpon_id_raw)
+            except (ValueError, TypeError):
+                pass
+
+        if lote_id_raw:
+            try:
+                lote_id = int(lote_id_raw)
+            except (ValueError, TypeError):
+                pass
+
+        # ── 1. Clima últimas 24h ──────────────────────────────────────────────
+        temp_qs = self.filter_by_tenant(
+            TemperaturaGalpon.objects
+            .select_related('galpon')
+            .filter(fecha_hora__gte=hace_24h)
+            .order_by('fecha_hora')
+        )
+        if galpon_id:
+            temp_qs = temp_qs.filter(galpon_id=galpon_id)
+
+        clima_24h = [
+            {
+                'fecha_hora': t.fecha_hora.isoformat(),
+                'temperatura': float(t.temperatura),
+                'humedad': float(t.humedad_externa) if t.humedad_externa is not None else None,
+                'estado': t.estado,
+                'galpon_id': t.galpon_id,
+                'galpon_nombre': t.galpon.nombre if t.galpon else None,
+            }
+            for t in temp_qs
+        ]
+
+        # ── 2. Alertas climáticas activas ─────────────────────────────────────
+        galpones_activos = self.filter_by_tenant(
+            Galpon.objects.filter(estado='activo')
+        )
+        if galpon_id:
+            galpones_activos = galpones_activos.filter(id=galpon_id)
+
+        alertas_climaticas = []
+        for galpon in galpones_activos:
+            ultimo = (
+                self.filter_by_tenant(TemperaturaGalpon.objects.all())
+                .filter(galpon=galpon)
+                .order_by('-fecha_hora', '-id')
+                .first()
+            )
+            if ultimo and str(ultimo.estado) in ('FRIO', 'CALOR'):
+                alertas_climaticas.append({
+                    'tipo': 'CLIMATICA',
+                    'galpon_id': galpon.id,
+                    'galpon_nombre': galpon.nombre,
+                    'temperatura': float(ultimo.temperatura),
+                    'estado': ultimo.estado,
+                    'fecha_hora': ultimo.fecha_hora.isoformat() if ultimo.fecha_hora else None,
+                    'mensaje': (
+                        f"Alerta de {'Frío' if ultimo.estado == 'FRIO' else 'Calor'}: "
+                        f"{float(ultimo.temperatura):.1f}°C en {galpon.nombre}"
+                    ),
+                })
+
+        # ── 3. Mortandad diaria ───────────────────────────────────────────────
+        mort_qs = self.filter_by_tenant(
+            RegistroMortalidad.objects.filter(fecha_hora__date=hoy)
+        )
+        if galpon_id:
+            mort_qs = mort_qs.filter(lote__galpon_id=galpon_id)
+        if lote_id:
+            mort_qs = mort_qs.filter(lote_id=lote_id)
+
+        mortandad_diaria = int(mort_qs.aggregate(t=Sum('cantidad'))['t'] or 0)
+
+        # ── 4. Tasa de mortalidad por lote ────────────────────────────────────
+        lotes_qs = self.filter_by_tenant(
+            Lote.objects.filter(
+                estado__in=['Crianza', 'Crecimiento', 'Engorde', 'Activo']
+            ).select_related('galpon')
+        )
+        if galpon_id:
+            lotes_qs = lotes_qs.filter(galpon_id=galpon_id)
+        if lote_id:
+            lotes_qs = lotes_qs.filter(id_lote=lote_id)
+
+        tasa_mortalidad = []
+        for lote in lotes_qs:
+            ini = int(lote.cantidad_inicial or 0)
+            act = int(lote.cantidad_actual or 0)
+            tasa = round(((ini - act) / ini) * 100, 2) if ini > 0 else 0.0
+            tasa_mortalidad.append({
+                'lote_id': lote.id_lote,
+                'galpon_nombre': lote.galpon.nombre if lote.galpon else None,
+                'cantidad_inicial': ini,
+                'cantidad_actual': act,
+                'bajas_totales': ini - act,
+                'tasa_mortalidad_pct': tasa,
+            })
+
+        # ── 5. Últimas 5 alertas (climáticas + sanitarias) ───────────────────
+        alertas_temp_recientes = self.filter_by_tenant(
+            TemperaturaGalpon.objects
+            .select_related('galpon')
+            .filter(fecha_hora__gte=hace_24h, estado__in=['FRIO', 'CALOR'])
+            .order_by('-fecha_hora')
+        )
+        if galpon_id:
+            alertas_temp_recientes = alertas_temp_recientes.filter(galpon_id=galpon_id)
+
+        alertas_lista = []
+        for t in alertas_temp_recientes[:10]:
+            alertas_lista.append({
+                'tipo': 'CLIMATICA',
+                'fecha_hora': t.fecha_hora.isoformat() if t.fecha_hora else None,
+                'descripcion': (
+                    f"{'Frío' if t.estado == 'FRIO' else 'Calor'} detectado: "
+                    f"{float(t.temperatura):.1f}°C en {t.galpon.nombre if t.galpon else 'Galpón'}"
+                ),
+                'estado': t.estado,
+                'galpon_nombre': t.galpon.nombre if t.galpon else None,
+            })
+
+        # Alertas sanitarias: registros de mortalidad recientes
+        mort_recientes = self.filter_by_tenant(
+            RegistroMortalidad.objects
+            .select_related('lote', 'lote__galpon')
+            .filter(fecha_hora__gte=hace_24h)
+            .order_by('-fecha_hora')
+        )
+        if galpon_id:
+            mort_recientes = mort_recientes.filter(lote__galpon_id=galpon_id)
+        if lote_id:
+            mort_recientes = mort_recientes.filter(lote_id=lote_id)
+
+        for m in mort_recientes[:10]:
+            causa = m.causa or 'Sin causa especificada'
+            galpon_nombre = (
+                m.lote.galpon.nombre
+                if m.lote and m.lote.galpon else 'Galpón desconocido'
+            )
+            alertas_lista.append({
+                'tipo': 'SANITARIA',
+                'fecha_hora': m.fecha_hora.isoformat() if m.fecha_hora else None,
+                'descripcion': (
+                    f"{m.cantidad} baja(s) en Lote {m.lote_id} "
+                    f"({galpon_nombre}). Causa: {causa}"
+                ),
+                'estado': 'BAJA',
+                'galpon_nombre': galpon_nombre,
+            })
+
+        alertas_lista.sort(
+            key=lambda x: x['fecha_hora'] or '',
+            reverse=True
+        )
+        ultimas_5_alertas = alertas_lista[:5]
+        alertas_count = len(alertas_lista)
+
+        # ── 6. Stock de alimentos vs mínimo ──────────────────────────────────
+        alimentos_qs = self.filter_by_tenant(
+            Insumo.objects
+            .filter(tipo='Alimento')
+            .order_by('stock_actual')
+        )
+
+        stock_alimentos = [
+            {
+                'id_insumo': i.id_insumo,
+                'nombre': i.nombre,
+                'unidad_medida': i.unidad_medida,
+                'stock_actual': float(i.stock_actual),
+                'stock_minimo': float(i.stock_minimo),
+                'bajo_stock': float(i.stock_actual) <= float(i.stock_minimo),
+                'diferencia': float(i.stock_actual) - float(i.stock_minimo),
+            }
+            for i in alimentos_qs
+        ]
+
+        alimentos_criticos = sum(1 for a in stock_alimentos if a['bajo_stock'])
+
+        return Response({
+            'clima_24h': clima_24h,
+            'alertas_climaticas': alertas_climaticas,
+            'mortandad_diaria': mortandad_diaria,
+            'tasa_mortalidad': tasa_mortalidad,
+            'ultimas_alertas': ultimas_5_alertas,
+            'alertas_count': alertas_count,
+            'stock_alimentos': stock_alimentos,
+            'alimentos_criticos_count': alimentos_criticos,
         })

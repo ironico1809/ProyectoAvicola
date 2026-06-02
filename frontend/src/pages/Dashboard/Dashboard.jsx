@@ -16,6 +16,7 @@ import StatCard from "../../components/StatCard";
 import AlertItem from "../../components/AlertItem";
 import api from "../../api/axios";
 import useIsMobile from "../../hooks/useIsMobile";
+import MonitoreoRealTime from "./MonitoreoRealTime";
 
 function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -321,6 +322,10 @@ function Dashboard() {
             ) : null}
           </div>
         </div>
+
+        {/* ── CU21: Dashboard de Monitoreo Real-Time ── */}
+        <MonitoreoRealTime />
+
       </main>
     </div>
   );
