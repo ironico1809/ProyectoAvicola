@@ -132,9 +132,21 @@ class ControlSanitario(models.Model):
     )
     tipo_tratamiento = models.CharField(
         max_length=20, choices=TIPO_CHOICES, default='Vacuna')
-    dosis = models.DecimalField(max_digits=10, decimal_places=2)
-    unidad_dosis = models.CharField(max_length=20, default='ml')
-    fecha_aplicacion = models.DateField()
+    dosis = models.DecimalField(
+    max_digits=10,
+    decimal_places=2,
+    null=True,
+    blank=True
+    )
+    unidad_dosis = models.CharField(
+    max_length=20,
+    default='',
+    blank=True
+    )
+    fecha_aplicacion = models.DateField(
+    null=True,
+    blank=True
+    )
     responsable = models.CharField(max_length=200, blank=True, null=True)
     observacion = models.TextField(blank=True, null=True)
     fecha_registro = models.DateTimeField(auto_now_add=True, db_default=Now())

@@ -132,10 +132,22 @@ function RegistroEnfermedad() {
     };
 
     try {
-      await api.post("/sanitario/enfermedades/", payload);
+      const res = await api.post("/sanitario/enfermedades/", payload);
+
+      const alertasGeneradas = res?.data?.alertas_generadas || [];
+
       setShowModal(false);
       setForm(FORM_INICIAL);
-      mostrarToast("ok", "Registro sanitario guardado exitosamente");
+
+      if (alertasGeneradas.length > 0) {
+        mostrarToast(
+          "error",
+          `Registro guardado. Se generó ${alertasGeneradas.length} alerta sanitaria por riesgo.`
+        );
+      } else {
+        mostrarToast("ok", "Registro sanitario guardado exitosamente");
+      }
+
       fetchData({ silent: true });
     } catch (err) {
       const msg =

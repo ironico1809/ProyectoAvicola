@@ -3,6 +3,7 @@ from apps.core.mixins import TenantSafeView
 from .models import RegistroMortalidad
 from .serializers import RegistroMortalidadSerializer
 from apps.bitacora.models import BitacoraEvento
+from apps.sanitario.services import generar_alerta_por_mortandad
 
 class RegistroMortalidadViewSet(TenantSafeView, viewsets.ModelViewSet):
     serializer_class = RegistroMortalidadSerializer
@@ -53,3 +54,6 @@ class RegistroMortalidadViewSet(TenantSafeView, viewsets.ModelViewSet):
             accion="Registro de Mortandad",
             descripcion=descripcion_evento
         )
+        # CU17: si existe enfermedad activa y la mortandad sube más del 20%,
+        # se genera una alerta sanitaria automáticamente.
+        generar_alerta_por_mortandad(registro, usuario=usuario_actual)
