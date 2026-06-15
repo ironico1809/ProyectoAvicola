@@ -14,7 +14,7 @@ from apps.sanitario.serializers import ControlSanitarioSerializer
 class AplicacionesSanitariasView(TenantSafeView):
     """Registro y consulta de aplicaciones/tratamientos sanitarios."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]  
     queryset = ControlSanitario.objects.all()
 
     def get(self, request):
