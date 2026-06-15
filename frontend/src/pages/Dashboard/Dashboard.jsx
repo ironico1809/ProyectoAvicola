@@ -1,15 +1,27 @@
 import { useState, useEffect } from "react";
-import { Bird, Skull, Package, Thermometer, Zap, AlertCircle, Brain, TrendingUp } from "lucide-react";
+import {
+  Bird,
+  Package,
+  Thermometer,
+  Zap,
+  AlertCircle,
+  Brain,
+  TrendingUp,
+  ShieldAlert,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import Sidebar from "../../components/Sidebar";
 import Topbar from "../../components/Topbar";
 import StatCard from "../../components/StatCard";
 import AlertItem from "../../components/AlertItem";
 import api from "../../api/axios";
 import useIsMobile from "../../hooks/useIsMobile";
+import MonitoreoRealTime from "./MonitoreoRealTime";
 
 function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalAves: 0,
@@ -18,41 +30,67 @@ function Dashboard() {
     galponesActivos: 0,
     predicciones: 0,
     alertasPredictivas: 0,
+    alertasSanitarias: 0,
+    alertasSanitariasCriticas: 0,
+    alertasStockMedicamento: 0,
   });
   const [predicciones, setPredicciones] = useState([]);
+  const [alertasSanitarias, setAlertasSanitarias] = useState([]);
 
   useEffect(() => {
     fetchStats();
+    const timer = setInterval(fetchStats, 10000);
+    return () => clearInterval(timer);
   }, []);
+
+  const valorResuelto = (result) => (result.status === "fulfilled" ? result.value : null);
 
   const fetchStats = async () => {
     setLoading(true);
     try {
-      const [lotRes, galRes, insRes, predRes] = await Promise.all([
+      const [lotRes, galRes, insRes, predRes, sanitariasRes] = await Promise.allSettled([
         api.get("/lotes/"),
         api.get("/galpones/"),
         api.get("/insumos/catalogo/"),
         api.get("/temperatura/prediccion/ultimas/"),
+        api.get("/sanitario/alertas/?estado=Pendiente"),
       ]);
 
-      const lotes = Array.isArray(lotRes.data) ? lotRes.data : [];
-      const activos = lotes.filter(l => ["crianza", "crecimiento", "engorde", "activo"].includes(l.estado.toLowerCase()));
+      const lotes = Array.isArray(valorResuelto(lotRes)?.data) ? valorResuelto(lotRes).data : [];
+      const activos = lotes.filter((l) =>
+        ["crianza", "crecimiento", "engorde", "activo"].includes(String(l.estado || "").toLowerCase())
+      );
       const aves = activos.reduce((acc, l) => acc + (Number(l.cantidad_actual) || 0), 0);
-      
-      const insumos = Array.isArray(insRes.data) ? insRes.data : [];
-      const alertas = insumos.filter(i => Number(i.stock_actual) <= Number(i.stock_minimo)).length;
 
-      const preds = Array.isArray(predRes.data) ? predRes.data : [];
-      const alertasPred = preds.filter(p => p.umbral_superado).length;
+      const galpones = Array.isArray(valorResuelto(galRes)?.data) ? valorResuelto(galRes).data : [];
+      const insumos = Array.isArray(valorResuelto(insRes)?.data) ? valorResuelto(insRes).data : [];
+      const alertasInventario = insumos.filter(
+        (i) => Number(i.stock_actual) <= Number(i.stock_minimo)
+      ).length;
+
+      const preds = Array.isArray(valorResuelto(predRes)?.data) ? valorResuelto(predRes).data : [];
+      const alertasPred = preds.filter((p) => p.umbral_superado).length;
+
+      const alertasSan = Array.isArray(valorResuelto(sanitariasRes)?.data)
+        ? valorResuelto(sanitariasRes).data
+        : [];
+      const criticasSan = alertasSan.filter(
+        (a) => a.nivel === "Critico" || a.nivel === "Crítico"
+      ).length;
+      const stockMed = alertasSan.filter((a) => a.tipo_alerta === "StockMedicamento").length;
 
       setPredicciones(preds);
+      setAlertasSanitarias(alertasSan);
       setStats({
         totalAves: aves,
         lotesActivos: activos.length,
-        alertasInventario: alertas,
-        galponesActivos: (galRes.data || []).filter(g => g.estado === 'activo').length,
+        alertasInventario,
+        galponesActivos: galpones.filter((g) => g.estado === "activo").length,
         predicciones: preds.length,
         alertasPredictivas: alertasPred,
+        alertasSanitarias: alertasSan.length,
+        alertasSanitariasCriticas: criticasSan,
+        alertasStockMedicamento: stockMed,
       });
     } catch (e) {
       console.error("Error al cargar estadísticas", e);
@@ -87,6 +125,14 @@ function Dashboard() {
       iconBg: "#fef3c7",
     },
     {
+      label: "Alertas Sanitarias",
+      value: loading ? "—" : stats.alertasSanitarias,
+      trend: stats.alertasSanitarias > 0 ? `${stats.alertasSanitariasCriticas} críticas` : "Sin riesgo",
+      trendType: stats.alertasSanitarias > 0 ? "trend-down" : "trend-up",
+      icon: <ShieldAlert size={24} color="#dc2626" />,
+      iconBg: "#fee2e2",
+    },
+    {
       label: "Galpones en Uso",
       value: loading ? "—" : stats.galponesActivos,
       trend: "Activos",
@@ -104,6 +150,26 @@ function Dashboard() {
     },
   ];
 
+  const textoTipo = (alerta) => {
+    const mapa = {
+      Afectacion: "Riesgo Sanitario Alto",
+      Mortandad: "Complicación Post-Diagnóstico",
+      StockMedicamento: "Bajo Stock de Medicamento Crítico",
+    };
+    return mapa[alerta.tipo_alerta] || alerta.tipo_alerta || "Alerta sanitaria";
+  };
+
+  const resumenAlerta = (alerta) => {
+    if (alerta.tipo_alerta === "StockMedicamento") {
+      return alerta.insumo_info?.nombre
+        ? `${alerta.insumo_info.nombre}: ${alerta.mensaje}`
+        : alerta.mensaje;
+    }
+
+    const lote = alerta.lote_info?.id_lote || alerta.lote || "-";
+    return `Lote ${lote}: ${alerta.mensaje}`;
+  };
+
   return (
     <div
       style={{
@@ -113,11 +179,7 @@ function Dashboard() {
         fontFamily: "'Poppins', sans-serif",
       }}
     >
-      <Sidebar
-        open={sidebarOpen}
-        setOpen={setSidebarOpen}
-        showMobileTrigger={false}
-      />
+      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} showMobileTrigger={false} />
 
       <main
         style={{
@@ -128,10 +190,15 @@ function Dashboard() {
           transition: "margin-left 0.3s ease",
           display: "flex",
           flexDirection: "column",
-          gap: "24px"
+          gap: "24px",
         }}
       >
-        <Topbar titulo="Resumen de la Granja" subtitulo="Vista general de producción" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <Topbar
+          titulo="Resumen de la Granja"
+          subtitulo="Vista general de producción"
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+        />
 
         <div
           style={{
@@ -154,61 +221,111 @@ function Dashboard() {
             border: "1px solid #f1f5f9",
           }}
         >
-          <h2
+          <div
             style={{
-              fontSize: "16px",
-              fontWeight: "700",
-              color: "#334155",
-              marginBottom: "20px",
               display: "flex",
+              justifyContent: "space-between",
               alignItems: "center",
-              gap: "8px"
+              gap: "12px",
+              flexWrap: "wrap",
+              marginBottom: "20px",
             }}
           >
-            <AlertCircle size={18} color="#ef4444" /> Centro de Notificaciones
-          </h2>
-          
+            <h2
+              style={{
+                fontSize: "16px",
+                fontWeight: "700",
+                color: "#334155",
+                margin: 0,
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              <AlertCircle size={18} color="#ef4444" /> Centro de Notificaciones
+            </h2>
+
+            <button
+              type="button"
+              onClick={() => navigate("/sanitario/alertas")}
+              style={{
+                border: "none",
+                background: "#fef3c7",
+                color: "#92400e",
+                padding: "8px 14px",
+                borderRadius: "12px",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Ver alertas sanitarias
+            </button>
+          </div>
+
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            {alertasSanitarias.length > 0 ? (
+              alertasSanitarias.slice(0, 4).map((alerta) => (
+                <AlertItem
+                  key={alerta.id}
+                  type={alerta.nivel === "Critico" || alerta.nivel === "Crítico" ? "danger" : "warn"}
+                  title={textoTipo(alerta)}
+                  desc={resumenAlerta(alerta)}
+                  icon={<ShieldAlert size={18} color="#dc2626" />}
+                />
+              ))
+            ) : (
+              <AlertItem
+                type="info"
+                title="Sin alertas sanitarias pendientes"
+                desc="No existen riesgos sanitarios pendientes por atender."
+                icon={<ShieldAlert size={18} color="#16a34a" />}
+              />
+            )}
+
             {stats.alertasInventario > 0 ? (
-              <AlertItem 
-                type="danger" 
-                title="Atención: Insumos Críticos" 
-                desc={`Hay ${stats.alertasInventario} productos con stock por debajo del mínimo.`} 
+              <AlertItem
+                type="danger"
+                title="Atención: Insumos Críticos"
+                desc={`Hay ${stats.alertasInventario} productos con stock por debajo del mínimo.`}
                 icon={<Package size={18} color="#dc2626" />}
               />
             ) : (
-              <AlertItem 
-                type="info" 
-                title="Inventario Saludable" 
-                desc="Todos los insumos tienen stock suficiente." 
+              <AlertItem
+                type="info"
+                title="Inventario Saludable"
+                desc="Todos los insumos tienen stock suficiente."
                 icon={<Package size={18} color="#16a34a" />}
               />
             )}
-            
-            <AlertItem 
-              type="info" 
-              title="Monitoreo Activo" 
-              desc={`Actualmente gestionando ${stats.lotesActivos} lotes en producción.`} 
+
+            <AlertItem
+              type="info"
+              title="Monitoreo Activo"
+              desc={`Actualmente gestionando ${stats.lotesActivos} lotes en producción.`}
               icon={<Bird size={18} color="#3b82f6" />}
             />
 
             {stats.alertasPredictivas > 0 ? (
-              <AlertItem 
-                type="danger" 
-                title="Alerta Predictiva de Temperatura" 
-                desc={`${stats.alertasPredictivas} predicción(es) superan el umbral crítico. Revise la sección Predicción IA.`} 
+              <AlertItem
+                type="danger"
+                title="Alerta Predictiva de Temperatura"
+                desc={`${stats.alertasPredictivas} predicción(es) superan el umbral crítico. Revise la sección Predicción IA.`}
                 icon={<Brain size={18} color="#dc2626" />}
               />
             ) : stats.predicciones > 0 ? (
-              <AlertItem 
-                type="info" 
-                title="Predicción IA Activa" 
-                desc={`${stats.predicciones} predicción(es) generadas. Sin alertas críticas.`} 
+              <AlertItem
+                type="info"
+                title="Predicción IA Activa"
+                desc={`${stats.predicciones} predicción(es) generadas. Sin alertas críticas.`}
                 icon={<TrendingUp size={18} color="#7c3aed" />}
               />
             ) : null}
           </div>
         </div>
+
+        {/* ── CU21: Dashboard de Monitoreo Real-Time ── */}
+        <MonitoreoRealTime />
+
       </main>
     </div>
   );

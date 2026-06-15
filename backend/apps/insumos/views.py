@@ -12,6 +12,7 @@ from apps.insumos.serializers import (
     MovimientoAlmacenSerializer
 )
 from apps.bitacora.utils import registrar_evento
+from apps.sanitario.services import generar_alerta_por_stock_medicamento
 
 
 class InsumoViewSet(TenantSafeView, viewsets.ModelViewSet):
@@ -40,6 +41,21 @@ class InsumoViewSet(TenantSafeView, viewsets.ModelViewSet):
             detalle=self.request.data,  # type: ignore
             usuario=self.request.user
         )
+        alerta_stock = generar_alerta_por_stock_medicamento(
+            insumo=insumo,
+            usuario=self.request.user,
+        )
+        if alerta_stock:
+            registrar_evento(
+                self.request,
+                accion='crear',
+                modulo='sanitario',
+                entidad='AlertaSanitaria',
+                entidad_id=alerta_stock.id,
+                entidad_nombre=f"Alerta stock crítico {alerta_stock.insumo_id}",
+                detalle={'tipo_alerta': alerta_stock.tipo_alerta, 'estado': alerta_stock.estado},
+                usuario=self.request.user,
+            )
 
     def perform_update(self, serializer):
         empresa_id = getattr(serializer.instance, 'empresa_id', None)
@@ -54,6 +70,21 @@ class InsumoViewSet(TenantSafeView, viewsets.ModelViewSet):
             detalle=self.request.data,  # type: ignore
             usuario=self.request.user
         )
+        alerta_stock = generar_alerta_por_stock_medicamento(
+            insumo=insumo,
+            usuario=self.request.user,
+        )
+        if alerta_stock:
+            registrar_evento(
+                self.request,
+                accion='crear',
+                modulo='sanitario',
+                entidad='AlertaSanitaria',
+                entidad_id=alerta_stock.id,
+                entidad_nombre=f"Alerta stock crítico {alerta_stock.insumo_id}",
+                detalle={'tipo_alerta': alerta_stock.tipo_alerta, 'estado': alerta_stock.estado},
+                usuario=self.request.user,
+            )
 
     def perform_destroy(self, instance):
         registrar_evento(
@@ -169,6 +200,22 @@ class MovimientoAlmacenView(TenantSafeView):
                 detalle=request.data,
                 usuario=request.user
             )
+
+            alerta_stock = generar_alerta_por_stock_medicamento(
+                insumo=insumo,
+                usuario=request.user,
+            )
+            if alerta_stock:
+                registrar_evento(
+                    request,
+                    accion='crear',
+                    modulo='sanitario',
+                    entidad='AlertaSanitaria',
+                    entidad_id=alerta_stock.id,
+                    entidad_nombre=f"Alerta stock crítico {alerta_stock.insumo_id}",
+                    detalle={'tipo_alerta': alerta_stock.tipo_alerta, 'estado': alerta_stock.estado},
+                    usuario=request.user,
+                )
 
         return Response(MovimientoAlmacenSerializer(
             mov).data, status=status.HTTP_201_CREATED)

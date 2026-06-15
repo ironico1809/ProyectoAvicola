@@ -10,6 +10,7 @@ import Bitacora from "./pages/Bitacora/Bitacora";
 import Permisos from "./pages/Permisos/Permisos";
 import Roles from "./pages/Roles/Roles";
 import Lotes from "./pages/Lotes/Lotes";
+import CrecimientoLote from "./pages/Lotes/CrecimientoLote";
 import Estado from "./pages/Estado/Estado";
 import Alimentacion from "./pages/Alimentacion/Alimentacion";
 import Reportes from "./pages/Reportes/Reportes";
@@ -18,9 +19,10 @@ import Inventario from "./pages/Inventario/Inventario";
 import Insumos from "./pages/Inventario/Insumos/Insumos";
 import Proveedores from "./pages/Inventario/Proveedores/Proveedores";
 import Movimientos from "./pages/Inventario/Movimientos/Movimientos";
-
+import RegistroEnfermedad from "./pages/Sanitario/Enfermedades/RegistroEnfermedad";
 import RegistroSanitario from "./pages/Sanitario/Registro/RegistroSanitario";
 import HistorialClinico from "./pages/Sanitario/Historial/HistorialClinico";
+import AlertasSanitarias from "./pages/Sanitario/Alertas/AlertasSanitarias";
 import Temperatura from "./pages/Temperatura/Temperatura";
 import PrediccionTemperatura from "./pages/PrediccionTemperatura/PrediccionTemperatura";
 import TemperatureAlert from "./components/TemperatureAlert";
@@ -126,6 +128,7 @@ function App() {
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/galpones" element={<ProtectedRoute><Galpones /></ProtectedRoute>} />
         <Route path="/lotes" element={<ProtectedRoute><Lotes /></ProtectedRoute>} />
+        <Route path="/lotes/control-calidad" element={<ProtectedRoute><CrecimientoLote /></ProtectedRoute>} />
         <Route path="/alimentacion" element={<ProtectedRoute><Alimentacion /></ProtectedRoute>} />
         <Route path="/inventario" element={<ProtectedRoute><Inventario /></ProtectedRoute>} />
         <Route path="/inventario/insumos" element={<ProtectedRoute><Insumos /></ProtectedRoute>} />
@@ -134,6 +137,8 @@ function App() {
 
         <Route path="/sanitario/registro" element={<ProtectedRoute><RegistroSanitario /></ProtectedRoute>} />
         <Route path="/sanitario/historial" element={<ProtectedRoute><HistorialClinico /></ProtectedRoute>} />
+        <Route path="/sanitario/enfermedades" element={<ProtectedRoute><RegistroEnfermedad /></ProtectedRoute>} />
+        <Route path="/sanitario/alertas" element={<ProtectedRoute><AlertasSanitarias /></ProtectedRoute>} />
         <Route path="/reportes" element={<ProtectedRoute><Reportes /></ProtectedRoute>} />
         <Route path="/mortandad" element={<ProtectedRoute><Mortandad /></ProtectedRoute>} />
         <Route path="/estado" element={<ProtectedRoute><Estado /></ProtectedRoute>} />

@@ -56,9 +56,12 @@ const MENU_ADMIN_OPERADOR = [
     items: [
       { icon: <Bird size={18} />, label: "Galpones", path: "/galpones" },
       { icon: <Package size={18} />, label: "Lotes", path: "/lotes" },
+      { icon: <ClipboardList size={18} />, label: "Control de Calidad", path: "/lotes/control-calidad" },
       { icon: <AlertTriangle size={18} />, label: "Mortandad", path: "/mortandad" },
       { icon: <Stethoscope size={18} />, label: "Registro Sanitario", path: "/sanitario/registro" },
       { icon: <ClipboardList size={18} />, label: "Historial Clínico", path: "/sanitario/historial" },
+      { icon: <AlertTriangle size={18} />, label: "Enfermedades", path: "/sanitario/enfermedades" },
+      { icon: <ShieldCheck size={18} />, label: "Alertas Sanitarias", path: "/sanitario/alertas" },
     ],
   },
   {

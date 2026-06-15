@@ -132,9 +132,21 @@ class ControlSanitario(models.Model):
     )
     tipo_tratamiento = models.CharField(
         max_length=20, choices=TIPO_CHOICES, default='Vacuna')
-    dosis = models.DecimalField(max_digits=10, decimal_places=2)
-    unidad_dosis = models.CharField(max_length=20, default='ml')
-    fecha_aplicacion = models.DateField()
+    dosis = models.DecimalField(
+    max_digits=10,
+    decimal_places=2,
+    null=True,
+    blank=True
+    )
+    unidad_dosis = models.CharField(
+    max_length=20,
+    default='',
+    blank=True
+    )
+    fecha_aplicacion = models.DateField(
+    null=True,
+    blank=True
+    )
     responsable = models.CharField(max_length=200, blank=True, null=True)
     observacion = models.TextField(blank=True, null=True)
     fecha_registro = models.DateTimeField(auto_now_add=True, db_default=Now())
@@ -150,7 +162,38 @@ class ControlSanitario(models.Model):
         db_column='empresa_id',
         related_name='controles_sanitarios',
     )
-
+    # ── CU15 / HU3-01-03: Registro de enfermedades ───────────────────────────
+    tipo_registro = models.CharField(
+        max_length=20,
+        choices=[
+            ('enfermedad', 'Registro de Enfermedad'),
+            ('tratamiento', 'Aplicación de Tratamiento'),
+        ],
+        default='tratamiento',
+    )
+    enfermedad_sintoma = models.CharField(
+        max_length=200, blank=True, null=True)
+    cantidad_aves_afectadas = models.IntegerField(null=True, blank=True)
+    porcentaje_afectacion = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True)
+    estado_enfermedad = models.CharField(
+        max_length=20,
+        choices=[
+            ('activo', 'Activo'),
+            ('en_tratamiento', 'En Tratamiento'),
+            ('resuelto', 'Resuelto'),
+        ],
+        default='activo',
+        blank=True,
+    )
+    usuario = models.ForeignKey(
+        'usuarios.Usuario',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        db_column='usuario_id',
+        related_name='controles_sanitarios',
+    )
     class Meta:
         db_table = 'control_sanitario'
         ordering = ['-fecha_aplicacion']
