@@ -281,7 +281,7 @@ export default function CrecimientoLote() {
           ...mainContentStyle,
           marginLeft: isNarrow ? "0px" : sidebarOpen ? "240px" : "70px",
           padding: isNarrow ? "16px" : "32px",
-          paddingTop: isNarrow ? "16px" : "32px",
+          paddingTop: isNarrow ? "80px" : "32px",
         }}
       >
         <Topbar

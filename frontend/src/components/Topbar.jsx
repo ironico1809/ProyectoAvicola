@@ -7,7 +7,7 @@ function Topbar({ titulo, subtitulo, sidebarOpen, setSidebarOpen }) {
     <div style={topbarStyle}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         {!sidebarOpen && (
-          <button onClick={() => setSidebarOpen(true)} style={menuBtnStyle}>
+          <button onClick={() => setSidebarOpen(true)} style={menuBtnStyle} type="button">
             <Menu size={20} color="#78350f" />
           </button>
         )}
@@ -17,9 +17,18 @@ function Topbar({ titulo, subtitulo, sidebarOpen, setSidebarOpen }) {
         </div>
       </div>
       <div style={badgeStyle}>
-        <User size={18} color="#78350f" />
+        <div style={userAvatarStyle}>
+          <User size={16} color="#78350f" />
+        </div>
         <span style={badgeTextStyle}>{usuario.nom_usuario || 'Usuario'}</span>
       </div>
+
+      <style>{`
+        @keyframes fadeSlideDown {
+          from { opacity: 0; transform: translateY(-6px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   )
 }
@@ -29,6 +38,7 @@ const topbarStyle = {
   justifyContent: 'space-between',
   alignItems: 'center',
   marginBottom: '32px',
+  animation: 'fadeSlideDown 0.35s ease',
 }
 const menuBtnStyle = {
   background: 'white',
@@ -40,6 +50,7 @@ const menuBtnStyle = {
   alignItems: 'center',
   boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
   flexShrink: 0,
+  transition: 'all 0.2s ease',
 }
 const titleStyle = {
   fontSize: '22px', fontWeight: '700',
@@ -51,8 +62,18 @@ const subtitleStyle = {
 const badgeStyle = {
   display: 'flex', alignItems: 'center',
   gap: '10px', background: 'white',
-  padding: '8px 16px', borderRadius: '12px',
+  padding: '6px 16px 6px 6px', borderRadius: '100px',
   boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+  transition: 'all 0.2s ease',
+}
+const userAvatarStyle = {
+  width: '32px',
+  height: '32px',
+  borderRadius: '50%',
+  background: '#fef3c7',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
 }
 const badgeTextStyle = {
   fontSize: '13px', fontWeight: '600', color: '#78350f',

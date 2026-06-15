@@ -8,6 +8,7 @@ import {
   Search,
   Trash2,
   Bird,
+  Tag,
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import Topbar from "../../components/Topbar";
@@ -53,6 +54,7 @@ function Lotes() {
   const [showModal, setShowModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showListoModal, setShowListoModal] = useState(false);
   const [loteSeleccionado, setLoteSeleccionado] = useState(null);
   const [filtro, setFiltro] = useState("");
   const [filtroGalpon, setFiltroGalpon] = useState("");
@@ -375,6 +377,23 @@ function Lotes() {
     }
   };
 
+  const handleMarcarListo = async () => {
+    const id_lote = loteSeleccionado?.id_lote;
+    if (!id_lote) return;
+
+    setSaving(true);
+    try {
+      await api.patch(`/lotes/${id_lote}/`, { estado: "Listo" });
+      setShowListoModal(false);
+      setLoteSeleccionado(null);
+      fetchData();
+    } catch (err) {
+      setFormError(err?.response?.data?.detail || "Error al actualizar el lote.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const estadoBadgeStyle = (estado) => {
     const e = String(estado || "").toLowerCase();
 
@@ -393,6 +412,28 @@ function Lotes() {
       return {
         background: "#fef3c7",
         color: "#d97706",
+        padding: "6px 12px",
+        borderRadius: "20px",
+        fontSize: "12px",
+        fontWeight: "600",
+      };
+    }
+
+    if (e.includes("list")) {
+      return {
+        background: "#eff6ff",
+        color: "#2563eb",
+        padding: "6px 12px",
+        borderRadius: "20px",
+        fontSize: "12px",
+        fontWeight: "600",
+      };
+    }
+
+    if (e.includes("vend") || e.includes("sal") || e.includes("fin") || e.includes("cerr") || e.includes("inact")) {
+      return {
+        background: "#f1f5f9",
+        color: "#475569",
         padding: "6px 12px",
         borderRadius: "20px",
         fontSize: "12px",
@@ -626,7 +667,7 @@ function Lotes() {
           ...mainContentStyle,
           marginLeft: isNarrow ? "0px" : sidebarOpen ? "240px" : "70px",
           padding: isNarrow ? "16px" : "32px",
-          paddingTop: isNarrow ? "16px" : "32px",
+          paddingTop: isNarrow ? "80px" : "32px",
         }}
       >
         <Topbar titulo="Gestión de Lotes" subtitulo="Registra lotes y visualiza el estado por galpón" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
@@ -771,6 +812,18 @@ function Lotes() {
                       </td>
                       <td style={tdStyle}>
                         <div className="btn-action-group">
+                          {String(l?.estado || "").toLowerCase().trim() === "crianza" && (
+                            <button
+                              onClick={() => {
+                                setLoteSeleccionado(l);
+                                setShowListoModal(true);
+                              }}
+                              className="btn-action btn-action--blue"
+                              title="Marcar listo para comercialización"
+                            >
+                              <Tag size={16} />
+                            </button>
+                          )}
                           <button
                             onClick={() => handleEditarClick(l)}
                             className="btn-action btn-action--edit"
@@ -877,6 +930,55 @@ function Lotes() {
               disabled={saving}
             >
               {saving ? "Eliminando..." : "Sí, eliminar"}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {showListoModal && (
+        <Modal
+          titulo="Comercializar Lote"
+          onClose={() => {
+            setShowListoModal(false);
+            setLoteSeleccionado(null);
+            setFormError("");
+          }}
+        >
+          <p style={{ color: "#4b5563", marginBottom: "20px" }}>
+            ¿Estás seguro de marcar el lote <strong>#{loteSeleccionado?.id_lote}</strong> como listo para su comercialización? Esto cambiará su estado a <strong>Listo</strong>.
+          </p>
+          {formError && (
+            <p style={{ color: "#dc2626", fontSize: "12px", margin: "0 0 12px 0" }}>
+              ⚠️ {formError}
+            </p>
+          )}
+          <div style={{ display: "flex", gap: "12px" }}>
+            <button
+              onClick={() => {
+                setShowListoModal(false);
+                setLoteSeleccionado(null);
+                setFormError("");
+              }}
+              style={btnCancelarStyle}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleMarcarListo}
+              style={{
+                flex: 1,
+                padding: "12px",
+                borderRadius: "10px",
+                border: "none",
+                fontWeight: "600",
+                fontSize: "14px",
+                cursor: "pointer",
+                background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+                color: "white",
+              }}
+              disabled={saving}
+            >
+              {saving ? "Procesando..." : "Confirmar"}
             </button>
           </div>
         </Modal>

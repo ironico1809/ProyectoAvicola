@@ -11,6 +11,7 @@ import Permisos from "./pages/Permisos/Permisos";
 import Roles from "./pages/Roles/Roles";
 import Lotes from "./pages/Lotes/Lotes";
 import CrecimientoLote from "./pages/Lotes/CrecimientoLote";
+import Ventas from "./pages/Ventas/Ventas";
 import Estado from "./pages/Estado/Estado";
 import Alimentacion from "./pages/Alimentacion/Alimentacion";
 import Reportes from "./pages/Reportes/Reportes";
@@ -128,6 +129,7 @@ function App() {
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/galpones" element={<ProtectedRoute><Galpones /></ProtectedRoute>} />
         <Route path="/lotes" element={<ProtectedRoute><Lotes /></ProtectedRoute>} />
+        <Route path="/ventas" element={<ProtectedRoute><Ventas /></ProtectedRoute>} />
         <Route path="/lotes/control-calidad" element={<ProtectedRoute><CrecimientoLote /></ProtectedRoute>} />
         <Route path="/alimentacion" element={<ProtectedRoute><Alimentacion /></ProtectedRoute>} />
         <Route path="/inventario" element={<ProtectedRoute><Inventario /></ProtectedRoute>} />

@@ -280,7 +280,7 @@ function Galpones() {
         style={{
           marginLeft: isMobile ? "0" : sidebarOpen ? "240px" : "70px",
           padding: isMobile ? "16px" : "32px",
-          paddingTop: isMobile ? "16px" : "32px",
+          paddingTop: isMobile ? "80px" : "32px",
           transition: "margin-left 0.3s ease",
           flex: 1,
         }}

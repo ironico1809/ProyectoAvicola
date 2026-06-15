@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     'apps.insumos',
     'apps.sanitario',
     'apps.mortandad',
+    'apps.ventas',
     # ── Mantenimiento (SuperAdmin) ─────────────────────────────────────────────
     'apps.mantenimiento',
     # ── Librerías terceros ────────────────────────────────────────────────────

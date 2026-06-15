@@ -6,6 +6,7 @@ import {
   Wheat,
   LogOut,
   ChevronLeft,
+  ChevronRight,
   Menu,
   Users,
   ShieldCheck,
@@ -21,7 +22,7 @@ import {
   CreditCard,
   Database,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useUsuario } from "../hooks/useUsuario";
 
@@ -56,6 +57,7 @@ const MENU_ADMIN_OPERADOR = [
     items: [
       { icon: <Bird size={18} />, label: "Galpones", path: "/galpones" },
       { icon: <Package size={18} />, label: "Lotes", path: "/lotes" },
+      { icon: <Truck size={18} />, label: "Ventas", path: "/ventas" },
       { icon: <ClipboardList size={18} />, label: "Control de Calidad", path: "/lotes/control-calidad" },
       { icon: <AlertTriangle size={18} />, label: "Mortandad", path: "/mortandad" },
       { icon: <Stethoscope size={18} />, label: "Registro Sanitario", path: "/sanitario/registro" },
@@ -85,12 +87,11 @@ const MENU_ADMIN_OPERADOR = [
       { icon: <History size={18} />, label: "Movimientos", path: "/inventario/movimientos" },
     ],
   },
-  // Solo Admin ve Seguridad y Admin
   {
     type: "group",
     label: "Seguridad y Admin",
     icon: <ShieldCheck size={20} />,
-    soloAdmin: true,   // flag para filtrar
+    soloAdmin: true,
     items: [
       { icon: <Users size={18} />, label: "Usuarios", path: "/usuarios" },
       { icon: <ShieldCheck size={18} />, label: "Roles", path: "/roles" },
@@ -113,9 +114,9 @@ function Sidebar({ open, setOpen, showMobileTrigger = true }) {
   const location = useLocation();
   const [isMobile, setIsMobile] = useState(false);
   const [openGroups, setOpenGroups] = useState({});
+  const [hoveredItem, setHoveredItem] = useState(null);
   const { esSuperAdmin, esAdmin } = useUsuario();
 
-  // Seleccionar menú según rol
   const menuGroups = esSuperAdmin
     ? MENU_SUPERADMIN
     : MENU_ADMIN_OPERADOR.filter((g) => {
@@ -135,6 +136,12 @@ function Sidebar({ open, setOpen, showMobileTrigger = true }) {
   useEffect(() => {
     if (isMobile && open) setOpen(false);
   }, [isMobile]);
+
+  useEffect(() => {
+    if (!open && !isMobile) {
+      setOpenGroups({});
+    }
+  }, [open, isMobile]);
 
   const toggleGroup = (label) => {
     if (!open && !isMobile) {
@@ -171,34 +178,62 @@ function Sidebar({ open, setOpen, showMobileTrigger = true }) {
           transform: isMobile && !open ? "translateX(-100%)" : "translateX(0)",
         }}
       >
-        <div style={logoStyle}>
-          {open && <img src="/logo.png" alt="logo" style={imgStyle} />}
-          {open && <span style={logoTextStyle}>AviGranja</span>}
-          <button onClick={() => setOpen(!open)} style={toggleStyle} type="button">
-            {open ? (
-              <ChevronLeft size={18} color="#fef3c7" />
-            ) : (
-              <img src="/logo.png" style={{ width: 24, height: 24 }} alt="" />
-            )}
-          </button>
+        <div style={{
+          ...logoStyle,
+          justifyContent: open ? "space-between" : "center",
+          padding: open ? "16px 14px" : "16px 0"
+        }}>
+          <div 
+            style={{ ...logoInnerStyle, cursor: !open ? "pointer" : "default" }}
+            onClick={() => !open && setOpen(true)}
+            title={!open ? "Expandir menú" : undefined}
+          >
+            <img src="/logo.png" alt="logo" style={imgStyle} />
+            {open && <span style={logoTextStyle}>AviGranja</span>}
+          </div>
+          {open && (
+            <button
+              onClick={() => setOpen(false)}
+              style={toggleStyle}
+              type="button"
+              title="Colapsar menú"
+            >
+              <div style={{
+                ...toggleIconWrap,
+                transform: "rotate(0deg)",
+              }}>
+                <ChevronLeft size={16} color="#fef3c7" />
+              </div>
+            </button>
+          )}
         </div>
 
         <nav style={navStyle}>
           {menuGroups.map((group, i) => {
             if (group.type === "single") {
               const isActive = location.pathname === group.path;
+              const isHovered = hoveredItem === `single-${i}`;
               return (
                 <button
                   key={i}
                   onClick={() => handleNavigate(group.path)}
+                  onMouseEnter={() => setHoveredItem(`single-${i}`)}
+                  onMouseLeave={() => setHoveredItem(null)}
                   style={{
                     ...navItemStyle,
                     justifyContent: open ? "flex-start" : "center",
                     ...(isActive ? activeStyle : {}),
+                    ...(isHovered && !isActive ? hoverNavStyle : {}),
+                    transform: isHovered ? "scale(1.02)" : "scale(1)",
                   }}
-                  title={group.label}
+                  title={!open ? group.label : undefined}
                 >
-                  <span style={iconStyle}>{group.icon}</span>
+                  <span style={{
+                    ...iconStyle,
+                    transform: isHovered ? "scale(1.1)" : "scale(1)",
+                  }}>
+                    {group.icon}
+                  </span>
                   {open && <span style={labelStyle}>{group.label}</span>}
                 </button>
               );
@@ -210,9 +245,11 @@ function Sidebar({ open, setOpen, showMobileTrigger = true }) {
             );
 
             return (
-              <div key={i} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <div key={i} style={groupWrapperStyle}>
                 <button
                   onClick={() => toggleGroup(group.label)}
+                  onMouseEnter={() => setHoveredItem(`group-${i}`)}
+                  onMouseLeave={() => setHoveredItem(null)}
                   style={{
                     ...navItemStyle,
                     justifyContent: open ? "flex-start" : "center",
@@ -221,37 +258,69 @@ function Sidebar({ open, setOpen, showMobileTrigger = true }) {
                         ? "rgba(255,255,255,0.1)"
                         : "transparent",
                   }}
-                  title={group.label}
+                  title={!open ? group.label : undefined}
                 >
-                  <span style={iconStyle}>{group.icon}</span>
+                  <span style={{
+                    ...iconStyle,
+                    transform: hoveredItem === `group-${i}` ? "scale(1.1)" : "scale(1)",
+                  }}>
+                    {group.icon}
+                  </span>
                   {open && (
                     <>
                       <span style={{ ...labelStyle, flex: 1 }}>{group.label}</span>
-                      {isGroupOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                      <div style={{
+                        transform: isGroupOpen ? "rotate(0deg)" : "rotate(-90deg)",
+                        transition: "transform 0.3s ease",
+                        display: "flex",
+                      }}>
+                        <ChevronDown size={16} color="rgba(255,255,255,0.6)" />
+                      </div>
                     </>
                   )}
                 </button>
 
-                {open && isGroupOpen && (
+                <div style={{
+                  ...subMenuContainer,
+                  maxHeight: open && isGroupOpen ? subMenuHeight : "0px",
+                  opacity: open && isGroupOpen ? 1 : 0,
+                }}>
                   <div style={subGroupStyle}>
                     {group.items.map((item, idx) => {
                       const isActive = location.pathname === item.path;
+                      const subHovered = hoveredItem === `sub-${i}-${idx}`;
                       return (
                         <button
                           key={idx}
                           onClick={() => handleNavigate(item.path)}
+                          onMouseEnter={() => setHoveredItem(`sub-${i}-${idx}`)}
+                          onMouseLeave={() => setHoveredItem(null)}
                           style={{
                             ...subItemStyle,
                             ...(isActive ? subActiveStyle : {}),
+                            ...(subHovered && !isActive ? subHoverStyle : {}),
+                            transform: subHovered ? "translateX(4px)" : "translateX(0)",
                           }}
                         >
-                          <span style={iconStyle}>{item.icon}</span>
-                          <span style={{ fontSize: "13px" }}>{item.label}</span>
+                          <span style={{
+                            ...subIconStyle,
+                            color: isActive ? "#fbbf24" : "rgba(255,255,255,0.6)",
+                          }}>
+                            {item.icon}
+                          </span>
+                          <span style={{
+                            fontSize: "13px",
+                            color: isActive ? "#fbbf24" : "rgba(255,255,255,0.75)",
+                            fontWeight: isActive ? "600" : "400",
+                          }}>
+                            {item.label}
+                          </span>
+                          {isActive && <div style={activeIndicatorStyle} />}
                         </button>
                       );
                     })}
                   </div>
-                )}
+                </div>
               </div>
             );
           })}
@@ -263,6 +332,8 @@ function Sidebar({ open, setOpen, showMobileTrigger = true }) {
               ...logoutStyle,
               justifyContent: open ? "flex-start" : "center",
             }}
+            onMouseEnter={() => setHoveredItem("logout")}
+            onMouseLeave={() => setHoveredItem(null)}
             onClick={() => {
               localStorage.removeItem("access_token");
               localStorage.removeItem("refresh_token");
@@ -270,17 +341,53 @@ function Sidebar({ open, setOpen, showMobileTrigger = true }) {
               handleNavigate("/login");
             }}
             type="button"
+            title={!open ? "Cerrar Sesión" : undefined}
           >
-            <span style={iconStyle}>
+            <span style={{
+              ...iconStyle,
+              transform: hoveredItem === "logout" ? "scale(1.1)" : "scale(1)",
+            }}>
               <LogOut size={20} />
             </span>
-            {open && <span style={labelStyle}>Cerrar Sesión</span>}
+            {open && <span style={logoutLabelStyle}>Cerrar Sesión</span>}
           </button>
         </div>
       </aside>
+
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-4px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateX(-8px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        .sidebar-item-enter {
+          animation: fadeIn 0.25s ease forwards;
+        }
+        .sidebar-sub-enter {
+          animation: slideIn 0.2s ease forwards;
+        }
+        aside::-webkit-scrollbar {
+          width: 4px;
+        }
+        aside::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        aside::-webkit-scrollbar-thumb {
+          background: rgba(255,255,255,0.15);
+          border-radius: 4px;
+        }
+        aside::-webkit-scrollbar-thumb:hover {
+          background: rgba(255,255,255,0.25);
+        }
+      `}</style>
     </>
   );
 }
+
+const subMenuHeight = "500px";
 
 // ─── Estilos ──────────────────────────────────────────────────────────────────
 
@@ -293,8 +400,9 @@ const sidebarStyle = {
   left: 0,
   height: "100dvh",
   zIndex: 100,
-  transition: "width 0.3s ease, transform 0.3s ease",
+  transition: "width 0.35s cubic-bezier(0.4, 0, 0.2, 1), transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
   overflow: "hidden",
+  overflowY: "auto",
 };
 
 const backdropStyle = {
@@ -303,6 +411,7 @@ const backdropStyle = {
   background: "rgba(0,0,0,0.5)",
   backdropFilter: "blur(4px)",
   zIndex: 90,
+  animation: "fadeIn 0.25s ease",
 };
 
 const mobileOpenBtnStyle = {
@@ -316,15 +425,24 @@ const mobileOpenBtnStyle = {
   padding: "8px",
   cursor: "pointer",
   boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+  transition: "all 0.2s ease",
 };
 
 const logoStyle = {
   display: "flex",
   alignItems: "center",
-  gap: "12px",
+  justifyContent: "space-between",
+  gap: "8px",
   padding: "16px 14px",
   borderBottom: "1px solid rgba(255,255,255,0.1)",
   minHeight: "70px",
+};
+
+const logoInnerStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: "12px",
+  overflow: "hidden",
 };
 
 const imgStyle = {
@@ -332,13 +450,16 @@ const imgStyle = {
   height: "34px",
   borderRadius: "50%",
   border: "2px solid #fbbf24",
+  flexShrink: 0,
+  transition: "transform 0.3s ease",
 };
 
 const logoTextStyle = {
   fontSize: "17px",
   fontWeight: "800",
   color: "#fef3c7",
-  flex: 1,
+  whiteSpace: "nowrap",
+  animation: "fadeIn 0.3s ease",
 };
 
 const toggleStyle = {
@@ -347,6 +468,17 @@ const toggleStyle = {
   borderRadius: "8px",
   padding: "6px",
   cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  transition: "all 0.3s ease",
+  flexShrink: 0,
+};
+
+const toggleIconWrap = {
+  display: "flex",
+  alignItems: "center",
+  transition: "transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
 };
 
 const navStyle = {
@@ -355,7 +487,6 @@ const navStyle = {
   padding: "12px 8px",
   gap: "4px",
   flex: 1,
-  overflowY: "auto",
 };
 
 const navItemStyle = {
@@ -370,14 +501,41 @@ const navItemStyle = {
   background: "transparent",
   width: "100%",
   fontFamily: "inherit",
-  transition: "all 0.2s",
+  transition: "all 0.25s ease, transform 0.15s ease",
+  position: "relative",
+  overflow: "hidden",
 };
 
-const activeStyle = { background: "#f59e0b", color: "white", fontWeight: "600" };
+const activeStyle = {
+  background: "linear-gradient(135deg, #f59e0b, #d97706)",
+  color: "white",
+  fontWeight: "600",
+  boxShadow: "0 4px 12px rgba(245,158,11,0.3)",
+};
+
+const hoverNavStyle = {
+  background: "rgba(255,255,255,0.08)",
+};
 
 const labelStyle = { fontSize: "14px", whiteSpace: "nowrap", textAlign: "left" };
 
-const iconStyle = { display: "flex", alignItems: "center", flexShrink: 0 };
+const iconStyle = {
+  display: "flex",
+  alignItems: "center",
+  flexShrink: 0,
+  transition: "transform 0.2s ease",
+};
+
+const groupWrapperStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "2px",
+};
+
+const subMenuContainer = {
+  overflow: "hidden",
+  transition: "max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease",
+};
 
 const subGroupStyle = {
   display: "flex",
@@ -391,14 +549,33 @@ const subGroupStyle = {
 const subItemStyle = {
   ...navItemStyle,
   padding: "8px 12px",
-  color: "rgba(255,255,255,0.7)",
   borderRadius: "8px",
+  gap: "10px",
 };
 
 const subActiveStyle = {
-  color: "#fbbf24",
-  background: "rgba(255,255,255,0.08)",
+  background: "rgba(255,255,255,0.1)",
   fontWeight: "600",
+};
+
+const subHoverStyle = {
+  background: "rgba(255,255,255,0.06)",
+};
+
+const subIconStyle = {
+  display: "flex",
+  alignItems: "center",
+  flexShrink: 0,
+  transition: "color 0.2s ease",
+};
+
+const activeIndicatorStyle = {
+  width: "3px",
+  height: "16px",
+  background: "#fbbf24",
+  borderRadius: "2px",
+  position: "absolute",
+  right: "4px",
 };
 
 const footerStyle = {
@@ -406,6 +583,14 @@ const footerStyle = {
   borderTop: "1px solid rgba(255,255,255,0.1)",
 };
 
-const logoutStyle = { ...navItemStyle, color: "rgba(255,255,255,0.6)" };
+const logoutStyle = {
+  ...navItemStyle,
+  color: "rgba(255,255,255,0.6)",
+};
+
+const logoutLabelStyle = {
+  ...labelStyle,
+  color: "rgba(255,255,255,0.6)",
+};
 
 export default Sidebar;
