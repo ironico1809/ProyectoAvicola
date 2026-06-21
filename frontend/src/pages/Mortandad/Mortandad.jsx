@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Search, AlertTriangle, Activity, List, BarChart2, PieChart, Download } from "lucide-react";
+import { Plus, Search, AlertTriangle, Activity, List, BarChart2, PieChart, Download, Brain } from "lucide-react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import html2canvas from "html2canvas"; // NUEVO IMPORT
 
@@ -31,12 +32,17 @@ function Mortandad() {
   const [lotes, setLotes] = useState([]);
   const [rows, setRows] = useState([]);
 
-  const [activeTab, setActiveTab] = useState("historial");
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const loteUrl = searchParams.get("lote");
+  const tabUrl = searchParams.get("tab");
+
+  const [activeTab, setActiveTab] = useState(tabUrl || "historial");
   const [mostrarCausas, setMostrarCausas] = useState(false);
   
   const [filtroTiempo, setFiltroTiempo] = useState("dia"); 
 
-  const [filtroLote, setFiltroLote] = useState("");
+  const [filtroLote, setFiltroLote] = useState(loteUrl || "");
   const [fechaInicio, setFechaInicio] = useState("");
   const [fechaFin, setFechaFin] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -54,6 +60,11 @@ function Mortandad() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (loteUrl) setFiltroLote(loteUrl);
+    if (tabUrl) setActiveTab(tabUrl);
+  }, [loteUrl, tabUrl]);
+
   const fetchInitial = async () => {
     setLoading(true);
     setFormError("");
@@ -62,7 +73,11 @@ function Mortandad() {
         api.get("/lotes/"),
         api.get("/mortandad/"),
       ]);
-      setLotes(Array.isArray(lotesRes.data) ? lotesRes.data : lotesRes.data?.results || []);
+      const dataLotes = Array.isArray(lotesRes.data) ? lotesRes.data : lotesRes.data?.results || [];
+      const lotesActivosFiltrados = dataLotes.filter(l =>
+        ["crianza", "crecimiento", "engorde", "activo"].includes(String(l.estado || "").toLowerCase().trim())
+      );
+      setLotes(lotesActivosFiltrados);
       setRows(Array.isArray(mortRes.data) ? mortRes.data : mortRes.data?.results || []);
     } catch (e) {
       setFormError("No se pudo cargar la información de mortandad.");
@@ -96,7 +111,7 @@ function Mortandad() {
       .sort((a, b) => (toNumber(b?.id_lote) ?? 0) - (toNumber(a?.id_lote) ?? 0))
       .map((l) => {
         const esFinalizado = String(l?.estado).toLowerCase() === "finalizado";
-        const etiquetaEstado = esFinalizado ? " 🔒 FINALIZADO" : ` (${l?.cantidad_actual || 0} vivas)`;
+        const etiquetaEstado = esFinalizado ? " - FINALIZADO" : ` (${l?.cantidad_actual || 0} vivas)`;
         
         return {
           value: String(l?.id_lote ?? ""),
@@ -429,14 +444,25 @@ function Mortandad() {
                     <h2 className="mort-title">Panel de Analisis: Tasa de Mortalidad (Lote {filtroLote})</h2>
                   </div>
                   
-                  <button 
-                    className="mort-secondaryBtn" 
-                    onClick={handleExportarPDF} 
-                    type="button"
-                  >
-                    <Download size={18} />
-                    Exportar PDF
-                  </button>
+                  <div style={{ display: "flex", gap: "10px" }}>
+                    <button 
+                      className="mort-secondaryBtn" 
+                      onClick={() => navigate(`/mortandad/prediccion?lote=${filtroLote}`)} 
+                      type="button"
+                      style={{ background: "#fef3c7", color: "#b45309", borderColor: "#f59e0b" }}
+                    >
+                      <Brain size={18} />
+                      Predicción IA
+                    </button>
+                    <button 
+                      className="mort-secondaryBtn" 
+                      onClick={handleExportarPDF} 
+                      type="button"
+                    >
+                      <Download size={18} />
+                      Exportar PDF
+                    </button>
+                  </div>
                 </div>
                 
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px", flexWrap: "wrap", gap: "10px" }}>
@@ -565,7 +591,7 @@ function Mortandad() {
               <label className="mort-label">Causa probable</label>
               <InputField type="text" name="causa" placeholder="Ej: Estrés calórico" value={form.causa} onChange={handleFormChange} />
             </div>
-            {formError && <p className="mort-formError">⚠️ {formError}</p>}
+            {formError && <p className="mort-formError">{formError}</p>}
             <Button text="Guardar" loadingText="Guardando..." loading={saving} icon={<Plus size={18} />} />
           </form>
         </Modal>

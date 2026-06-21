@@ -70,7 +70,11 @@ function RegistroSanitario() {
         api.get("/usuarios/"),
       ]);
 
-      setLotes(lotesRes.data);
+      const dataLotes = lotesRes.data || [];
+      const lotesActivosFiltrados = dataLotes.filter(l =>
+        ["crianza", "crecimiento", "engorde", "activo"].includes(String(l.estado || "").toLowerCase().trim())
+      );
+      setLotes(lotesActivosFiltrados);
 
       const sanitarios = (insRes.data || []).filter((i) =>
         ["Vacuna", "Medicamento", "Suministro"].includes(i.tipo),

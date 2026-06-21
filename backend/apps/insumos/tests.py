@@ -1,10 +1,16 @@
 from django.test import TestCase
 from apps.insumos.models import Insumo, MovimientoAlmacen, Proveedor
+from apps.empresas.models import Empresa
 from django.db import connection
 
 
 class MovimientoAlmacenTest(TestCase):
     def setUp(self):
+        self.empresa = Empresa.objects.create(
+            id=1,
+            nombre="Empresa Demo",
+            email_contacto="demo@correo.com"
+        )
         self.insumo = Insumo.objects.create(
             nombre="Alimento Inicial",
             tipo="Alimento",

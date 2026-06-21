@@ -13,8 +13,11 @@ from apps.bitacora.utils import registrar_evento
 from apps.insumos.models import Insumo, MovimientoAlmacen
 
 
-def _descontar_stock(insumo_id, cantidad, lote_id):
-	insumo = Insumo.objects.select_for_update().get(pk=insumo_id)
+def _descontar_stock(insumo_id, cantidad, lote_id, empresa_id=None):
+	if empresa_id:
+		insumo = Insumo.objects.select_for_update().filter(empresa_id=empresa_id).get(pk=insumo_id)
+	else:
+		insumo = Insumo.objects.select_for_update().get(pk=insumo_id)
 	if insumo.stock_actual < cantidad:
 		raise ValueError(
 			f"Stock insuficiente para '{insumo.nombre}'. "
@@ -28,6 +31,7 @@ def _descontar_stock(insumo_id, cantidad, lote_id):
 		tipo_movimiento='Salida',
 		cantidad=cantidad,
 		motivo=f'Consumo alimentación - Lote {lote_id}',
+		empresa_id=empresa_id,
 	)
 
 
@@ -58,7 +62,7 @@ class AlimentacionBulkCreateView(TenantSafeView):
 
 						if insumo_id:
 							_descontar_stock(
-								insumo_id, obj.cantidad_kg, obj.lote_id)
+								insumo_id, obj.cantidad_kg, obj.lote_id, empresa_id)
 
 						registrar_evento(
 							request,
@@ -154,7 +158,8 @@ class AlimentacionListCreateView(TenantSafeView):
 					_descontar_stock(
 						insumo_id,
 						alimentacion.cantidad_kg,
-						alimentacion.lote_id)
+						alimentacion.lote_id,
+						self.get_tenant_id())
 
 				entidad_nombre = f"Alimentación {alimentacion.id_alimentacion} - Lote {alimentacion.lote_id}"
 				registrar_evento(

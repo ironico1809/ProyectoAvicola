@@ -198,6 +198,7 @@
 @media (max-width: 900px) {
   .mort-main {
     padding: 18px;
+    padding-top: 80px;
   }
 
   .mort-filters {
@@ -211,5 +212,15 @@
   .mort-table th,
   .mort-table td {
     padding: 12px;
+    font-size: 13px;
+  }
+
+  .mort-card {
+    padding: 16px;
+  }
+
+  .mort-cardHeader {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

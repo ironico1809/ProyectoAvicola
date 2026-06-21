@@ -16,6 +16,9 @@ function Temperatura() {
   const [error, setError] = useState("");
   const [mensajeManual, setMensajeManual] = useState("");
 
+  const [paginaActual, setPaginaActual] = useState(1);
+  const REGISTROS_POR_PAGINA = 8;
+
   const [formManual, setFormManual] = useState({ id_galpon: "", temperatura: "" });
 
   const simulacionIniciadaRef = useRef(new Set());
@@ -300,19 +303,35 @@ function Temperatura() {
                       </tr>
                     </thead>
                     <tbody>
-                      {historial.map((item) => (
-                        <tr key={item.id}>
-                          <td>{item.galpon_nombre}</td>
-                          <td><strong>{item.temperatura}°C</strong></td>
-                          <td>
-                            <span className={`badge ${obtenerClaseEstado(item.estado)}`}>
-                              {item.estado}
-                            </span>
-                          </td>
-                          <td>{item.usuario_nombre ?? "—"}</td>
-                          <td>{formatearFecha(item.fecha_hora)}</td>
-                        </tr>
-                      ))}
+                      {historial
+                        .slice(
+                          (paginaActual - 1) * REGISTROS_POR_PAGINA,
+                          paginaActual * REGISTROS_POR_PAGINA
+                        )
+                        .map((item) => (
+                          <tr key={item.id}>
+                            <td>{item.galpon_nombre}</td>
+                            <td><strong>{item.temperatura}°C</strong></td>
+                            <td>
+                              <span className={`badge ${obtenerClaseEstado(item.estado)}`}>
+                                {item.estado}
+                              </span>
+                            </td>
+                            <td>{item.usuario_nombre ?? "—"}</td>
+                            <td>{formatearFecha(item.fecha_hora)}</td>
+                          </tr>
+                        ))}
+                      {/* Llenar con espacios en blanco si faltan registros para mantener el alto de la tabla */}
+                      {historial.length > 0 && 
+                        Array.from({ length: Math.max(0, REGISTROS_POR_PAGINA - historial.slice((paginaActual - 1) * REGISTROS_POR_PAGINA, paginaActual * REGISTROS_POR_PAGINA).length) }).map((_, index) => (
+                          <tr key={`empty-${index}`} style={{ height: "45px" }}>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                          </tr>
+                        ))}
                       {historial.length === 0 && (
                         <tr>
                           <td colSpan="5" style={{ textAlign: "center", color: "#94a3b8" }}>
@@ -322,6 +341,30 @@ function Temperatura() {
                       )}
                     </tbody>
                   </table>
+
+                  {historial.length > REGISTROS_POR_PAGINA && (
+                    <div className="pagination-container">
+                      <button
+                        type="button"
+                        className="pagination-btn"
+                        disabled={paginaActual === 1}
+                        onClick={() => setPaginaActual((p) => Math.max(p - 1, 1))}
+                      >
+                        Anterior
+                      </button>
+                      <span className="pagination-info">
+                        Página {paginaActual} de {Math.ceil(historial.length / REGISTROS_POR_PAGINA)}
+                      </span>
+                      <button
+                        type="button"
+                        className="pagination-btn"
+                        disabled={paginaActual >= Math.ceil(historial.length / REGISTROS_POR_PAGINA)}
+                        onClick={() => setPaginaActual((p) => Math.min(p + 1, Math.ceil(historial.length / REGISTROS_POR_PAGINA)))}
+                      >
+                        Siguiente
+                      </button>
+                    </div>
+                  )}
                 </div>
               </section>
             </>

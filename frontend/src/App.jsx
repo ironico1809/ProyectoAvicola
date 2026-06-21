@@ -11,6 +11,7 @@ import Permisos from "./pages/Permisos/Permisos";
 import Roles from "./pages/Roles/Roles";
 import Lotes from "./pages/Lotes/Lotes";
 import CrecimientoLote from "./pages/Lotes/CrecimientoLote";
+import ReporteProduccionDetallado from "./pages/Lotes/ReporteProduccionDetallado";
 import Ventas from "./pages/Ventas/Ventas";
 import Estado from "./pages/Estado/Estado";
 import Alimentacion from "./pages/Alimentacion/Alimentacion";
@@ -28,6 +29,8 @@ import Temperatura from "./pages/Temperatura/Temperatura";
 import PrediccionTemperatura from "./pages/PrediccionTemperatura/PrediccionTemperatura";
 import TemperatureAlert from "./components/TemperatureAlert";
 import Mortandad from "./pages/Mortandad/Mortandad";
+import PrediccionMortalidad from "./pages/Mortalidad/PrediccionMortalidad";
+import RecomendacionesCentro from "./pages/Mortalidad/RecomendacionesCentro";
 import ChangePasswordPage from "./pages/ChangePasswordPage/ChangePasswordPage";
 import SuccessPage from "./pages/SuccessPage/SuccessPage";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -131,6 +134,7 @@ function App() {
         <Route path="/lotes" element={<ProtectedRoute><Lotes /></ProtectedRoute>} />
         <Route path="/ventas" element={<ProtectedRoute><Ventas /></ProtectedRoute>} />
         <Route path="/lotes/control-calidad" element={<ProtectedRoute><CrecimientoLote /></ProtectedRoute>} />
+        <Route path="/lotes/reporte-produccion" element={<ProtectedRoute><ReporteProduccionDetallado /></ProtectedRoute>} />
         <Route path="/alimentacion" element={<ProtectedRoute><Alimentacion /></ProtectedRoute>} />
         <Route path="/inventario" element={<ProtectedRoute><Inventario /></ProtectedRoute>} />
         <Route path="/inventario/insumos" element={<ProtectedRoute><Insumos /></ProtectedRoute>} />
@@ -143,6 +147,8 @@ function App() {
         <Route path="/sanitario/alertas" element={<ProtectedRoute><AlertasSanitarias /></ProtectedRoute>} />
         <Route path="/reportes" element={<ProtectedRoute><Reportes /></ProtectedRoute>} />
         <Route path="/mortandad" element={<ProtectedRoute><Mortandad /></ProtectedRoute>} />
+        <Route path="/mortandad/prediccion" element={<ProtectedRoute><PrediccionMortalidad /></ProtectedRoute>} />
+        <Route path="/recomendaciones-ia" element={<ProtectedRoute><RecomendacionesCentro /></ProtectedRoute>} />
         <Route path="/estado" element={<ProtectedRoute><Estado /></ProtectedRoute>} />
         <Route path="/usuarios" element={<ProtectedRoute><Usuarios /></ProtectedRoute>} />
         <Route path="/bitacora" element={<ProtectedRoute><Bitacora /></ProtectedRoute>} />

@@ -68,8 +68,11 @@ class VentaLoteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'precio_unitario': 'El precio unitario debe ser mayor a 0.'})
 
         # Validar disponibilidad del lote
-        if lote.estado == 'Vendido' or lote.cantidad_actual <= 0:
-            raise serializers.ValidationError({'id_lote': 'El lote seleccionado ya ha sido vendido por completo o está vacío.'})
+        if lote.estado not in ['Listo para venta', 'Listo']:
+            raise serializers.ValidationError({'id_lote': 'Solo se pueden comercializar lotes que estén en estado "Listo para venta".'})
+
+        if lote.cantidad_actual <= 0:
+            raise serializers.ValidationError({'id_lote': 'El lote seleccionado está vacío.'})
 
         if cantidad > lote.cantidad_actual:
             raise serializers.ValidationError({'cantidad': f'La cantidad a vender supera el stock disponible en el lote ({lote.cantidad_actual} aves).'})

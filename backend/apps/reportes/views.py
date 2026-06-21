@@ -68,7 +68,7 @@ def _rows_to_xlsx_bytes(rows: list[dict]) -> bytes:
     return buf.getvalue()
 
 
-class ReporteGenerarView(APIView):
+class ReporteGenerarView(TenantSafeView):
     """Motor de reportes dinámicos.
 
     Endpoint:
@@ -176,6 +176,7 @@ class ReporteGenerarView(APIView):
                 fecha_inicio=fecha_inicio,
                 fecha_fin=fecha_fin,
                 galpon_ids=galpon_ids,
+                lote_ids=lote_ids,
                 estado_lote=payload.get('estado_lote'),
                 agrupar_por=agrupar_por,
             )
@@ -235,7 +236,7 @@ class ReporteGenerarView(APIView):
 
         Fuente: apps.temperatura.TemperaturaGalpon
         """
-        qs = TemperaturaGalpon.objects.select_related('galpon').all()
+        qs = self.filter_by_tenant(TemperaturaGalpon.objects.select_related('galpon').all())
 
         if fecha_inicio:
             qs = qs.filter(fecha_hora__date__gte=fecha_inicio)
@@ -359,7 +360,7 @@ class ReporteGenerarView(APIView):
 
     def _report_mortalidad(self, *, fecha_inicio, fecha_fin, galpon_ids, lote_ids, agrupar_por):
         """Reporte de bajas (mortalidad)."""
-        qs = RegistroMortalidad.objects.select_related('lote', 'lote__galpon').all()
+        qs = self.filter_by_tenant(RegistroMortalidad.objects.select_related('lote', 'lote__galpon').all())
         if fecha_inicio:
             qs = qs.filter(fecha_hora__date__gte=fecha_inicio)
         if fecha_fin:
@@ -447,7 +448,7 @@ class ReporteGenerarView(APIView):
 
     def _report_usuarios(self, *, fecha_inicio, fecha_fin, agrupar_por):
         """Reporte de personal / usuarios."""
-        qs = Usuario.objects.all()
+        qs = self.filter_by_tenant(Usuario.objects.all())
         # No hay campo fecha de creación en tu SQL actual, reportamos lista y estado
         rows = [
             {
@@ -479,7 +480,7 @@ class ReporteGenerarView(APIView):
             tipo_alimento,
             agrupar_por,
     ):
-        qs = Alimentacion.objects.select_related('lote', 'lote__galpon').all()
+        qs = self.filter_by_tenant(Alimentacion.objects.select_related('lote', 'lote__galpon').all())
 
         if fecha_inicio:
             qs = qs.filter(fecha__gte=fecha_inicio)
@@ -619,7 +620,7 @@ class ReporteGenerarView(APIView):
             qs.values_list(
                 'lote_id',
                 flat=True).distinct())
-        lote_qs = Lote.objects.filter(id_lote__in=lote_ids_en_datos)
+        lote_qs = self.filter_by_tenant(Lote.objects.filter(id_lote__in=lote_ids_en_datos))
 
         lote_stats = qs.values('lote_id').annotate(total_kg=Sum('cantidad_kg'))
         total_kg_por_lote = {int(r['lote_id']): float(
@@ -654,10 +655,12 @@ class ReporteGenerarView(APIView):
         return rows, summary, series
 
     def _report_lotes(self, *, fecha_inicio, fecha_fin,
-                      galpon_ids, estado_lote, agrupar_por):
-        qs = Lote.objects.select_related('galpon').all()
+                      galpon_ids, lote_ids, estado_lote, agrupar_por):
+        qs = self.filter_by_tenant(Lote.objects.select_related('galpon').all())
         if galpon_ids:
             qs = qs.filter(galpon_id__in=galpon_ids)
+        if lote_ids:
+            qs = qs.filter(id_lote__in=lote_ids)
 
         if estado_lote:
             estado = str(estado_lote).strip()
@@ -779,13 +782,30 @@ class ReporteGenerarView(APIView):
             series = rows
 
         else:
+            from apps.lotes.models import ControlCalidad
+            from apps.alimentacion.models import Alimentacion
+
             qs = qs.order_by('-id_lote')
             rows = []
             for l in qs[:2000]:
                 mortalidad = None
                 if l.cantidad_inicial and l.cantidad_inicial > 0:
                     mortalidad = round(
-                        ((l.cantidad_inicial - (l.cantidad_actual or 0)) / l.cantidad_inicial) * 100, 4)
+                        ((l.cantidad_inicial - (l.cantidad_actual or 0)) / l.cantidad_inicial) * 100, 2)
+                
+                # Consumo de Alimento (alimento_consumido_kg)
+                sum_alim = self.filter_by_tenant(Alimentacion.objects.filter(lote=l)).aggregate(s=Sum('cantidad_kg'))['s'] or 0
+                alimento_consumido_kg = round(float(sum_alim), 2)
+
+                # Crecimiento (peso_promedio_kg)
+                latest_cc = self.filter_by_tenant(ControlCalidad.objects.filter(id_lote=l)).order_by('-fecha_registro').first()
+                peso_promedio_kg = round(float(latest_cc.peso_registrado), 3) if latest_cc else (round(float(l.peso_inicial), 3) if l.peso_inicial else 0.0)
+
+                # Eficiencia FCA (Feed Conversion Ratio)
+                # FCA = total_alimento_consumido / (peso_promedio * cantidad_actual_aves)
+                divisor = (peso_promedio_kg * (l.cantidad_actual or 1))
+                fca = round(alimento_consumido_kg / divisor, 3) if divisor > 0 else 0.0
+
                 rows.append(
                     {
                         'id_lote': int(l.id_lote),
@@ -797,6 +817,9 @@ class ReporteGenerarView(APIView):
                         'cantidad_actual': int(l.cantidad_actual or 0),
                         'estado': l.estado,
                         'mortalidad_pct': mortalidad,
+                        'peso_promedio_kg': peso_promedio_kg,
+                        'alimento_consumido_kg': alimento_consumido_kg,
+                        'fca_eficiencia': fca,
                     }
                 )
 
@@ -814,7 +837,7 @@ class ReporteGenerarView(APIView):
 
     def _report_bitacora(self, *, fecha_inicio, fecha_fin,
                          accion, usuario_id, agrupar_por):
-        qs = BitacoraEvento.objects.select_related('usuario').all()
+        qs = self.filter_by_tenant(BitacoraEvento.objects.select_related('usuario').all())
 
         if usuario_id:
             qs = qs.filter(usuario_id=usuario_id)
@@ -880,7 +903,7 @@ class ReporteGenerarView(APIView):
     # ── Inventario / Insumos ──────────────────────────────────────────────────
     def _report_insumos(self, *, fecha_inicio, fecha_fin, agrupar_por):
         """Reporte de movimientos de almacén y estado del catálogo de insumos."""
-        mov_qs = MovimientoAlmacen.objects.select_related('insumo', 'proveedor').all()
+        mov_qs = self.filter_by_tenant(MovimientoAlmacen.objects.select_related('insumo', 'proveedor').all())
 
         if fecha_inicio:
             mov_qs = mov_qs.filter(fecha_hora__date__gte=fecha_inicio)
@@ -937,7 +960,7 @@ class ReporteGenerarView(APIView):
 
         else:
             # Catálogo de insumos con estado de stock
-            insumo_qs = Insumo.objects.all().order_by('tipo', 'nombre')
+            insumo_qs = self.filter_by_tenant(Insumo.objects.all()).order_by('tipo', 'nombre')
             rows = [
                 {
                     'id_insumo': i.id_insumo,
@@ -953,7 +976,7 @@ class ReporteGenerarView(APIView):
             ]
 
         # summary
-        cat = Insumo.objects.aggregate(
+        cat = self.filter_by_tenant(Insumo.objects.all()).aggregate(
             total_insumos=Count('id_insumo'),
             bajo_stock_count=Count('id_insumo', filter=Q(stock_actual__lte=F('stock_minimo'))),
         )
@@ -972,7 +995,7 @@ class ReporteGenerarView(APIView):
     # ── Sanitario ─────────────────────────────────────────────────────────────
     def _report_sanitario(self, *, fecha_inicio, fecha_fin, lote_ids, agrupar_por):
         """Reporte de tratamientos sanitarios aplicados."""
-        qs = ControlSanitario.objects.select_related('lote', 'insumo').all()
+        qs = self.filter_by_tenant(ControlSanitario.objects.select_related('lote', 'insumo').all())
 
         if fecha_inicio:
             qs = qs.filter(fecha_aplicacion__gte=fecha_inicio)
@@ -1065,7 +1088,7 @@ class ReporteGenerarView(APIView):
 
 
 # ── Dashboard de KPIs ─────────────────────────────────────────────────────────
-class DashboardResumenView(APIView):
+class DashboardResumenView(TenantSafeView):
     """Endpoint GET /reportes/dashboard/ — devuelve KPIs generales del sistema."""
 
     permission_classes = [IsAuthenticated]
@@ -1075,9 +1098,9 @@ class DashboardResumenView(APIView):
         primer_dia_mes = hoy.replace(day=1)
 
         # ── Lotes activos ──
-        lotes_activos = Lote.objects.filter(
+        lotes_activos = self.filter_by_tenant(Lote.objects.filter(
             estado__in=['Crianza', 'Crecimiento', 'Engorde', 'Activo']
-        )
+        ))
         total_aves = lotes_activos.aggregate(t=Sum('cantidad_actual'))['t'] or 0
         total_aves_ini = lotes_activos.aggregate(t=Sum('cantidad_inicial'))['t'] or 0
         mortalidad_pct = 0
@@ -1085,7 +1108,7 @@ class DashboardResumenView(APIView):
             mortalidad_pct = round(((total_aves_ini - total_aves) / total_aves_ini) * 100, 2)
 
         # ── Alimentación del mes ──
-        alim_mes = Alimentacion.objects.filter(fecha__gte=primer_dia_mes)
+        alim_mes = self.filter_by_tenant(Alimentacion.objects.filter(fecha__gte=primer_dia_mes))
         consumo_mes_kg = float(alim_mes.aggregate(t=Sum('cantidad_kg'))['t'] or 0)
 
         # ── Conversión estimada ──
@@ -1095,7 +1118,7 @@ class DashboardResumenView(APIView):
 
         # ── Insumos críticos ──
         insumos_criticos = list(
-            Insumo.objects.filter(stock_actual__lte=F('stock_minimo'))
+            self.filter_by_tenant(Insumo.objects.filter(stock_actual__lte=F('stock_minimo')))
             .order_by('stock_actual')
             .values('id_insumo', 'nombre', 'tipo', 'stock_actual', 'stock_minimo', 'unidad_medida')[:10]
         )
@@ -1104,29 +1127,29 @@ class DashboardResumenView(APIView):
             i['stock_minimo'] = float(i['stock_minimo'])
 
         # ── Tratamientos sanitarios del mes ──
-        tratamientos_mes = ControlSanitario.objects.filter(
+        tratamientos_mes = self.filter_by_tenant(ControlSanitario.objects.filter(
             fecha_aplicacion__gte=primer_dia_mes
-        ).count()
+        )).count()
 
         # ── Movimientos de inventario del mes ──
         entradas_mes = float(
-            MovimientoAlmacen.objects.filter(
+            self.filter_by_tenant(MovimientoAlmacen.objects.filter(
                 fecha_hora__date__gte=primer_dia_mes,
                 tipo_movimiento='Entrada'
-            ).aggregate(t=Sum('cantidad'))['t'] or 0
+            )).aggregate(t=Sum('cantidad'))['t'] or 0
         )
         salidas_mes = float(
-            MovimientoAlmacen.objects.filter(
+            self.filter_by_tenant(MovimientoAlmacen.objects.filter(
                 fecha_hora__date__gte=primer_dia_mes,
                 tipo_movimiento='Salida'
-            ).aggregate(t=Sum('cantidad'))['t'] or 0
+            )).aggregate(t=Sum('cantidad'))['t'] or 0
         )
 
         # ── Consumo últimos 7 días (serie para mini-chart) ──
         from datetime import timedelta
         hace_7 = hoy - timedelta(days=6)
         serie_7d = (
-            Alimentacion.objects.filter(fecha__gte=hace_7)
+            self.filter_by_tenant(Alimentacion.objects.filter(fecha__gte=hace_7))
             .annotate(periodo=TruncDay('fecha'))
             .values('periodo')
             .annotate(kg=Sum('cantidad_kg'))
@@ -1135,6 +1158,54 @@ class DashboardResumenView(APIView):
         consumo_7d = [
             {'fecha': r['periodo'].isoformat(), 'kg': float(r['kg'] or 0)}
             for r in serie_7d
+        ]
+
+        # ── CU20: Dashboard general de producción ──
+        # ── Galpones ocupados ──
+        galpones_ocupados_count = lotes_activos.values('galpon').distinct().count()
+
+        # ── Alertas Sanitarias Pendientes ──
+        from apps.sanitario.models import AlertaSanitaria
+        alertas_sanitarias_count = self.filter_by_tenant(AlertaSanitaria.objects.filter(estado='Pendiente')).count()
+
+        # ── Alertas Generales ──
+        alertas_generales_count = len(insumos_criticos) + alertas_sanitarias_count
+
+        # ── Curva de Crecimiento (Real vs Estandar) ──
+        from apps.lotes.models import ControlCalidad
+        curva_crecimiento = list(
+            self.filter_by_tenant(ControlCalidad.objects.filter(id_lote__in=lotes_activos))
+            .order_by('edad_dias')
+            .values('id', 'id_lote_id', 'edad_dias', 'peso_registrado', 'peso_estandar', 'fecha_registro')[:30]
+        )
+        for c in curva_crecimiento:
+            c['peso_registrado'] = float(c['peso_registrado'])
+            c['peso_estandar'] = float(c['peso_estandar'])
+            c['fecha_registro'] = c['fecha_registro'].isoformat()
+
+        # ── Bajas Recientes ──
+        bajas_recientes = list(
+            self.filter_by_tenant(RegistroMortalidad.objects.filter(lote__in=lotes_activos))
+            .order_by('-fecha_hora')
+            .values('id_muerte', 'lote_id', 'cantidad', 'causa', 'fecha_hora')[:10]
+        )
+        for b in bajas_recientes:
+            b['fecha_hora'] = b['fecha_hora'].isoformat()
+
+        # ── Mortalidad 7 días ──
+        serie_mortalidad_7d = (
+            self.filter_by_tenant(RegistroMortalidad.objects.filter(fecha_hora__date__gte=hace_7))
+            .annotate(periodo=TruncDay('fecha_hora'))
+            .values('periodo')
+            .annotate(cant=Sum('cantidad'))
+            .order_by('periodo')
+        )
+        mortalidad_7d = [
+            {
+                'fecha': r['periodo'].date().isoformat() if isinstance(r['periodo'], timezone.datetime) else r['periodo'].isoformat(),
+                'cantidad': int(r['cant'] or 0)
+            }
+            for r in serie_mortalidad_7d
         ]
 
         return Response({
@@ -1149,6 +1220,12 @@ class DashboardResumenView(APIView):
             'entradas_mes': entradas_mes,
             'salidas_mes': salidas_mes,
             'consumo_7d': consumo_7d,
+            'galpones_ocupados_count': galpones_ocupados_count,
+            'alertas_sanitarias_count': alertas_sanitarias_count,
+            'alertas_generales_count': alertas_generales_count,
+            'curva_crecimiento': curva_crecimiento,
+            'bajas_recientes': bajas_recientes,
+            'mortalidad_7d': mortalidad_7d,
         })
 
 
@@ -1377,4 +1454,125 @@ class DashboardMonitoreoView(TenantSafeView):
             'alertas_count': alertas_count,
             'stock_alimentos': stock_alimentos,
             'alimentos_criticos_count': alimentos_criticos,
-        })
+        }, status=status.HTTP_200_OK)
+
+
+class ReporteProduccionAvanzadoView(TenantSafeView):
+    """
+    CU22: Genera el reporte avanzado y especializado de rendimiento y producción de lotes.
+    Devuelve KPIs consolidados, rankings y datos detallados para análisis gerencial.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from apps.lotes.models import ControlCalidad
+        from apps.alimentacion.models import Alimentacion
+        from django.db.models import Sum
+        
+        # Filtro de seguridad tenant
+        lotes_qs = self.filter_by_tenant(Lote.objects.select_related('galpon').all()).order_by('-id_lote')
+        
+        # Aplicar filtros opcionales
+        galpon_id = request.query_params.get('galpon_id')
+        if galpon_id:
+            lotes_qs = lotes_qs.filter(galpon_id=galpon_id)
+            
+        fecha_inicio = request.query_params.get('fecha_inicio')
+        if fecha_inicio:
+            lotes_qs = lotes_qs.filter(fecha_ingreso__gte=fecha_inicio)
+            
+        fecha_fin = request.query_params.get('fecha_fin')
+        if fecha_fin:
+            lotes_qs = lotes_qs.filter(fecha_ingreso__lte=fecha_fin)
+            
+        lotes_data = []
+        total_aves = 0
+        total_alimento = 0.0
+        mortalidad_suma = 0.0
+        fca_suma = 0.0
+        fca_count = 0
+        lotes_listos = 0
+        
+        galpon_fca = {}  # Para buscar el galpón más eficiente
+        hoy = timezone.localdate()
+        
+        for l in lotes_qs:
+            # Calcular días transcurridos
+            dias_crianza = (hoy - l.fecha_ingreso).days if l.fecha_ingreso else 0
+            if dias_crianza < 0:
+                dias_crianza = 0
+                
+            # Mortalidad
+            bajas = int(l.cantidad_inicial or 0) - int(l.cantidad_actual or 0)
+            tasa_mort = round((bajas / l.cantidad_inicial) * 100, 2) if l.cantidad_inicial > 0 else 0.0
+            
+            # Alimentación
+            alim_agg = self.filter_by_tenant(Alimentacion.objects.filter(lote=l)).aggregate(s=Sum('cantidad_kg'))['s'] or 0
+            alimento_kg = round(float(alim_agg), 2)
+            
+            # Crecimiento
+            latest_cc = self.filter_by_tenant(ControlCalidad.objects.filter(id_lote=l)).order_by('-fecha_registro').first()
+            peso_prom = round(float(latest_cc.peso_registrado), 3) if latest_cc else (round(float(l.peso_inicial), 3) if l.peso_inicial else 0.0)
+            
+            # Conversión (FCA)
+            divisor = (peso_prom * (l.cantidad_actual or 1))
+            fca = round(alimento_kg / divisor, 3) if divisor > 0 else 0.0
+            
+            # Acumuladores de KPIs
+            if l.estado in ['Crianza', 'Crecimiento', 'Engorde', 'Listo para venta', 'Listo', 'Activo']:
+                total_aves += int(l.cantidad_actual or 0)
+                if l.estado in ['Listo para venta', 'Listo']:
+                    lotes_listos += 1
+                    
+            total_alimento += alimento_kg
+            mortalidad_suma += tasa_mort
+            
+            if fca > 0:
+                fca_suma += fca
+                fca_count += 1
+                g_nombre = l.galpon.nombre if l.galpon else "Desconocido"
+                if g_nombre not in galpon_fca:
+                    galpon_fca[g_nombre] = []
+                galpon_fca[g_nombre].append(fca)
+                
+            lotes_data.append({
+                'id_lote': l.id_lote,
+                'galpon_nombre': l.galpon.nombre if l.galpon else 'S/N',
+                'raza_tipo': l.raza_tipo or 'Sin especificar',
+                'fecha_ingreso': l.fecha_ingreso.isoformat() if l.fecha_ingreso else None,
+                'dias_crianza': dias_crianza,
+                'cantidad_inicial': l.cantidad_inicial,
+                'cantidad_actual': l.cantidad_actual,
+                'bajas_totales': bajas,
+                'tasa_mortalidad_pct': tasa_mort,
+                'alimento_consumido_kg': alimento_kg,
+                'peso_promedio_kg': peso_prom,
+                'fca_eficiencia': fca,
+                'estado': l.estado,
+            })
+            
+        # Calcular galpón más eficiente (menor FCR promedio)
+        galpon_mas_eficiente = "Ninguno"
+        menor_fcr_promedio = 999.0
+        for g_nombre, fcrs in galpon_fca.items():
+            prom = sum(fcrs) / len(fcrs)
+            if prom < menor_fcr_promedio:
+                menor_fcr_promedio = prom
+                galpon_mas_eficiente = g_nombre
+                
+        # Promedios generales
+        promedio_mortalidad = round(mortalidad_suma / len(lotes_data), 2) if lotes_data else 0.0
+        promedio_fca = round(fca_suma / fca_count, 3) if fca_count > 0 else 0.0
+        
+        return Response({
+            'lotes': lotes_data,
+            'kpis': {
+                'total_aves': total_aves,
+                'lotes_activos': sum(1 for l in lotes_data if l['estado'] in ['Crianza', 'Crecimiento', 'Engorde', 'Listo para venta', 'Listo', 'Activo']),
+                'lotes_listos_count': lotes_listos,
+                'total_alimento_consumido_kg': round(total_alimento, 2),
+                'promedio_mortalidad_pct': promedio_mortalidad,
+                'promedio_fca_eficiencia': promedio_fca,
+                'galpon_mas_eficiente': galpon_mas_eficiente,
+            }
+        }, status=status.HTTP_200_OK)

@@ -16,6 +16,9 @@ import {
   History,
   Stethoscope,
   AlertTriangle,
+  FileText,
+  Sparkles,
+  Brain,
   ChevronDown,
   ChevronUp,
   Globe,
@@ -25,6 +28,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useUsuario } from "../hooks/useUsuario";
+import api from "../api/axios";
 
 // ─── Menús por rol ────────────────────────────────────────────────────────────
 
@@ -57,13 +61,21 @@ const MENU_ADMIN_OPERADOR = [
     items: [
       { icon: <Bird size={18} />, label: "Galpones", path: "/galpones" },
       { icon: <Package size={18} />, label: "Lotes", path: "/lotes" },
-      { icon: <Truck size={18} />, label: "Ventas", path: "/ventas" },
+      { icon: <Truck size={18} />, label: "Ventas de Lotes", path: "/ventas" },
       { icon: <ClipboardList size={18} />, label: "Control de Calidad", path: "/lotes/control-calidad" },
-      { icon: <AlertTriangle size={18} />, label: "Mortandad", path: "/mortandad" },
+      { icon: <ClipboardList size={18} />, label: "Estado del Lote", path: "/estado" },
+    ],
+  },
+  {
+    type: "group",
+    label: "Módulo de Sanidad",
+    icon: <Stethoscope size={20} />,
+    items: [
       { icon: <Stethoscope size={18} />, label: "Registro Sanitario", path: "/sanitario/registro" },
       { icon: <ClipboardList size={18} />, label: "Historial Clínico", path: "/sanitario/historial" },
       { icon: <AlertTriangle size={18} />, label: "Enfermedades", path: "/sanitario/enfermedades" },
       { icon: <ShieldCheck size={18} />, label: "Alertas Sanitarias", path: "/sanitario/alertas" },
+      { icon: <AlertTriangle size={18} />, label: "Registro de Mortandad", path: "/mortandad" },
     ],
   },
   {
@@ -73,8 +85,16 @@ const MENU_ADMIN_OPERADOR = [
     items: [
       { icon: <Wheat size={18} />, label: "Alimentación", path: "/alimentacion" },
       { icon: <Thermometer size={18} />, label: "Temperatura", path: "/temperatura" },
-      { icon: <BarChart3 size={18} />, label: "Predicción IA", path: "/prediccion" },
-      { icon: <ClipboardList size={18} />, label: "Estado", path: "/estado" },
+    ],
+  },
+  {
+    type: "group",
+    label: "Inteligencia Artificial",
+    icon: <Brain size={20} />,
+    items: [
+      { icon: <BarChart3 size={18} />, label: "Predicción Mortalidad", path: "/mortandad/prediccion" },
+      { icon: <Sparkles size={18} />, label: "Recomendaciones IA", path: "/recomendaciones-ia" },
+      { icon: <BarChart3 size={18} />, label: "Predicción Clima", path: "/prediccion" },
     ],
   },
   {
@@ -100,10 +120,13 @@ const MENU_ADMIN_OPERADOR = [
     ],
   },
   {
-    type: "single",
-    icon: <BarChart3 size={20} />,
+    type: "group",
     label: "Reportes",
-    path: "/reportes",
+    icon: <FileText size={20} />,
+    items: [
+      { icon: <FileText size={18} />, label: "Reportes Generales", path: "/reportes" },
+      { icon: <FileText size={18} />, label: "Reporte de Producción", path: "/lotes/reporte-produccion" },
+    ],
   },
 ];
 
@@ -115,6 +138,7 @@ function Sidebar({ open, setOpen, showMobileTrigger = true }) {
   const [isMobile, setIsMobile] = useState(false);
   const [openGroups, setOpenGroups] = useState({});
   const [hoveredItem, setHoveredItem] = useState(null);
+
   const { esSuperAdmin, esAdmin } = useUsuario();
 
   const menuGroups = esSuperAdmin
@@ -136,6 +160,8 @@ function Sidebar({ open, setOpen, showMobileTrigger = true }) {
   useEffect(() => {
     if (isMobile && open) setOpen(false);
   }, [isMobile]);
+
+
 
   useEffect(() => {
     if (!open && !isMobile) {
@@ -312,6 +338,9 @@ function Sidebar({ open, setOpen, showMobileTrigger = true }) {
                             fontSize: "13px",
                             color: isActive ? "#fbbf24" : "rgba(255,255,255,0.75)",
                             fontWeight: isActive ? "600" : "400",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
                           }}>
                             {item.label}
                           </span>

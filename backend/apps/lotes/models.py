@@ -80,6 +80,9 @@ class CurvaCrecimientoEstandar(models.Model):
     edad_dias = models.IntegerField()
     peso_estandar = models.DecimalField(max_digits=10, decimal_places=4)
     unidad_medida = models.CharField(max_length=20)
+    activo = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'curva_crecimiento_estandar'

@@ -331,10 +331,7 @@ class UsuarioDetailView(TenantSafeView):
     def _get_usuario_or_404(self, usuario_id):
         """Helper: retorna usuario o None."""
         try:
-            # Aplicamos el filtro de tenant solo si es GET (retrieve), permitiendo patch/delete sin romper
-            if self.request.method == 'GET':
-                return self.get_queryset().get(pk=usuario_id)
-            return Usuario.objects.all().get(pk=usuario_id)
+            return self.get_queryset().get(pk=usuario_id)
         except Usuario.DoesNotExist:
             return None
 
@@ -495,13 +492,14 @@ class RolDetailView(APIView):
 # Vista para obtener y modificar los roles de un usuario
 
 
-class UsuarioRolesView(APIView):
+class UsuarioRolesView(TenantSafeView):
     permission_classes = [IsAuthenticated]
+    queryset = Usuario.objects.all()
 
     def _get_usuario_or_404(self, usuario_id):
         """Helper: retorna usuario o None."""
         try:
-            return Usuario.objects.get(pk=usuario_id)
+            return self.get_queryset().get(pk=usuario_id)
         except Usuario.DoesNotExist:
             return None
 

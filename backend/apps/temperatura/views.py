@@ -171,7 +171,7 @@ def obtener_mensaje_estado(estado):
 # Vistas existentes
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TemperaturaTiempoRealView(APIView):
+class TemperaturaTiempoRealView(TenantSafeView):
     """
     CU09 - Monitorear temperatura en tiempo real.
 
@@ -185,7 +185,7 @@ class TemperaturaTiempoRealView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        galpones = Galpon.objects.filter(estado='activo').order_by('id')
+        galpones = self.filter_by_tenant(Galpon.objects.filter(estado='activo')).order_by('id')
 
         # Evitar que el polling del frontend llene la BD:
         # - Este endpoint se consulta en “tiempo real” (cada pocos segundos).
@@ -212,7 +212,7 @@ class TemperaturaTiempoRealView(APIView):
             # - o si pasó el intervalo
             # - o si cambió el estado (FRIO/NORMAL/CALOR)
             ultimo = (
-                TemperaturaGalpon.objects
+                self.filter_by_tenant(TemperaturaGalpon.objects.all())
                 .filter(galpon=galpon, fuente='SIMULADO')
                 .order_by('-fecha_hora', '-id')
                 .first()
@@ -230,7 +230,7 @@ class TemperaturaTiempoRealView(APIView):
 
             registro = None
             if should_persist:
-                empresa_id = getattr(getattr(request, 'user', None), 'empresa_id', None)
+                empresa_id = self.get_tenant_id()
                 registro = TemperaturaGalpon.objects.create(
                     galpon=galpon,
                     temperatura=temperatura,
@@ -258,7 +258,7 @@ class TemperaturaTiempoRealView(APIView):
         return Response(data, status=status.HTTP_200_OK)
 
 
-class TemperaturaManualCreateView(APIView):
+class TemperaturaManualCreateView(TenantSafeView):
     """
     CU08 - Registrar temperatura del galpón manualmente.
 
@@ -275,6 +275,16 @@ class TemperaturaManualCreateView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         galpon = serializer.validated_data['galpon']
+        
+        # Validar pertenencia del galpón al tenant
+        if not self.is_global_admin():
+            tenant_id = self.get_tenant_id()
+            if tenant_id and galpon.empresa_id != tenant_id:
+                return Response(
+                    {'galpon': ['El galpón no pertenece a su empresa.']},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
         temperatura = serializer.validated_data['temperatura']
         estado = calcular_estado_temperatura(temperatura)
 
@@ -284,6 +294,7 @@ class TemperaturaManualCreateView(APIView):
             estado=estado,
             fuente='MANUAL',
             usuario=request.user,
+            empresa_id=self.get_tenant_id(),
         )
 
         registrar_evento(
@@ -311,7 +322,7 @@ class TemperaturaManualCreateView(APIView):
         )
 
 
-class TemperaturaHistorialView(APIView):
+class TemperaturaHistorialView(TenantSafeView):
     """
     Consulta el historial de temperaturas.
 
@@ -324,7 +335,7 @@ class TemperaturaHistorialView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        queryset = TemperaturaGalpon.objects.select_related('galpon').all()
+        queryset = self.filter_by_tenant(TemperaturaGalpon.objects.select_related('galpon').all())
 
         id_galpon = request.query_params.get('id_galpon')
         fecha_inicio_raw = request.query_params.get('fecha_inicio')
@@ -375,7 +386,7 @@ class TemperaturaHistorialView(APIView):
         )
 
 
-class TemperaturaUltimaPorGalponView(APIView):
+class TemperaturaUltimaPorGalponView(TenantSafeView):
     """
     Devuelve la última temperatura registrada por cada galpón.
 
@@ -386,12 +397,12 @@ class TemperaturaUltimaPorGalponView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        galpones = Galpon.objects.all().order_by('id')
+        galpones = self.filter_by_tenant(Galpon.objects.all()).order_by('id')
         data = []
 
         for galpon in galpones:
             ultimo = (
-                TemperaturaGalpon.objects
+                self.filter_by_tenant(TemperaturaGalpon.objects.all())
                 .filter(galpon=galpon)
                 .order_by('-fecha_hora', '-id')
                 .first()
@@ -423,7 +434,7 @@ class TemperaturaUltimaPorGalponView(APIView):
         return Response(data, status=status.HTTP_200_OK)
 
 
-class TemperaturaAlertasView(APIView):
+class TemperaturaAlertasView(TenantSafeView):
     """
     Endpoint global para detectar alertas de temperatura.
 
@@ -440,13 +451,13 @@ class TemperaturaAlertasView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        galpones = Galpon.objects.filter(estado='activo').order_by('id')
+        galpones = self.filter_by_tenant(Galpon.objects.filter(estado='activo')).order_by('id')
 
         alertas = []
 
         for galpon in galpones:
             ultimo = (
-                TemperaturaGalpon.objects
+                self.filter_by_tenant(TemperaturaGalpon.objects.all())
                 .filter(galpon=galpon)
                 .order_by('-fecha_hora', '-id')
                 .first()
@@ -483,7 +494,7 @@ class TemperaturaAlertasView(APIView):
 # Nuevos endpoints: Reverse Geocoding + Simulación con base real
 # ─────────────────────────────────────────────────────────────────────────────
 
-class ReverseGeocodingView(APIView):
+class ReverseGeocodingView(TenantSafeView):
     """
     Convierte coordenadas (lat, lon) en un nombre de lugar legible.
 
@@ -546,7 +557,7 @@ class ReverseGeocodingView(APIView):
         }, status=status.HTTP_200_OK)
 
 
-class SimulacionIniciarView(APIView):
+class SimulacionIniciarView(TenantSafeView):
     """
     Inicia el monitoreo con base real de OpenWeather para un galpón.
 
@@ -574,7 +585,7 @@ class SimulacionIniciarView(APIView):
             )
 
         try:
-            galpon = Galpon.objects.get(pk=galpon_id)
+            galpon = self.filter_by_tenant(Galpon.objects.all()).get(pk=galpon_id)
         except Galpon.DoesNotExist:
             return Response(
                 {'error': 'Galpón no encontrado.'},
@@ -595,7 +606,7 @@ class SimulacionIniciarView(APIView):
         }, status=status.HTTP_200_OK)
 
 
-class ClimaActualView(APIView):
+class ClimaActualView(TenantSafeView):
     """
     Devuelve la temperatura actual del WeatherManager sin guardar en BD.
 
@@ -625,11 +636,19 @@ class ClimaActualView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        clima = weather_service.get_current_data(galpon_id)
+        try:
+            galpon = self.filter_by_tenant(Galpon.objects.all()).get(pk=galpon_id)
+        except Galpon.DoesNotExist:
+            return Response(
+                {'error': 'Galpón no encontrado.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        clima = weather_service.get_current_data(galpon.id)
         estado = calcular_estado_temperatura(clima['temp'])
 
         return Response({
-            'galpon_id': galpon_id,
+            'galpon_id': galpon.id,
             'temp': clima['temp'],
             'humidity': clima['humidity'],
             'source': clima['source'],
@@ -639,7 +658,7 @@ class ClimaActualView(APIView):
         }, status=status.HTTP_200_OK)
 
 
-class ClimaManualOverrideView(APIView):
+class ClimaManualOverrideView(TenantSafeView):
     """
     Fuerza un valor de temperatura en el WeatherManager para un galpón específico.
 
@@ -670,8 +689,16 @@ class ClimaManualOverrideView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        try:
+            galpon = self.filter_by_tenant(Galpon.objects.all()).get(pk=galpon_id)
+        except Galpon.DoesNotExist:
+            return Response(
+                {'error': 'Galpón no encontrado.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
         if desactivar:
-            weather_service.clear_manual_override(galpon_id)
+            weather_service.clear_manual_override(galpon.id)
             return Response(
                 {'status': 'Override eliminado. Volviendo a simulación.'},
                 status=status.HTTP_200_OK
@@ -701,12 +728,12 @@ class ClimaManualOverrideView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        weather_service.set_manual_override(galpon_id, temp_f, humidity_f)
+        weather_service.set_manual_override(galpon.id, temp_f, humidity_f)
         estado = calcular_estado_temperatura(temp_f)
 
         return Response({
             'status': 'Override activado para el galpón',
-            'galpon_id': galpon_id,
+            'galpon_id': galpon.id,
             'temp': temp_f,
             'humidity': humidity_f,
             'estado': estado,

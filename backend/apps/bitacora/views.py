@@ -13,6 +13,7 @@ from rest_framework.pagination import PageNumberPagination
 
 from apps.bitacora.models import BitacoraEvento
 from apps.bitacora.serializers import BitacoraEventoSerializer
+from apps.core.mixins import TenantSafeView
 
 
 class BitacoraPagination(PageNumberPagination):
@@ -21,14 +22,15 @@ class BitacoraPagination(PageNumberPagination):
     max_page_size = 500
 
 
-class BitacoraListView(APIView):
+class BitacoraListView(TenantSafeView):
     """Lista eventos de bitácora con paginación y optimización N+1."""
 
     permission_classes = [IsAuthenticated]
+    queryset = BitacoraEvento.objects.all()
 
     def get(self, request):
         # Optimizamos con select_related para traer el nombre del usuario en una sola consulta
-        qs = BitacoraEvento.objects.select_related('usuario').all().order_by('-fecha_hora', '-id')
+        qs = self.get_queryset().select_related('usuario').order_by('-fecha_hora', '-id')
 
         usuario_id = request.query_params.get('usuario_id')
         if usuario_id:

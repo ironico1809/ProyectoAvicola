@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { User, Lock, LogIn } from 'lucide-react'
+import { User, Lock, LogIn, Eye, EyeOff, AlertCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../api/axios'
 import { styles } from './Login.styles'
@@ -8,6 +8,8 @@ function Login() {
   const [form, setForm] = useState({ nom_usuario: '', password: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPass, setShowPass] = useState(false)
+  const [focusField, setFocusField] = useState(null)
   const navigate = useNavigate()
 
   const handleChange = (e) => {
@@ -24,7 +26,6 @@ function Login() {
       localStorage.setItem('refresh_token', res.data.refresh)
       localStorage.setItem('usuario', JSON.stringify(res.data.usuario))
 
-      // Redirigir según el estado del primer ingreso y el rol
       if (res.data.usuario?.must_change_password) {
         navigate('/cambio-password')
       } else if (res.data.usuario?.tipo_usuario === 'Superusuario') {
@@ -39,8 +40,17 @@ function Login() {
     }
   }
 
+  const inputGroupStyle = (field) => ({
+    ...styles.inputGroup,
+    ...(focusField === field ? styles.inputGroupFocus : {}),
+  })
+
   return (
     <div style={styles.page}>
+      <style>{`
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
       <div style={styles.pageBg} />
 
       <div style={styles.card}>
@@ -60,61 +70,61 @@ function Login() {
           <p style={styles.welcomeSub}>Ingresa tus credenciales para continuar</p>
 
           <form onSubmit={handleSubmit} style={styles.form}>
-            <div style={styles.inputGroup}>
-              <User size={18} color="#9ca3af" style={styles.inputIcon} />
+            <div style={inputGroupStyle('user')}>
+              <User size={18} style={styles.inputIcon} />
               <input
                 name="nom_usuario"
                 placeholder="Usuario"
+                value={form.nom_usuario}
                 onChange={handleChange}
+                onFocus={() => setFocusField('user')}
+                onBlur={() => setFocusField(null)}
                 style={styles.input}
                 required
               />
             </div>
 
-            <div style={styles.inputGroup}>
-              <Lock size={18} color="#9ca3af" style={styles.inputIcon} />
+            <div style={inputGroupStyle('pass')}>
+              <Lock size={18} style={styles.inputIcon} />
               <input
                 name="password"
-                type="password"
+                type={showPass ? 'text' : 'password'}
                 placeholder="Contraseña"
+                value={form.password}
                 onChange={handleChange}
+                onFocus={() => setFocusField('pass')}
+                onBlur={() => setFocusField(null)}
                 style={styles.input}
                 required
               />
+              <button type="button" onClick={() => setShowPass(!showPass)} style={styles.togglePassBtn}>
+                {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
 
-            {error && <p style={styles.error}>⚠️ {error}</p>}
+            <button type="button" onClick={() => alert('Comunícate con el administrador del sistema para restablecer tu contraseña.')} style={styles.forgotPass}>
+              ¿Olvidaste tu contraseña?
+            </button>
+
+            {error && (
+              <p style={styles.error}>
+                <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                <span>{error}</span>
+              </p>
+            )}
 
             <button
               type="submit"
               style={loading ? { ...styles.button, ...styles.buttonLoading } : styles.button}
               disabled={loading}
-            >        
-              <LogIn size={18} style={{ marginRight: '8px' }} />
+            >
+              {loading ? <div style={styles.spinner} /> : <LogIn size={18} style={{ marginRight: '8px' }} />}
               {loading ? 'Ingresando...' : 'Ingresar al Sistema'}
             </button>
-             <button
-                type="button"
-                onClick={() => navigate('/register')}
-                style={{
-                  background: 'transparent',
-                  border: '1.5px solid #e5e7eb',
-                  borderRadius: '12px',
-                  padding: '12px',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  color: '#6b7280',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '100%',
-                  fontFamily: "'Poppins', sans-serif",
-                  marginTop: '4px',
-                }}
-              >
-                ¿No tienes cuenta? Regístrate
-              </button>
+
+            <button type="button" onClick={() => navigate('/register')} style={styles.registerBtn}>
+              ¿No tienes cuenta? Regístrate
+            </button>
           </form>
           <p style={styles.footer}>UAGRM · Sistema Avícola 2026</p>
         </div>

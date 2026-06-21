@@ -13,6 +13,21 @@ class ControlSanitarioSerializer(serializers.ModelSerializer):
         model = ControlSanitario
         fields = '__all__'
 
+    def validate(self, attrs):
+        lote = attrs.get('lote')
+        insumo = attrs.get('insumo')
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            user = request.user
+            if not (getattr(user, 'is_superuser', False) or getattr(user, 'tipo_usuario', '') == 'Superusuario'):
+                tenant_id = getattr(user, 'empresa_id', None)
+                if tenant_id:
+                    if lote and lote.empresa_id != tenant_id:
+                        raise serializers.ValidationError({'lote': 'El lote seleccionado no pertenece a su empresa.'})
+                    if insumo and insumo.empresa_id != tenant_id:
+                        raise serializers.ValidationError({'insumo': 'El insumo seleccionado no pertenece a su empresa.'})
+        return attrs
+
 
 class RegistroEnfermedadSerializer(serializers.ModelSerializer):
     lote_info = serializers.SerializerMethodField(read_only=True)
@@ -81,6 +96,16 @@ class RegistroEnfermedadSerializer(serializers.ModelSerializer):
                 'cantidad_aves_afectadas':
                     'Debe ingresar la cantidad de aves afectadas o el porcentaje de afectación.'
             })
+
+        # Validar pertenencia del lote al tenant
+        lote = attrs.get('lote')
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            user = request.user
+            if not (getattr(user, 'is_superuser', False) or getattr(user, 'tipo_usuario', '') == 'Superusuario'):
+                tenant_id = getattr(user, 'empresa_id', None)
+                if tenant_id and lote and lote.empresa_id != tenant_id:
+                    raise serializers.ValidationError({'lote': 'El lote seleccionado no pertenece a su empresa.'})
         return attrs
 
     def create(self, validated_data):

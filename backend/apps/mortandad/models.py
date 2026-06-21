@@ -43,3 +43,46 @@ class RegistroMortalidad(models.Model):
 
     def __str__(self):
         return f"{self.cantidad} bajas en Lote {self.lote.id_lote}"
+
+
+class PrediccionMortalidad(models.Model):
+    id_prediccion = models.AutoField(primary_key=True)
+    lote = models.ForeignKey(
+        Lote,
+        on_delete=models.CASCADE,
+        db_column='id_lote',
+        related_name='predicciones_mortalidad'
+    )
+    fecha_hora = models.DateTimeField(auto_now_add=True)
+    riesgo_porcentaje = models.DecimalField(max_digits=5, decimal_places=2)  # p.ej. 85.50
+    nivel_riesgo = models.CharField(max_length=20)  # 'Bajo', 'Medio', 'Alto'
+
+    # Parámetros de entrada de la IA en ese momento
+    temperatura_promedio = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    humedad_promedio = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    desviacion_alimento = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    edad_dias = models.IntegerField(null=True, blank=True)
+    bajas_recientes = models.IntegerField(default=0)
+    alerta_sanitaria = models.BooleanField(default=False)
+
+    # Explicación estructurada y recomendaciones correctivas sugeridas
+    factores_clave = models.JSONField(default=list, blank=True)
+    recomendaciones = models.JSONField(default=list, blank=True)
+
+    # ── SaaS: tenant ──────────────────────────────────────────────────────────
+    empresa = models.ForeignKey(
+        'empresas.Empresa',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        default=1,
+        db_column='empresa_id',
+        related_name='predicciones_mortalidad',
+    )
+
+    class Meta:
+        db_table = 'prediccion_mortalidad'
+        ordering = ['-fecha_hora', '-id_prediccion']
+
+    def __str__(self):
+        return f"Predicción Lote {self.lote_id} - {self.riesgo_porcentaje}% ({self.nivel_riesgo})"

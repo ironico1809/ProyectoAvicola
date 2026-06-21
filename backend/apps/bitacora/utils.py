@@ -94,11 +94,16 @@ def registrar_evento(
             ensure_ascii=False,
             default=str)
 
+        empresa_obj = None
+        if actor and getattr(actor, 'is_authenticated', False):
+            empresa_obj = getattr(actor, 'empresa', None)
+
         BitacoraEvento.objects.create(
             usuario=actor if getattr(
                 actor, 'is_authenticated', False) else None,
             accion=str(accion),
             descripcion=descripcion_txt,
+            empresa=empresa_obj,
         )
     except Exception:
         # La bitácora nunca debe tumbar el request

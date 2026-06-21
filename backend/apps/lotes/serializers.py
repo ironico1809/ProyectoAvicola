@@ -9,6 +9,8 @@ class LoteSerializer(serializers.ModelSerializer):
     id_galpon = serializers.PrimaryKeyRelatedField(
         source='galpon', queryset=Galpon.objects.all())
 
+    ventas = serializers.SerializerMethodField()
+
     class Meta:
         model = Lote
         fields = [
@@ -21,8 +23,24 @@ class LoteSerializer(serializers.ModelSerializer):
             'cantidad_actual',
             'peso_inicial',
             'estado',
+            'ventas',
         ]
-        read_only_fields = ['id_lote']
+        read_only_fields = ['id_lote', 'ventas']
+
+    def get_ventas(self, obj):
+        # Retorna el historial de ventas de este lote
+        ventas_queryset = obj.ventas.all().order_by('-fecha_venta')
+        return [
+            {
+                'id_venta': v.id_venta,
+                'fecha_venta': v.fecha_venta,
+                'cantidad': v.cantidad,
+                'precio_total': v.precio_total,
+                'tipo_venta': v.tipo_venta,
+                'cliente': v.cliente.nombre if v.cliente else 'Desconocido',
+            }
+            for v in ventas_queryset
+        ]
 
     def validate(self, attrs):
         cantidad_inicial = attrs.get(
@@ -42,7 +60,38 @@ class LoteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {'cantidad_actual': 'No puede ser mayor que cantidad_inicial.'})
 
+        # CU24: Validar peso mínimo al cambiar estado a 'Listo para venta' o 'Listo'
+        estado = attrs.get('estado')
+        if (estado in ['Listo para venta', 'Listo']) and self.instance:
+            latest_control = ControlCalidad.objects.filter(id_lote=self.instance).order_by('-fecha_registro').first()
+            if not latest_control:
+                raise serializers.ValidationError(
+                    {'estado': 'El lote debe contar con al menos un registro de control de calidad para validar su peso antes de comercializarlo.'}
+                )
+            if latest_control.peso_registrado < 1.5:
+                raise serializers.ValidationError(
+                    {'estado': f'El lote no cumple con el peso mínimo esperado de 1.50 kg para comercialización. Peso actual registrado: {latest_control.peso_registrado:.2f} kg.'}
+                )
+
         return attrs
+
+    def create(self, validated_data):
+        lote = super().create(validated_data)
+        # Cambiar estado de galpón a ocupado
+        galpon = lote.galpon
+        galpon.estado = 'ocupado'
+        galpon.save()
+        return lote
+
+    def update(self, instance, validated_data):
+        estado = validated_data.get('estado', instance.estado)
+        lote = super().update(instance, validated_data)
+        # Cambiar estado del galpón al marcar listo para venta
+        if estado in ['Listo para venta', 'Listo']:
+            galpon = lote.galpon
+            galpon.estado = 'Listo para venta'
+            galpon.save()
+        return lote
 
 
 class ControlCalidadSerializer(serializers.ModelSerializer):
@@ -100,6 +149,17 @@ class ControlCalidadSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 'id_lote': 'El lote es requerido.'
             })
+
+        # Validar pertenencia del lote al tenant
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            user = request.user
+            if not (getattr(user, 'is_superuser', False) or getattr(user, 'tipo_usuario', '') == 'Superusuario'):
+                tenant_id = getattr(user, 'empresa_id', None)
+                if tenant_id and lote.empresa_id != tenant_id:
+                    raise serializers.ValidationError({
+                        'id_lote': 'El lote seleccionado no pertenece a su empresa.'
+                    })
 
         fecha_ingreso = lote.fecha_ingreso
 

@@ -9,6 +9,7 @@ import {
   Trash2,
   Bird,
   Tag,
+  Eye,
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import Topbar from "../../components/Topbar";
@@ -52,6 +53,7 @@ function Lotes() {
 
   // UI
   const [showModal, setShowModal] = useState(false);
+  const [showVerModal, setShowVerModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showListoModal, setShowListoModal] = useState(false);
@@ -383,12 +385,12 @@ function Lotes() {
 
     setSaving(true);
     try {
-      await api.patch(`/lotes/${id_lote}/`, { estado: "Listo" });
+      await api.patch(`/lotes/${id_lote}/`, { estado: "Listo para venta" });
       setShowListoModal(false);
       setLoteSeleccionado(null);
       fetchData();
     } catch (err) {
-      setFormError(err?.response?.data?.detail || "Error al actualizar el lote.");
+      setFormError(err?.response?.data?.estado?.[0] || err?.response?.data?.detail || "Error al actualizar el lote.");
     } finally {
       setSaving(false);
     }
@@ -812,7 +814,18 @@ function Lotes() {
                       </td>
                       <td style={tdStyle}>
                         <div className="btn-action-group">
-                          {String(l?.estado || "").toLowerCase().trim() === "crianza" && (
+                          <button
+                            onClick={() => {
+                              setLoteSeleccionado(l);
+                              setShowVerModal(true);
+                            }}
+                            className="btn-action btn-action--view"
+                            title="Ver Historial de Ventas (Flujo)"
+                            style={{ background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0", padding: "6px", borderRadius: "8px", cursor: "pointer" }}
+                          >
+                            <Eye size={16} />
+                          </button>
+                          {["crianza", "crecimiento", "engorde", "activo"].includes(String(l?.estado || "").toLowerCase().trim()) && (
                             <button
                               onClick={() => {
                                 setLoteSeleccionado(l);
@@ -866,6 +879,64 @@ function Lotes() {
           </div>
         </div>
       </main>
+
+      {showVerModal && loteSeleccionado && (
+        <Modal
+          titulo={`Flujo de Ventas - Lote #${loteSeleccionado.id_lote}`}
+          onClose={() => {
+            setShowVerModal(false);
+            setLoteSeleccionado(null);
+          }}
+        >
+          <div style={{ marginBottom: "20px" }}>
+            <h4 style={{ margin: "0 0 10px 0", color: "#374151" }}>Detalles del Lote</h4>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", fontSize: "14px", color: "#4b5563" }}>
+              <div><strong>Estado:</strong> <span style={estadoBadgeStyle(loteSeleccionado.estado)}>{loteSeleccionado.estado}</span></div>
+              <div><strong>Cantidad Actual:</strong> {loteSeleccionado.cantidad_actual} / {loteSeleccionado.cantidad_inicial} aves</div>
+              <div><strong>Galpón:</strong> {loteSeleccionado._galponNombre}</div>
+              <div><strong>Ingreso:</strong> {loteSeleccionado.fecha_ingreso}</div>
+            </div>
+          </div>
+          <h4 style={{ margin: "0 0 10px 0", color: "#374151", borderTop: "1px solid #e5e7eb", paddingTop: "15px" }}>Historial de Ventas</h4>
+          {(!loteSeleccionado.ventas || loteSeleccionado.ventas.length === 0) ? (
+            <p style={{ color: "#6b7280", fontSize: "14px" }}>Aún no hay ventas registradas para este lote.</p>
+          ) : (
+            <div style={{ maxHeight: "300px", overflowY: "auto", border: "1px solid #e5e7eb", borderRadius: "8px" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                <thead style={{ background: "#f9fafb", position: "sticky", top: 0 }}>
+                  <tr>
+                    <th style={{ padding: "8px", textAlign: "left", borderBottom: "1px solid #e5e7eb", color: "#6b7280" }}>Fecha</th>
+                    <th style={{ padding: "8px", textAlign: "left", borderBottom: "1px solid #e5e7eb", color: "#6b7280" }}>Cliente</th>
+                    <th style={{ padding: "8px", textAlign: "right", borderBottom: "1px solid #e5e7eb", color: "#6b7280" }}>Cant. Vendida</th>
+                    <th style={{ padding: "8px", textAlign: "right", borderBottom: "1px solid #e5e7eb", color: "#6b7280" }}>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loteSeleccionado.ventas.map((v) => (
+                    <tr key={v.id_venta} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                      <td style={{ padding: "8px", color: "#1f2937" }}>{new Date(v.fecha_venta).toLocaleDateString()}</td>
+                      <td style={{ padding: "8px", color: "#1f2937" }}>{v.cliente}</td>
+                      <td style={{ padding: "8px", textAlign: "right", color: "#dc2626", fontWeight: "bold" }}>-{v.cantidad}</td>
+                      <td style={{ padding: "8px", textAlign: "right", color: "#059669", fontWeight: "bold" }}>Bs. {v.precio_total}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "20px" }}>
+            <button
+              onClick={() => {
+                setShowVerModal(false);
+                setLoteSeleccionado(null);
+              }}
+              style={btnCancelarStyle}
+            >
+              Cerrar
+            </button>
+          </div>
+        </Modal>
+      )}
 
       {showModal && (
         <Modal titulo="Registrar Lote" onClose={() => setShowModal(false)}>
@@ -945,7 +1016,7 @@ function Lotes() {
           }}
         >
           <p style={{ color: "#4b5563", marginBottom: "20px" }}>
-            ¿Estás seguro de marcar el lote <strong>#{loteSeleccionado?.id_lote}</strong> como listo para su comercialización? Esto cambiará su estado a <strong>Listo</strong>.
+            ¿Estás seguro de marcar el lote <strong>#{loteSeleccionado?.id_lote}</strong> como listo para su comercialización? Esto cambiará su estado a <strong>Listo para venta</strong>.
           </p>
           {formError && (
             <p style={{ color: "#dc2626", fontSize: "12px", margin: "0 0 12px 0" }}>

@@ -36,3 +36,14 @@ class AlimentacionSerializer(serializers.ModelSerializer):
         if value <= 0:
             raise serializers.ValidationError('Debe ser mayor que 0.')
         return value
+
+    def validate(self, attrs):
+        lote = attrs.get('lote')
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            user = request.user
+            if not (getattr(user, 'is_superuser', False) or getattr(user, 'tipo_usuario', '') == 'Superusuario'):
+                tenant_id = getattr(user, 'empresa_id', None)
+                if tenant_id and lote and lote.empresa_id != tenant_id:
+                    raise serializers.ValidationError({'id_lote': 'El lote seleccionado no pertenece a su empresa.'})
+        return attrs

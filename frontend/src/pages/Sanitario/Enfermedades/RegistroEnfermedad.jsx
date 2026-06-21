@@ -78,7 +78,11 @@ function RegistroEnfermedad() {
         api.get("/lotes/"),
         api.get("/sanitario/enfermedades/"),
       ]);
-      setLotes(lotesRes.data || []);
+      const dataLotes = lotesRes.data || [];
+      const lotesActivosFiltrados = dataLotes.filter(l =>
+        ["crianza", "crecimiento", "engorde", "activo"].includes(String(l.estado || "").toLowerCase().trim())
+      );
+      setLotes(lotesActivosFiltrados);
       setRegistros(enfermedadesRes.data || []);
     } catch (e) {
       console.error("Error cargando datos", e);

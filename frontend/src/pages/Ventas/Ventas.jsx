@@ -108,7 +108,7 @@ export default function Ventas() {
   const lotesDisponibles = useMemo(() => {
     return lotes.filter(
       (l) =>
-        (l.estado === "Listo" || l.estado === "Crianza") &&
+        (l.estado === "Listo para venta" || l.estado === "Listo") &&
         (toNumber(l.cantidad_actual) ?? 0) > 0
     );
   }, [lotes]);

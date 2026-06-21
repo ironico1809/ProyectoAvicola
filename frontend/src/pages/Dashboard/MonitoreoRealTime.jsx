@@ -28,8 +28,10 @@ import {
   Package,
   RefreshCw,
   Clock,
+  Brain,
 } from "lucide-react";
 import api from "../../api/axios";
+import RecomendacionesIA from "../../components/RecomendacionesIA";
 
 // ─── Paleta de colores ────────────────────────────────────────────────────────
 const COLOR = {
@@ -242,6 +244,7 @@ function MonitoreoRealTime() {
   const [lastUpdate, setLastUpdate] = useState(null);
   // Alertas sanitarias pendientes reales (de AlertaSanitaria)
   const [alertasSanitariasPendientes, setAlertasSanitariasPendientes] = useState(0);
+  const [recomendacionesPendientes, setRecomendacionesPendientes] = useState([]);
 
   // Filtros
   const [galpones, setGalpones] = useState([]);
@@ -267,10 +270,11 @@ function MonitoreoRealTime() {
       if (selectedGalpon) params.galpon_id = selectedGalpon;
       if (selectedLote) params.lote_id = selectedLote;
 
-      // Llamadas en paralelo: datos de monitoreo + alertas sanitarias pendientes reales
-      const [monRes, sanRes] = await Promise.allSettled([
+      // Llamadas en paralelo: datos de monitoreo + alertas + recomendaciones IA
+      const [monRes, sanRes, recsRes] = await Promise.allSettled([
         api.get("/reportes/monitoreo/", { params }),
         api.get("/sanitario/alertas/", { params: { estado: "Pendiente" } }),
+        api.get("/mortandad/prediccion/recomendaciones/pendientes/"),
       ]);
 
       if (monRes.status === "fulfilled") {
@@ -282,6 +286,11 @@ function MonitoreoRealTime() {
       if (sanRes.status === "fulfilled") {
         const alertas = Array.isArray(sanRes.value.data) ? sanRes.value.data : [];
         setAlertasSanitariasPendientes(alertas.length);
+      }
+
+      if (recsRes.status === "fulfilled") {
+        const recs = Array.isArray(recsRes.value.data) ? recsRes.value.data : [];
+        setRecomendacionesPendientes(recs);
       }
 
       setLastUpdate(new Date());
@@ -844,6 +853,94 @@ function MonitoreoRealTime() {
           </div>
         )}
       </div>
+
+      {/* ── CU29: Recomendaciones de IA Pendientes ── */}
+      {(() => {
+        const recsFiltradas = selectedLote
+          ? recomendacionesPendientes.filter(
+              (g) => String(g.lote_id) === String(selectedLote)
+            )
+          : recomendacionesPendientes;
+
+        if (recsFiltradas.length === 0) return null;
+
+        return (
+          <div style={cardStyle}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 16,
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: 15,
+                  fontWeight: 700,
+                  color: "#334155",
+                  margin: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <Brain size={16} color="#d97706" />
+                Recomendaciones de IA
+                {selectedLote && (
+                  <span style={{ fontWeight: 400, color: "#64748b", fontSize: 13 }}>
+                    para Lote {selectedLote}
+                  </span>
+                )}
+              </h3>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  padding: "3px 10px",
+                  borderRadius: 20,
+                  background: "#fef3c7",
+                  color: "#92400e",
+                }}
+              >
+                {recsFiltradas.reduce(
+                  (acc, g) => acc + g.recomendaciones.length,
+                  0
+                )}{" "}
+                pendientes
+              </span>
+            </div>
+            {recsFiltradas.map((grupo) => (
+              <div key={grupo.id_prediccion} style={{ marginBottom: 12 }}>
+                <div
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: "#1e293b",
+                    marginBottom: 8,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  Lote {grupo.lote_codigo}
+                  {grupo.galpon_nombre && (
+                    <span style={{ fontWeight: 400, color: "#64748b" }}>
+                      — {grupo.galpon_nombre}
+                    </span>
+                  )}
+                </div>
+                <RecomendacionesIA
+                  recomendaciones={grupo.recomendaciones}
+                  prediccionId={grupo.id_prediccion}
+                  compact
+                  maxItems={3}
+                />
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Animación de spinner */}
       <style>{`

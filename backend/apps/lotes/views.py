@@ -203,20 +203,13 @@ class LotesResumenEstadoView(TenantSafeView):
         return Response(list(rows), status=status.HTTP_200_OK)
 
 
-class ControlCalidadViewSet(viewsets.ModelViewSet):
+class ControlCalidadViewSet(TenantSafeView, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = ControlCalidadSerializer
     queryset = ControlCalidad.objects.all()
 
     def get_queryset(self):
-        user = self.request.user
-        if getattr(user, 'is_superuser', False) or getattr(user, 'tipo_usuario', '') == 'Superusuario':
-            return self.queryset.order_by('-fecha_registro')
-
-        tenant_id = getattr(user, 'empresa_id', None)
-        if tenant_id is None:
-            return ControlCalidad.objects.none()
-        return self.queryset.filter(empresa_id=tenant_id).order_by('-fecha_registro')
+        return super().get_queryset().order_by('-fecha_registro')
 
     def perform_create(self, serializer):
         user = self.request.user

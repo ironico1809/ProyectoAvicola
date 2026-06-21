@@ -122,6 +122,10 @@ class VentaLoteListCreateView(TenantSafeView):
                 if lote.cantidad_actual <= 0:
                     lote.cantidad_actual = 0
                     lote.estado = 'Vendido'
+                    # Liberar el galpón
+                    galpon = lote.galpon
+                    galpon.estado = 'activo'
+                    galpon.save()
                 lote.save()
 
                 registrar_evento(

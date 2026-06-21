@@ -318,7 +318,7 @@ function Galpones() {
                 <tr style={theadRowStyle}>
                   <th>Nombre</th>
                   <th>Descripción</th>
-                  <th>Capacidad</th>
+                  <th>Ocupación</th>
                   <th>Ubicación</th>
                   <th>Estado</th>
                   <th>Acciones</th>
@@ -330,11 +330,21 @@ function Galpones() {
                 ) : galponesFiltrados.length === 0 ? (
                   <tr><td colSpan={6} className="galp-muted" style={{ padding: "24px" }}>No hay galpones registrados.</td></tr>
                 ) : (
-                  galponesFiltrados.map((g) => (
+                  galponesFiltrados.map((g) => {
+                    const ocupacion = g.poblacion_actual || 0;
+                    const porcentaje = Math.min(100, Math.round((ocupacion / g.capacidad) * 100)) || 0;
+                    return (
                     <tr key={g.id}>
                       <td><strong>{g.nombre}</strong></td>
                       <td className="galp-muted">{g.descripcion || "Sin descripción"}</td>
-                      <td>{g.capacidad} aves</td>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <span style={{ fontSize: '13px', fontWeight: 600 }}>{ocupacion.toLocaleString()} / {g.capacidad.toLocaleString()} aves</span>
+                          <div style={{ width: '100%', height: '6px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                            <div style={{ width: `${porcentaje}%`, height: '100%', background: porcentaje > 90 ? '#ef4444' : '#10b981', transition: 'width 0.3s ease' }}></div>
+                          </div>
+                        </div>
+                      </td>
                       <td>
                         {g.ubicacion_nombre ? (
                           <span title={`Lat: ${g.latitud}, Lon: ${g.longitud}`} style={{ color: "#3b82f6", fontSize: "13px" }}>
@@ -371,7 +381,8 @@ function Galpones() {
                         </div>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -441,7 +452,7 @@ function Galpones() {
           <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
             {[
               { label: "Nombre", value: galponSeleccionado.nombre },
-              { label: "Capacidad", value: `${galponSeleccionado.capacidad} aves` },
+              { label: "Ocupación", value: `${(galponSeleccionado.poblacion_actual || 0).toLocaleString()} / ${galponSeleccionado.capacidad.toLocaleString()} aves` },
               { label: "Descripción", value: galponSeleccionado.descripcion || "Sin descripción" },
               { label: "Estado", value: galponSeleccionado.estado },
               { label: "Ubicación", value: galponSeleccionado.ubicacion_nombre || "No registrada" },

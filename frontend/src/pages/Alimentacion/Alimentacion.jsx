@@ -88,7 +88,10 @@ function Alimentacion() {
       ]);
 
       const dataLotes = Array.isArray(lotesRes.data) ? lotesRes.data : [];
-      setLotes(dataLotes);
+      const lotesActivosFiltrados = dataLotes.filter(l =>
+        ["crianza", "crecimiento", "engorde", "activo"].includes(String(l.estado || "").toLowerCase().trim())
+      );
+      setLotes(lotesActivosFiltrados);
       setRows(Array.isArray(alimentRes.data) ? alimentRes.data : []);
       setInsumos(Array.isArray(insumosRes.data) ? insumosRes.data : []);
 
