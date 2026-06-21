@@ -139,6 +139,7 @@ function FiltroReportes({
   const lastAppliedRef = useRef("");
   const shouldListenRef = useRef(false);
   const restartTimeRef = useRef(null);
+  const latestTranscriptRef = useRef("");
 
   const normalize = (s) =>
     String(s || "")
@@ -148,7 +149,7 @@ function FiltroReportes({
       .replace(/\s+/g, " ")
       .trim();
 
-  const applyVoiceCommand = (rawText) => {
+  const applyVoiceCommand = (rawText, triggerGenerate = false) => {
     const text = normalize(rawText);
     if (!text) return;
 
@@ -225,13 +226,14 @@ function FiltroReportes({
       setFechaFin(iso(hoy));
     }
 
-    // Generar automáticamente si se pide
+    // Generar automáticamente si se pide o tiene palabras de generación activa
     if (
+      triggerGenerate ||
       text.includes("generar") ||
       text.includes("crear") ||
       text.includes("haz")
     ) {
-      setTimeout(() => onGenerar?.(), 500);
+      setTimeout(() => onGenerar?.(), 300);
     }
   };
 
@@ -258,6 +260,7 @@ function FiltroReportes({
       voiceFinalRef.current = finalText;
       const liveText =
         `${finalText}${interimText ? ` ${interimText}` : ""}`.trim();
+      latestTranscriptRef.current = liveText;
       setVoiceText(liveText);
       // Mientras dictas, escribe en el input principal.
       if (shouldListenRef.current) setCommandText(liveText);
@@ -265,7 +268,7 @@ function FiltroReportes({
       const normalizedFinal = normalize(finalText);
       if (normalizedFinal && normalizedFinal !== lastAppliedRef.current) {
         lastAppliedRef.current = normalizedFinal;
-        applyVoiceCommand(finalText);
+        applyVoiceCommand(finalText, false); // No auto-generate while dictating
       }
     };
 
@@ -310,10 +313,16 @@ function FiltroReportes({
     if (restartTimeRef.current) clearTimeout(restartTimeRef.current);
     if (recognitionRef.current) {
       try {
-        recognitionRef.current.abort();
+        recognitionRef.current.stop();
       } catch {}
     }
     setListening(false);
+    
+    // Al hacer clic en Detener, aplicamos y procesamos inmediatamente el texto dictado
+    setTimeout(() => {
+      const latestText = latestTranscriptRef.current || commandText;
+      applyCommandFromText(latestText);
+    }, 150);
   };
 
   const manualStartVoice = () => {
@@ -328,6 +337,7 @@ function FiltroReportes({
       return;
     }
     voiceFinalRef.current = "";
+    latestTranscriptRef.current = "";
     lastAppliedRef.current = "";
     shouldListenRef.current = true;
     setCommandText("");
@@ -338,12 +348,14 @@ function FiltroReportes({
     rec.start();
   };
 
-  const applyCommandFromText = () => {
-    const raw = String(commandText || "").trim();
+  const applyCommandFromText = (forcedText) => {
+    const raw = String(
+      forcedText && typeof forcedText === "string" ? forcedText : commandText || ""
+    ).trim();
     if (!raw) return;
     setVoiceError("");
     setVoiceText(raw);
-    applyVoiceCommand(raw);
+    applyVoiceCommand(raw, true); // Forzar generación
   };
 
   useEffect(() => {

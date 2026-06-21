@@ -2,10 +2,10 @@
   position: fixed;
   top: 86px;
   right: 24px;
-  width: 360px;
+  width: 380px;
   z-index: 9999;
   display: flex;
-  gap: 14px;
+  gap: 12px;
   padding: 16px;
   border-radius: 18px;
   background: white;
@@ -14,46 +14,142 @@
 }
 
 .alerta-calor {
-  border-left: 8px solid #ef4444;
+  border-left: 5px solid #ef4444;
 }
 
 .alerta-frio {
-  border-left: 8px solid #3b82f6;
+  border-left: 5px solid #3b82f6;
 }
 
 .temperature-alert-icon {
   display: flex;
   align-items: flex-start;
-  /* El color se aplica desde el componente vía inline style según el tipo de alerta */
-  margin-top: 2px;
+  margin-top: 3px;
+  flex-shrink: 0;
 }
 
 .temperature-alert-content {
   flex: 1;
+  min-width: 0;
 }
 
-.temperature-alert-content h3 {
-  margin: 0 0 6px 0;
-  font-size: 17px;
+.temperature-alert-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.temperature-alert-header h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
   color: #111827;
 }
 
-.temperature-alert-content p {
-  margin: 0 0 6px 0;
-  color: #374151;
-  font-size: 14px;
+.temperature-alert-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 11px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 700;
 }
 
-.temperature-alert-content span {
-  display: block;
-  color: #6b7280;
+.temperature-alert-scroll {
+  max-height: 240px;
+  overflow-y: auto;
+  margin: 0 -4px;
+  padding: 0 4px;
+}
+
+.temperature-alert-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.temperature-alert-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.temperature-alert-scroll::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+
+.temperature-alert-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.temperature-alert-list + .temperature-alert-list {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.temperature-alert-item {
+  padding: 10px 12px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
   font-size: 13px;
+}
+
+.temperature-alert-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.temperature-alert-item strong {
+  color: #111827;
+  font-size: 13px;
+}
+
+.temperature-alert-item span {
+  color: #374151;
+  font-size: 12px;
   line-height: 1.4;
 }
 
-.temperature-alert-content small {
+.temperature-alert-item-tag {
+  font-size: 10px !important;
+  font-weight: 600;
+  color: #7c3aed !important;
+  background: rgba(124, 58, 237, 0.1);
+  padding: 2px 6px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.temperature-alert-item-temp {
+  font-size: 13px !important;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.item-calor {
+  background: #fef2f2;
+  border-left: 3px solid #ef4444;
+}
+
+.item-frio {
+  background: #eff6ff;
+  border-left: 3px solid #3b82f6;
+}
+
+.temperature-alert-hint {
   display: block;
-  margin-top: 8px;
+  margin-top: 10px;
+  font-size: 11px;
   font-weight: 600;
   color: #92400e;
 }
@@ -70,6 +166,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s;
 }
 
 .temperature-alert-close:hover {
@@ -81,7 +179,6 @@
     opacity: 0;
     transform: translateX(40px);
   }
-
   to {
     opacity: 1;
     transform: translateX(0);
@@ -95,42 +192,8 @@
     left: 12px;
     width: auto;
   }
-}
 
-.alerta-multiple {
-  border-left: 8px solid #f59e0b;
-}
-
-.temperature-alert-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.temperature-alert-item {
-  padding: 9px 10px;
-  border-radius: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  font-size: 13px;
-}
-
-.temperature-alert-item strong {
-  color: #111827;
-}
-
-.temperature-alert-item span {
-  color: #374151;
-}
-
-.item-calor {
-  background: #fee2e2;
-  border-left: 4px solid #ef4444;
-}
-
-.item-frio {
-  background: #dbeafe;
-  border-left: 4px solid #3b82f6;
+  .temperature-alert-scroll {
+    max-height: 180px;
+  }
 }

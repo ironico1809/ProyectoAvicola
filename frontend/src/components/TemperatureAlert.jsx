@@ -67,94 +67,64 @@ function TemperatureAlert() {
   const total = alertas.length + predictivas.length;
   if (ocultar || total === 0 || dismissed) return null;
 
-  const tipoAlerta =
-    predictivas.length > 0 && alertas.length === 0
-      ? "predictiva"
-      : alertas.length > 0 && predictivas.length === 0
-        ? "directa"
-        : "mixta";
+  const hayCalor = alertas.some((a) => a.estado === "CALOR") || predictivas.some((p) => p.estado_predicho === "CALOR");
+  const borderClass = total === 0 ? "" : hayCalor ? "alerta-calor" : "alerta-frio";
 
-  const getBorderClass = () => {
-    if (tipoAlerta === "predictiva") return "alerta-frio";
-    if (tipoAlerta === "directa") {
-      const hayCalor = alertas.some((a) => a.estado === "CALOR");
-      return hayCalor ? "alerta-calor" : "alerta-frio";
-    }
-    return "alerta-multiple";
-  };
+  const tipoLabel =
+    predictivas.length > 0 && alertas.length === 0
+      ? "Alerta Predictiva"
+      : alertas.length > 0 && predictivas.length === 0
+        ? "Alerta de Temperatura"
+        : "Alertas de Temperatura";
 
   return (
-    <div className={`temperature-alert ${getBorderClass()}`}>
-      <div className="temperature-alert-icon">
-        {tipoAlerta === "predictiva" ? (
-          <Brain size={24} color="#7c3aed" />
-        ) : (
-          <Thermometer size={24} color={tipoAlerta === "mixta" ? "#f59e0b" : "#ef4444"} />
-        )}
+    <div className={`temperature-alert ${borderClass}`}>
+      <div className="temperature-alert-icon" style={{ color: hayCalor ? "#ef4444" : "#3b82f6" }}>
+        {predictivas.length > 0 ? <Brain size={22} /> : <Thermometer size={22} />}
       </div>
 
       <div className="temperature-alert-content">
-        <h3>
-          {tipoAlerta === "predictiva"
-            ? "Alerta Predictiva de Temperatura"
-            : tipoAlerta === "mixta"
-              ? "Alertas de Temperatura"
-              : "Alerta de Temperatura"}
-        </h3>
+        <div className="temperature-alert-header">
+          <h3>{tipoLabel}</h3>
+          <span className="temperature-alert-count">{total}</span>
+        </div>
 
-        {predictivas.length > 0 && (
-          <div className="temperature-alert-list">
-            {predictivas.map((p) => (
-              <div
-                key={`pred-${p.id}`}
-                className={`temperature-alert-item ${p.estado_predicho === "CALOR" ? "item-calor" : "item-frio"}`}
-              >
-                <strong>{p.galpon_nombre}</strong>
-                <span>{p.mensaje}</span>
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="temperature-alert-scroll">
+          {predictivas.length > 0 && (
+            <div className="temperature-alert-list">
+              {predictivas.map((p) => (
+                <div key={`pred-${p.id}`} className={`temperature-alert-item ${p.estado_predicho === "CALOR" ? "item-calor" : "item-frio"}`}>
+                  <div className="temperature-alert-item-head">
+                    <strong>{p.galpon_nombre}</strong>
+                    <span className="temperature-alert-item-tag">Predictiva</span>
+                  </div>
+                  <span>{p.mensaje}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
-        {alertas.length > 0 && (
-          <div className="temperature-alert-list">
-            {alertas.map((a) => (
-              <div
-                key={`alert-${a.id}`}
-                className={`temperature-alert-item ${a.estado === "CALOR" ? "item-calor" : "item-frio"}`}
-              >
-                <strong>{a.galpon_nombre}</strong>
-                <span>
-                  {a.temperatura}°C — {a.mensaje}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
+          {alertas.length > 0 && (
+            <div className="temperature-alert-list">
+              {alertas.map((a) => (
+                <div key={`alert-${a.id}`} className={`temperature-alert-item ${a.estado === "CALOR" ? "item-calor" : "item-frio"}`}>
+                  <div className="temperature-alert-item-head">
+                    <strong>{a.galpon_nombre}</strong>
+                    <span className="temperature-alert-item-temp">{a.temperatura}°C</span>
+                  </div>
+                  <span>{a.mensaje}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
-        {total === 1 && alertas[0] && (
-          <>
-            <p>{alertas[0].galpon_nombre}: {alertas[0].temperatura}°C</p>
-            <span>{alertas[0].mensaje}</span>
-            <small>Haga clic en Temperatura para ver detalles</small>
-          </>
-        )}
-
-        {total === 1 && predictivas[0] && (
-          <>
-            <p>{predictivas[0].galpon_nombre}</p>
-            <span>{predictivas[0].mensaje}</span>
-            <small>Revise la sección Predicción IA</small>
-          </>
-        )}
+        <small className="temperature-alert-hint">
+          {predictivas.length > 0 ? "Revise la sección Predicción IA" : "Haga clic en Temperatura para ver detalles"}
+        </small>
       </div>
 
-      <button
-        className="temperature-alert-close"
-        onClick={() => setDismissed(true)}
-        type="button"
-        aria-label="Cerrar alerta"
-      >
+      <button className="temperature-alert-close" onClick={() => setDismissed(true)} type="button" aria-label="Cerrar">
         <X size={16} />
       </button>
     </div>
