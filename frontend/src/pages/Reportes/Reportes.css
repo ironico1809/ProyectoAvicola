@@ -4,6 +4,7 @@
   min-height: 100vh;
   background: #f9fafb;
   font-family: "Poppins", sans-serif;
+  overflow-x: hidden;
 }
 
 .rep-main {
@@ -15,12 +16,17 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .rep-container {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  min-width: 0;
+  width: 100%;
 }
 
 /* ── HEADER IA ── */
@@ -392,6 +398,8 @@
   border: 1.5px solid #e2e8f0;
   font-size: 13px;
   background: #f8fafc;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Multi-select (Galpón/Lote): más moderno y legible */

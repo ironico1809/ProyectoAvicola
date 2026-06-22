@@ -270,6 +270,9 @@ export default function PrediccionMortalidad() {
         style={{
           marginLeft: isMobile ? "0" : sidebarOpen ? "260px" : "70px",
           transition: "margin-left 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+          minWidth: 0,
+          width: "100%",
+          boxSizing: "border-box",
         }}
       >
         <Topbar

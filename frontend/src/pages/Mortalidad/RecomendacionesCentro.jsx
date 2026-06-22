@@ -211,6 +211,9 @@ export default function RecomendacionesCentro() {
         className="recs-centro-main"
         style={{
           marginLeft: isMobile ? "0" : sidebarOpen ? "260px" : "70px",
+          minWidth: 0,
+          width: "100%",
+          boxSizing: "border-box",
         }}
       >
         <Topbar

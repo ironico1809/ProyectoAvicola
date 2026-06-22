@@ -195,6 +195,7 @@ function ReporteProduccionDetallado() {
         minHeight: "100vh",
         background: "#f8fafc",
         fontFamily: "'Poppins', sans-serif",
+        overflowX: "hidden",
       }}
     >
       <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} showMobileTrigger={false} />
@@ -203,12 +204,15 @@ function ReporteProduccionDetallado() {
         style={{
           marginLeft: isMobile ? "0" : sidebarOpen ? "260px" : "70px",
           flex: 1,
-          padding: isMobile ? "20px" : "32px",
+          minWidth: 0,
+          padding: isMobile ? "16px" : "32px",
           paddingTop: isMobile ? "80px" : "32px",
           transition: "margin-left 0.3s ease",
           display: "flex",
           flexDirection: "column",
           gap: "24px",
+          width: "100%",
+          boxSizing: "border-box",
         }}
       >
         <Topbar
@@ -223,16 +227,19 @@ function ReporteProduccionDetallado() {
           style={{
             background: "white",
             borderRadius: "24px",
-            padding: "24px",
+            padding: isMobile ? "16px" : "24px",
             boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
             border: "1px solid #f1f5f9",
             display: "flex",
             flexWrap: "wrap",
             gap: "20px",
             alignItems: "flex-end",
+            width: "100%",
+            boxSizing: "border-box",
+            minWidth: 0,
           }}
         >
-          <div style={{ flex: "1 1 200px" }}>
+          <div style={{ flex: isMobile ? "1 1 100%" : "1 1 200px", minWidth: 0, width: "100%" }}>
             <ComboBox
               label="Filtrar por Galpón"
               value={filterGalpon}
@@ -243,7 +250,7 @@ function ReporteProduccionDetallado() {
               ]}
             />
           </div>
-          <div style={{ flex: "1 1 180px", display: "flex", flexDirection: "column", gap: "6px" }}>
+          <div style={{ flex: isMobile ? "1 1 100%" : "1 1 180px", display: "flex", flexDirection: "column", gap: "6px", width: "100%" }}>
             <label style={{ fontSize: "12px", fontWeight: "700", color: "#475569" }}>Fecha Inicio</label>
             <input
               type="date"
@@ -256,10 +263,12 @@ function ReporteProduccionDetallado() {
                 fontSize: "13px",
                 color: "#1e293b",
                 outline: "none",
+                width: "100%",
+                boxSizing: "border-box",
               }}
             />
           </div>
-          <div style={{ flex: "1 1 180px", display: "flex", flexDirection: "column", gap: "6px" }}>
+          <div style={{ flex: isMobile ? "1 1 100%" : "1 1 180px", display: "flex", flexDirection: "column", gap: "6px", width: "100%" }}>
             <label style={{ fontSize: "12px", fontWeight: "700", color: "#475569" }}>Fecha Fin</label>
             <input
               type="date"
@@ -272,6 +281,8 @@ function ReporteProduccionDetallado() {
                 fontSize: "13px",
                 color: "#1e293b",
                 outline: "none",
+                width: "100%",
+                boxSizing: "border-box",
               }}
             />
           </div>
@@ -349,7 +360,7 @@ function ReporteProduccionDetallado() {
         </div>
 
         {/* CONTENEDOR PRINCIPAL DEL REPORTE IMPRIMIBLE */}
-        <div id="reporte-produccion-pdf" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+        <div id="reporte-produccion-pdf" style={{ display: "flex", flexDirection: "column", gap: "24px", width: "100%", minWidth: 0, boxSizing: "border-box" }}>
           
           {/* Cabecera del PDF (solo visible en PDF) */}
           <div className="only-pdf" style={{ display: "none", padding: "10px", borderBottom: "2px solid #e2e8f0", marginBottom: "20px" }}>
@@ -369,8 +380,9 @@ function ReporteProduccionDetallado() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(220px, 1fr))",
               gap: "20px",
+              width: "100%",
             }}
           >
             {cards.map((card, i) => (
@@ -384,9 +396,12 @@ function ReporteProduccionDetallado() {
               style={{
                 background: "white",
                 borderRadius: "24px",
-                padding: "24px",
+                padding: isMobile ? "16px" : "24px",
                 boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
                 border: "1px solid #f1f5f9",
+                width: "100%",
+                boxSizing: "border-box",
+                minWidth: 0,
               }}
             >
               <h3 style={{ fontSize: "16px", fontWeight: "700", color: "#334155", marginTop: 0, marginBottom: "8px" }}>
@@ -395,7 +410,7 @@ function ReporteProduccionDetallado() {
               <p style={{ fontSize: "12px", color: "#64748b", margin: "0 0 20px 0" }}>
                 Verde: Excelente ( conversión &lt; 1.60 ) | Amarillo: Normal ( 1.60 - 1.80 ) | Rojo: Alerta ( &gt; 1.80 ).
               </p>
-              <div style={{ width: "100%", height: 320 }}>
+              <div style={{ width: "100%", height: 320, minWidth: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -419,9 +434,12 @@ function ReporteProduccionDetallado() {
             style={{
               background: "white",
               borderRadius: "24px",
-              padding: "24px",
+              padding: isMobile ? "16px" : "24px",
               boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
               border: "1px solid #f1f5f9",
+              width: "100%",
+              boxSizing: "border-box",
+              minWidth: 0,
             }}
           >
             <h3 style={{ fontSize: "16px", fontWeight: "700", color: "#334155", marginTop: 0, marginBottom: "20px" }}>
@@ -434,7 +452,7 @@ function ReporteProduccionDetallado() {
               </p>
             )}
 
-            <div style={{ overflowX: "auto" }}>
+            <div style={{ overflowX: "auto", width: "100%" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "900px" }}>
                 <thead>
                   <tr style={{ borderBottom: "2px solid #f1f5f9", textAlign: "left" }}>

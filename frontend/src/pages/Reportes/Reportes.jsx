@@ -236,7 +236,10 @@ function Reportes() {
           padding: isMobile ? "16px" : "32px",
           paddingTop: isMobile ? "80px" : "32px",
           transition: "margin-left 0.3s ease",
-          flex: 1
+          flex: 1,
+          minWidth: 0,
+          width: "100%",
+          boxSizing: "border-box",
         }}
       >
         <Topbar titulo="Reportes con IA" subtitulo="Análisis y exportación de datos" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />

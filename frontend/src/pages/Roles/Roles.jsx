@@ -406,17 +406,23 @@ const layoutStyle = {
   minHeight: "100vh",
   background: "#f9fafb",
   fontFamily: "'Poppins', sans-serif",
+  overflowX: "hidden",
 };
 const mainContentStyle = {
   flex: 1,
   padding: "40px",
   transition: "margin-left 0.3s ease",
+  minWidth: 0,
+  boxSizing: "border-box",
+  width: "100%",
 };
 const headerStyle = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
   marginBottom: "32px",
+  width: "100%",
+  boxSizing: "border-box",
 };
 const titleStyle = {
   fontSize: "24px",
@@ -447,6 +453,9 @@ const containerStyle = {
   borderRadius: "20px",
   padding: "24px",
   boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
+  width: "100%",
+  boxSizing: "border-box",
+  minWidth: 0,
 };
 const searchWrapperStyle = {
   display: "flex",
