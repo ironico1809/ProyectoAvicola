@@ -147,12 +147,12 @@ function Estado() {
         </section>
 
         <div className="est-cards-grid">
-          <div className="panel">
-            <div className="panel-header">
-              <h3 className="panel-title"><Warehouse size={20} color="#f59e0b" /> Capacidad de Galpones</h3>
+          <div className="est-panel">
+            <div className="est-panel-header">
+              <h3 className="est-panel-title"><Warehouse size={20} color="#f59e0b" /> Capacidad de Galpones</h3>
             </div>
-            <div className="table-wrap">
-              <table className="table">
+            <div className="est-table-wrap">
+              <table className="est-table">
                 <thead>
                   <tr>
                     <th>Nombre</th>
@@ -173,7 +173,7 @@ function Estado() {
                         <td>{g._cap.toLocaleString()}</td>
                         <td>{g._aves.toLocaleString()}</td>
                         <td>
-                          <span className={`badge ${g._tipo === "riesgo" ? "badge--danger" : "badge--success"}`}>
+                          <span className={`est-badge ${g._tipo === "riesgo" ? "est-badge-danger" : "est-badge-success"}`}>
                             {g._tipo === "riesgo" ? <AlertCircle size={14} /> : <CheckCircle2 size={14} />}
                             {g._tipo === "riesgo" ? "Límite" : "Óptimo"}
                           </span>
@@ -186,12 +186,12 @@ function Estado() {
             </div>
           </div>
 
-          <div className="panel">
-            <div className="panel-header">
-              <h3 className="panel-title"><Thermometer size={20} color="#f59e0b" /> Últimos Lotes</h3>
+          <div className="est-panel">
+            <div className="est-panel-header">
+              <h3 className="est-panel-title"><Thermometer size={20} color="#f59e0b" /> Últimos Lotes</h3>
             </div>
-            <div className="table-wrap">
-              <table className="table">
+            <div className="est-table-wrap">
+              <table className="est-table">
                 <thead>
                   <tr>
                     <th>ID</th>

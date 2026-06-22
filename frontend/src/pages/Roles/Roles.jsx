@@ -170,21 +170,31 @@ function Roles() {
       >
         <Topbar titulo="Gestión de Roles" subtitulo="Administrar los roles del sistema" sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-        <div style={{...headerStyle, marginBottom: '20px'}}>
-          <div style={{ flex: 1 }} />
+        <div style={{
+          ...headerStyle,
+          marginBottom: '20px',
+          flexDirection: isMobile ? "column" : "row",
+          alignItems: isMobile ? "stretch" : "center",
+          gap: "12px",
+        }}>
+          <div style={{ display: isMobile ? "none" : "block", flex: 1 }} />
           <button
             onClick={() => {
               resetForm();
               setShowModal(true);
             }}
-            style={btnAgregarStyle}
+            style={{
+              ...btnAgregarStyle,
+              width: isMobile ? "100%" : "auto",
+              justifyContent: "center",
+            }}
           >
             <Plus size={18} style={{ marginRight: "8px" }} /> Nuevo Rol
           </button>
         </div>
 
         <div style={containerStyle}>
-          <div style={searchWrapperStyle}>
+          <div style={{ ...searchWrapperStyle, width: isMobile ? "100%" : "300px" }}>
             <Search size={18} color="#9ca3af" />
             <input
               type="text"

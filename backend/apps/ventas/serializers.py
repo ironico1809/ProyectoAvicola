@@ -19,6 +19,8 @@ class VentaLoteSerializer(serializers.ModelSerializer):
         source='lote', queryset=Lote.objects.all()
     )
     cliente_nombre = serializers.CharField(source='cliente.nombre', read_only=True)
+    cliente_telefono = serializers.CharField(source='cliente.telefono', read_only=True)
+    cliente_email = serializers.CharField(source='cliente.email', read_only=True)
     lote_raza = serializers.CharField(source='lote.raza_tipo', read_only=True)
     lote_galpon_nombre = serializers.CharField(source='lote.galpon.nombre', read_only=True)
 
@@ -28,6 +30,8 @@ class VentaLoteSerializer(serializers.ModelSerializer):
             'id_venta',
             'id_cliente',
             'cliente_nombre',
+            'cliente_telefono',
+            'cliente_email',
             'id_lote',
             'lote_raza',
             'lote_galpon_nombre',

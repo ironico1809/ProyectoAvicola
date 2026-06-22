@@ -777,3 +777,44 @@
 .rep-table td.num {
   text-align: right;
 }
+
+@media (max-width: 900px) {
+  .rep-main {
+    padding: 16px;
+    padding-top: 80px;
+  }
+  .rep-input-group {
+    flex-direction: column;
+  }
+  .rep-btn-send {
+    justify-content: center;
+    padding: 12px;
+  }
+  .rep-quick-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 12px;
+  }
+  .rep-filters-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .rep-filters-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .rep-export-group {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .rep-btn-export, .rep-btn-generate {
+    justify-content: center;
+  }
+  .rep-chart-grid {
+    grid-template-columns: 1fr;
+  }
+  .rep-help-info {
+    flex-direction: column;
+    gap: 10px;
+  }
+}

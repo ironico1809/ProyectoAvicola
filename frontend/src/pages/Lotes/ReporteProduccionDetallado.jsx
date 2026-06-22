@@ -275,7 +275,14 @@ function ReporteProduccionDetallado() {
               }}
             />
           </div>
-          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+          <div style={{
+            display: "flex",
+            gap: "12px",
+            flexWrap: "wrap",
+            width: isMobile ? "100%" : "auto",
+            flexDirection: isMobile ? "column" : "row",
+            alignItems: isMobile ? "stretch" : "center"
+          }}>
             <button
               onClick={fetchReport}
               style={{
@@ -291,6 +298,7 @@ function ReporteProduccionDetallado() {
                 alignItems: "center",
                 gap: "8px",
                 boxShadow: "0 4px 12px rgba(124, 58, 237, 0.25)",
+                justifyContent: "center"
               }}
             >
               <Filter size={16} /> Consultar
@@ -311,6 +319,7 @@ function ReporteProduccionDetallado() {
                 alignItems: "center",
                 gap: "8px",
                 boxShadow: "0 4px 12px rgba(22, 163, 74, 0.25)",
+                justifyContent: "center"
               }}
             >
               <Download size={16} /> Excel
@@ -331,6 +340,7 @@ function ReporteProduccionDetallado() {
                 alignItems: "center",
                 gap: "8px",
                 boxShadow: "0 4px 12px rgba(239, 68, 68, 0.25)",
+                justifyContent: "center"
               }}
             >
               <FileText size={16} /> Exportar PDF

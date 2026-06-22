@@ -341,7 +341,7 @@ function Mortandad() {
                 </button>
               </div>
 
-              <div className="mort-filters" style={{ gridTemplateColumns: "1.2fr 1fr 1fr auto" }}>
+              <div className="mort-filters">
                 <div className="mort-filter">
                   <label className="mort-label">Filtrar por Lote</label>
                   <div className="mort-selectWrap">

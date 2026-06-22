@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { jsPDF } from "jspdf";
 import {
   ChevronLeft,
   ChevronRight,
@@ -15,6 +16,8 @@ import {
   Users as UsersIcon,
   ShoppingCart,
   Bird,
+  MessageSquare,
+  FileText,
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import Topbar from "../../components/Topbar";
@@ -68,6 +71,13 @@ export default function Ventas() {
   });
 
   const [formCliente, setFormCliente] = useState({
+    nombre: "",
+    telefono: "",
+    email: "",
+  });
+
+  const [showQuickClienteForm, setShowQuickClienteForm] = useState(false);
+  const [formQuickCliente, setFormQuickCliente] = useState({
     nombre: "",
     telefono: "",
     email: "",
@@ -174,7 +184,6 @@ export default function Ventas() {
     setFormError("");
     setSuccess("");
   };
-
   const resetFormVenta = () => {
     setFormVenta({
       id_cliente: "",
@@ -184,6 +193,12 @@ export default function Ventas() {
       tipo_venta: "Por unidad",
       peso_total_vendido: "",
       observacion: "",
+    });
+    setShowQuickClienteForm(false);
+    setFormQuickCliente({
+      nombre: "",
+      telefono: "",
+      email: "",
     });
     setFormError("");
     setSuccess("");
@@ -204,7 +219,8 @@ export default function Ventas() {
     setFormError("");
     setSuccess("");
 
-    if (!formVenta.id_cliente) return setFormError("Selecciona un cliente.");
+    if (!showQuickClienteForm && !formVenta.id_cliente) return setFormError("Selecciona un cliente.");
+    if (showQuickClienteForm && !formQuickCliente.nombre.trim()) return setFormError("El nombre del nuevo cliente es requerido.");
     if (!formVenta.id_lote) return setFormError("Selecciona un lote.");
 
     const qty = toNumber(formVenta.cantidad);
@@ -228,8 +244,21 @@ export default function Ventas() {
 
     setSaving(true);
     try {
+      let finalClienteId = formVenta.id_cliente;
+
+      if (showQuickClienteForm) {
+        // Crear cliente primero
+        const clientePayload = {
+          nombre: formQuickCliente.nombre.trim(),
+          telefono: formQuickCliente.telefono.trim() || null,
+          email: formQuickCliente.email.trim() || null,
+        };
+        const clienteRes = await api.post("/ventas/clientes/", clientePayload);
+        finalClienteId = clienteRes.data.id_cliente;
+      }
+
       const payload = {
-        id_cliente: Number(formVenta.id_cliente),
+        id_cliente: Number(finalClienteId),
         id_lote: Number(formVenta.id_lote),
         cantidad: qty,
         precio_unitario: unitPrice,
@@ -325,6 +354,93 @@ export default function Ventas() {
     }
   };
 
+  const imprimirRecibo = (v) => {
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a6",
+    });
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.setTextColor(28, 28, 28);
+    doc.text("RECIBO DE VENTA", 10, 15);
+    doc.setFontSize(8);
+    doc.setTextColor(107, 114, 128);
+    doc.text(`Sistema Avicola - Comprobante de Venta`, 10, 20);
+
+    doc.setDrawColor(229, 231, 235);
+    doc.setLineWidth(0.3);
+    doc.line(10, 23, 95, 23);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(28, 28, 28);
+    
+    doc.setFont("helvetica", "bold");
+    doc.text(`Nro Venta: #${v.id_venta}`, 10, 30);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Fecha: ${v.fecha_venta ? new Date(v.fecha_venta).toLocaleDateString() : "-"}`, 10, 35);
+    doc.text(`Cliente: ${v.cliente_nombre || "Desconocido"}`, 10, 40);
+    if (v.cliente_telefono) {
+      doc.text(`Telefono: ${v.cliente_telefono}`, 10, 45);
+    }
+
+    doc.line(10, 50, 95, 50);
+
+    doc.setFont("helvetica", "bold");
+    doc.text(`Detalle de Venta`, 10, 57);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Lote: #${v.id_lote} (${v.lote_raza || "S/R"})`, 10, 63);
+    doc.text(`Galpon: ${v.lote_galpon_nombre || "-"}`, 10, 68);
+    doc.text(`Tipo Venta: ${v.tipo_venta}`, 10, 73);
+    doc.text(`Cantidad: ${v.cantidad} aves`, 10, 78);
+    
+    if (v.peso_total_vendido) {
+      doc.text(`Peso Total: ${v.peso_total_vendido} Kg`, 10, 83);
+    }
+
+    doc.line(10, 88, 95, 88);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text(`Precio Unit.: Bs. ${Number(v.precio_unitario).toFixed(2)}`, 10, 95);
+    doc.setFontSize(12);
+    doc.setTextColor(16, 185, 129);
+    doc.text(`TOTAL: Bs. ${Number(v.precio_total).toFixed(2)}`, 10, 103);
+
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(8);
+    doc.setTextColor(156, 163, 175);
+    doc.text("¡Gracias por su preferencia!", 10, 118);
+
+    doc.save(`Recibo_Venta_${v.id_venta}.pdf`);
+  };
+
+  const enviarWhatsApp = (v) => {
+    const telefono = v.cliente_telefono ? v.cliente_telefono.replace(/\s+/g, "") : "";
+    const cleanPhone = telefono.startsWith("+") 
+      ? telefono.substring(1) 
+      : (telefono.length === 8 ? "591" + telefono : telefono);
+
+    const mensaje = encodeURIComponent(
+      `*RECIBO DE VENTA #${v.id_venta}*\n\n` +
+      `*Cliente:* ${v.cliente_nombre || "Desconocido"}\n` +
+      `*Lote:* #${v.id_lote} (${v.lote_raza || "S/R"})\n` +
+      `*Cantidad:* ${v.cantidad} aves\n` +
+      (v.peso_total_vendido ? `*Peso Total:* ${v.peso_total_vendido} Kg\n` : "") +
+      `*Tipo de Venta:* ${v.tipo_venta}\n` +
+      `*Precio Unitario:* Bs. ${Number(v.precio_unitario).toFixed(2)}\n` +
+      `*TOTAL A PAGAR:* Bs. ${Number(v.precio_total).toFixed(2)}\n\n` +
+      `¡Gracias por su compra! 🐔`
+    );
+
+    const url = cleanPhone 
+      ? `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${mensaje}` 
+      : `https://api.whatsapp.com/send?text=${mensaje}`;
+    window.open(url, "_blank");
+  };
+
   const handleTabChange = (tab) => {
     if (tab === activeTab) return;
     setTabTransition(true);
@@ -378,15 +494,63 @@ export default function Ventas() {
         </div>
       )}
 
-      <ComboBox
-        label="Cliente"
-        placeholder="Selecciona un cliente..."
-        options={clienteOptions}
-        value={formVenta.id_cliente}
-        onChange={(val) => setFormVenta((prev) => ({ ...prev, id_cliente: val }))}
-        required
-        icon={<User size={18} color="#f59e0b" />}
-      />
+      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <label style={{ fontSize: "14px", fontWeight: "600", color: "#374151" }}>Cliente</label>
+          <button
+            type="button"
+            onClick={() => setShowQuickClienteForm(!showQuickClienteForm)}
+            style={{
+              padding: "4px 8px",
+              background: showQuickClienteForm ? "#fee2e2" : "#ecfdf5",
+              color: showQuickClienteForm ? "#dc2626" : "#059669",
+              border: "none",
+              borderRadius: "8px",
+              fontSize: "12px",
+              fontWeight: "600",
+              cursor: "pointer",
+            }}
+          >
+            {showQuickClienteForm ? "Elegir Existente" : "+ Registrar Nuevo"}
+          </button>
+        </div>
+        {!showQuickClienteForm ? (
+          <ComboBox
+            placeholder="Selecciona un cliente..."
+            options={clienteOptions}
+            value={formVenta.id_cliente}
+            onChange={(val) => setFormVenta((prev) => ({ ...prev, id_cliente: val }))}
+            required
+            icon={<User size={18} color="#f59e0b" />}
+          />
+        ) : (
+          <div style={{
+            background: "#f9fafb",
+            border: "1.5px dashed #d1d5db",
+            borderRadius: "12px",
+            padding: "12px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "10px",
+          }}>
+            <InputField
+              label="Nombre Razón Social"
+              name="quick_nombre"
+              placeholder="Ej: Distribuidora Los Pinos"
+              value={formQuickCliente.nombre}
+              onChange={(e) => setFormQuickCliente(prev => ({ ...prev, nombre: e.target.value }))}
+              required
+            />
+            <InputField
+              label="Teléfono"
+              name="quick_telefono"
+              placeholder="Ej: 78945612"
+              value={formQuickCliente.telefono}
+              onChange={(e) => setFormQuickCliente(prev => ({ ...prev, telefono: e.target.value }))}
+            />
+          </div>
+        )}
+      </div>
 
       <InputField
         label="Cantidad de Aves a Vender"
@@ -526,10 +690,7 @@ export default function Ventas() {
         />
 
         {/* Mini Dashboard Stats */}
-        <div style={{
-          ...statsRowStyle,
-          flexDirection: isNarrow ? "column" : "row",
-        }}>
+        <div style={statsRowStyle}>
           <div style={statCardStyle("#fef3c7", "#f59e0b")}>
             <div style={statIconStyle("#f59e0b")}>
               <ShoppingCart size={20} />
@@ -592,7 +753,7 @@ export default function Ventas() {
             </button>
           </div>
 
-          <div style={{ flex: 1 }} />
+          <div style={{ display: isNarrow ? "none" : "block", flex: 1 }} />
 
           {activeTab === "ventas" ? (
             <button
@@ -639,7 +800,7 @@ export default function Ventas() {
               alignItems: isNarrow ? "stretch" : "center",
             }}
           >
-            <div style={searchWrapperStyle}>
+            <div style={{ ...searchWrapperStyle, maxWidth: isNarrow ? "100%" : "400px" }}>
               <Search size={18} color="#9ca3af" />
               <input
                 type="text"
@@ -669,12 +830,13 @@ export default function Ventas() {
                     <th style={thStyle}>Aves</th>
                     <th style={thStyle}>Precio Unitario</th>
                     <th style={thStyle}>Total (Bs.)</th>
+                    <th style={{ ...thStyle, width: "100px" }}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={9} style={emptyTdStyle}>
+                      <td colSpan={10} style={emptyTdStyle}>
                         <div style={loadingStyle}>
                           <div style={spinnerStyle} />
                           Cargando registros...
@@ -683,7 +845,7 @@ export default function Ventas() {
                     </tr>
                   ) : ventasFiltradas.length === 0 ? (
                     <tr>
-                      <td colSpan={9} style={emptyTdStyle}>
+                      <td colSpan={10} style={emptyTdStyle}>
                         No se encontraron registros de ventas.
                       </td>
                     </tr>
@@ -715,6 +877,24 @@ export default function Ventas() {
                         <td style={tdStyle}>Bs. {Number(v.precio_unitario).toFixed(2)}</td>
                         <td style={{ ...tdStyle, color: "#10b981", fontWeight: "700" }}>
                           Bs. {Number(v.precio_total).toFixed(2)}
+                        </td>
+                        <td style={tdStyle}>
+                          <div style={actionGroupStyle}>
+                            <button
+                              onClick={() => imprimirRecibo(v)}
+                              style={actionBtnStyle("pdf")}
+                              title="Imprimir Recibo PDF"
+                            >
+                              <FileText size={15} />
+                            </button>
+                            <button
+                              onClick={() => enviarWhatsApp(v)}
+                              style={actionBtnStyle("whatsapp")}
+                              title="Enviar por WhatsApp"
+                            >
+                              <MessageSquare size={15} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -888,13 +1068,13 @@ export default function Ventas() {
 // ─── Estilos ──────────────────────────────────────────────────────────────────
 
 const statsRowStyle = {
-  display: "flex",
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
   gap: "16px",
   marginBottom: "28px",
 };
 
 const statCardStyle = (bg, accent) => ({
-  flex: 1,
   background: bg,
   borderRadius: "16px",
   padding: "18px 20px",
@@ -1204,6 +1384,16 @@ const actionBtnStyle = (type) => ({
   justifyContent: "center",
   cursor: "pointer",
   transition: "all 0.2s ease",
-  background: type === "edit" ? "#fef3c7" : "#fee2e2",
-  color: type === "edit" ? "#d97706" : "#dc2626",
+  background: 
+    type === "edit" || type === "pdf"
+      ? "#fef3c7"
+      : type === "whatsapp"
+      ? "#e8f5e9"
+      : "#fee2e2",
+  color: 
+    type === "edit" || type === "pdf"
+      ? "#d97706"
+      : type === "whatsapp"
+      ? "#2e7d32"
+      : "#dc2626",
 });
